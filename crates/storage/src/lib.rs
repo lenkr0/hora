@@ -20,7 +20,7 @@ pub use pending::{OpState, Operation, PendingOp, PendingSummary};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Datenbank: {0}")]
+    #[error("{}", hora_i18n::tr!("Database: {}", .0))]
     Sqlite(#[from] rusqlite::Error),
 }
 

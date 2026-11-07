@@ -101,7 +101,7 @@ export component WeekView inherits Rectangle {
             height: Theme.hour-height;
 
             Text {
-                text: (h < 10 ? "0" : "") + "\{h}:00";
+                text: Fmt.hour(h);
                 font-size: 11px;
                 font-weight: 500;
                 color: Theme.ink-3;
@@ -172,7 +172,7 @@ export component WeekView inherits Rectangle {
                 width: 0px;
                 height: 0px;
                 accessible-role: table;
-                accessible-label: "Kalenderraster, Pfeiltasten wählen die Zeit, Eingabe legt einen Termin an";
+                accessible-label: @tr("Calendar grid, arrow keys select the time, Enter creates an event");
                 key-pressed(e) => {
                     if e.text == Key.LeftArrow && root.cursor-day > 0 {
                         root.cursor-day -= 1;
@@ -453,7 +453,7 @@ export component WeekView inherits Rectangle {
             border-color: Theme.event-border;
             background: a.color.mix(Theme.canvas, bar-ta.has-hover ? Theme.event-bg-mix-hover : Theme.event-bg-mix);
             accessible-role: button;
-            accessible-label: a.task ? "Aufgabe " + a.title : a.title + ", ganztägig";
+            accessible-label: a.task ? @tr("Task {}", a.title) : @tr("{}, all day", a.title);
 
             if a.task: Rectangle {
                 x: 7px;

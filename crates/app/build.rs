@@ -1,7 +1,13 @@
 use std::path::PathBuf;
 
 fn main() {
-    let config = slint_build::CompilerConfiguration::new().with_style("fluent".into());
+    // Übersetzungen aus translations/<sprache>/LC_MESSAGES/hora-app.po fest
+    // einbinden; ohne Standardkontext, damit Rust (crates/i18n) dieselben
+    // Einträge findet.
+    let config = slint_build::CompilerConfiguration::new()
+        .with_style("fluent".into())
+        .with_bundled_translations("../../translations")
+        .with_default_translation_context(slint_build::DefaultTranslationContext::None);
     slint_build::compile_with_config("ui/app.slint", config).expect("Slint-Oberfläche kompilieren");
 
     // Programmsymbol und Versionsangaben (Explorer, Task-Manager, Startmenü)
@@ -30,12 +36,12 @@ FILETYPE 0x1
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-    BLOCK "040704B0"
+    BLOCK "040904B0"
     BEGIN
-      VALUE "FileDescription", "Hora Kalender"
+      VALUE "FileDescription", "Hora Calendar"
       VALUE "FileVersion", "{version}"
       VALUE "InternalName", "hora"
-      VALUE "LegalCopyright", "Copyright (c) 2026 lenkr0, MIT-Lizenz"
+      VALUE "LegalCopyright", "Copyright (c) 2026 lenkr0, MIT License"
       VALUE "OriginalFilename", "hora.exe"
       VALUE "ProductName", "Hora"
       VALUE "ProductVersion", "{version}"
@@ -43,7 +49,7 @@ BEGIN
   END
   BLOCK "VarFileInfo"
   BEGIN
-    VALUE "Translation", 0x407, 1200
+    VALUE "Translation", 0x409, 1200
   END
 END
 "#,

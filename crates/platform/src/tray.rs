@@ -76,10 +76,13 @@ mod imp {
 
     const WM_TRAY: u32 = 0x8000 + 1;
 
+    /// Menüeinträge; die App kann sie ersetzen (z. B. nach einem Sprachwechsel)
+    type SharedMenu = std::sync::Arc<std::sync::Mutex<Vec<MenuItem>>>;
+
     struct State {
         icon: HICON,
         tooltip: String,
-        menu: Vec<MenuItem>,
+        menu: SharedMenu,
         handler: Rc<dyn Fn(TrayEvent)>,
         taskbar_created: u32,
     }
@@ -119,7 +122,10 @@ mod imp {
     }
 
     fn show_menu(hwnd: HWND) {
-        let Some(items) = STATE.with_borrow(|s| s.as_ref().map(|s| s.menu.clone())) else {
+        let Some(items) = STATE.with_borrow(|s| {
+            s.as_ref()
+                .map(|s| s.menu.lock().map(|m| m.clone()).unwrap_or_default())
+        }) else {
             return;
         };
         // SAFETY: Menü wird hier erzeugt und wieder zerstört; Zeichenketten
@@ -242,6 +248,7 @@ mod imp {
     pub struct Tray {
         hwnd: usize,
         thread: Option<std::thread::JoinHandle<()>>,
+        menu: SharedMenu,
     }
 
     impl Tray {
@@ -253,6 +260,8 @@ mod imp {
         ) -> Result<Tray, PlatformError> {
             let (sender, receiver) = mpsc::channel::<Result<usize, String>>();
             let (instance, tooltip) = (instance.to_string(), tooltip.to_string());
+            let shared: SharedMenu = std::sync::Arc::new(std::sync::Mutex::new(menu));
+            let menu = shared.clone();
             let thread = std::thread::Builder::new()
                 .name("infobereich".into())
                 .spawn(move || {
@@ -319,7 +328,15 @@ mod imp {
             Ok(Tray {
                 hwnd,
                 thread: Some(thread),
+                menu: shared,
             })
+        }
+
+        /// Menüeinträge ersetzen; gilt ab dem nächsten Rechtsklick
+        pub fn set_menu(&self, items: Vec<MenuItem>) {
+            if let Ok(mut menu) = self.menu.lock() {
+                *menu = items;
+            }
         }
     }
 
@@ -350,6 +367,8 @@ impl Tray {
     ) -> Result<Tray, PlatformError> {
         Err(PlatformError("Infobereich nur unter Windows".into()))
     }
+
+    pub fn set_menu(&self, _items: Vec<MenuItem>) {}
 }
 
 #[cfg(all(test, windows))]

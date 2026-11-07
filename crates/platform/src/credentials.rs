@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 const SERVICE: &str = "Hora";
 
 #[derive(Debug, thiserror::Error)]
-#[error("Anmeldeinformationsspeicher: {0}")]
+#[error("{}", hora_i18n::tr!("Credential Manager: {}", .0))]
 pub struct CredentialError(String);
 
 enum Backend {

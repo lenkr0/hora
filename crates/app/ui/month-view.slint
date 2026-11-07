@@ -2,7 +2,7 @@
 // Termine als kompakte Chips, "+N weitere" bei Platzmangel.
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Locale } from "theme.slint";
 
 export struct MonthCell {
     number: string,
@@ -78,7 +78,7 @@ export component MonthView inherits Rectangle {
     clip: true;
 
     // Wochentage
-    for name[i] in ["MO", "DI", "MI", "DO", "FR", "SA", "SO"]: Text {
+    for name[i] in Locale.weekday-caps: Text {
         x: 1px + week-w + i * cell-w;
         y: 1px;
         width: cell-w;
@@ -160,7 +160,7 @@ export component MonthView inherits Rectangle {
             background: cell.today ? (number-ta.has-hover ? Theme.accent-hover : Theme.accent-strong)
                 : number-ta.has-hover ? Theme.hover-bg : transparent;
             accessible-role: button;
-            accessible-label: "Tag " + cell.number + " öffnen";
+            accessible-label: @tr("Open day {}", cell.number);
 
             Text {
                 text: cell.number;
@@ -188,7 +188,7 @@ export component MonthView inherits Rectangle {
             border-radius: 6px;
             background: journal-ta.has-hover ? Theme.hover-bg : transparent;
             accessible-role: button;
-            accessible-label: "Journaleinträge für den " + cell.number + ". anzeigen";
+            accessible-label: @tr("Show journal entries for day {}", cell.number);
             accessible-action-default => {
                 root.open-journal(i);
             }
@@ -212,7 +212,7 @@ export component MonthView inherits Rectangle {
             x: 5px + 8px;
             y: 5px + 28px + 3px + (root.capacity - 1) * 21px;
             height: 18px;
-            text: "+\{cell.count - root.capacity + 1} weitere";
+            text: @tr("+{} more", cell.count - root.capacity + 1);
             font-size: 11.5px;
             color: more-ta.has-hover ? Theme.ink : Theme.ink-2;
             vertical-alignment: center;
@@ -241,7 +241,7 @@ export component MonthView inherits Rectangle {
         background: chip.color.mix(Theme.canvas, chip-ta.has-hover ? Theme.event-bg-mix-hover : Theme.event-bg-mix);
         opacity: root.drag-id == chip.id ? 0.45 : 1;
         accessible-role: button;
-        accessible-label: (chip.task ? "Aufgabe " : "") + (chip.time == "" ? chip.title : chip.time + " " + chip.title);
+        accessible-label: (chip.task ? @tr("Task") + " " : "") + (chip.time == "" ? chip.title : chip.time + " " + chip.title);
 
         HorizontalLayout {
             padding-left: chip.task ? 6px : 8px;
@@ -318,7 +318,7 @@ export component MonthView inherits Rectangle {
         width: 0px;
         height: 0px;
         accessible-role: table;
-        accessible-label: "Monatsraster, Pfeiltasten wählen den Tag, Eingabe öffnet ihn";
+        accessible-label: @tr("Month grid, arrow keys select the day, Enter opens it");
         key-pressed(e) => {
             if e.text == Key.LeftArrow && root.cursor > 0 {
                 root.cursor -= 1;

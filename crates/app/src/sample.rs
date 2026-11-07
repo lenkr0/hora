@@ -1,6 +1,7 @@
-//! Beispieltermine für den Prototyp, bis in M2 echte Kalender geladen werden.
+//! Beispieltermine für den Start ohne Konto, in der App-Sprache.
 
 use chrono::{Days, NaiveDate, NaiveDateTime, NaiveTime};
+use hora_i18n::tr;
 
 #[derive(Debug, Clone)]
 pub struct Event {
@@ -88,10 +89,34 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             monday + Days::new(offset as u64 * 7)
         };
         // Jede Woche
-        g.timed(week, 0, (8, 0), (9, 30), "Mathe", "Raum 204", SCHULE);
-        g.timed(week, 2, (8, 0), (9, 30), "Physik", "Raum 112", SCHULE);
-        g.timed(week, 3, (7, 30), (8, 15), "Laufen", "Stadtpark", SPORT);
-        g.timed(week, 4, (13, 0), (14, 0), "Wochenrückblick", "", ARBEIT);
+        g.timed(
+            week,
+            0,
+            (8, 0),
+            (9, 30),
+            tr!("Math"),
+            tr!("Room 204"),
+            SCHULE,
+        );
+        g.timed(
+            week,
+            2,
+            (8, 0),
+            (9, 30),
+            tr!("Physics"),
+            tr!("Room 112"),
+            SCHULE,
+        );
+        g.timed(
+            week,
+            3,
+            (7, 30),
+            (8, 15),
+            tr!("Running"),
+            tr!("City park"),
+            SPORT,
+        );
+        g.timed(week, 4, (13, 0), (14, 0), tr!("Weekly review"), "", ARBEIT);
         if offset != 0 {
             continue;
         }
@@ -101,8 +126,8 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             0,
             (10, 0),
             (11, 0),
-            "Team-Standup",
-            "Besprechungsraum 2",
+            tr!("Team standup"),
+            tr!("Meeting room 2"),
             ARBEIT,
         );
         g.timed(
@@ -110,8 +135,8 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             0,
             (12, 30),
             (13, 15),
-            "Mittagessen mit Anna",
-            "Kantine",
+            tr!("Lunch with Anna"),
+            tr!("Cafeteria"),
             PRIVAT,
         );
         g.timed(
@@ -119,8 +144,8 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             1,
             (9, 0),
             (10, 0),
-            "Zahnarzt",
-            "Praxis Dr. Weber",
+            tr!("Dentist"),
+            tr!("Dr. Weber's office"),
             PRIVAT,
         );
         g.timed(
@@ -128,19 +153,27 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             1,
             (9, 30),
             (11, 0),
-            "Projektbesprechung",
-            "Online",
+            tr!("Project meeting"),
+            tr!("Online"),
             ARBEIT,
         );
-        g.timed(week, 1, (16, 0), (16, 30), "Paket abholen", "", PRIVAT);
-        g.timed(week, 2, (14, 0), (16, 0), "Fokuszeit", "", ARBEIT);
+        g.timed(
+            week,
+            1,
+            (16, 0),
+            (16, 30),
+            tr!("Pick up parcel"),
+            "",
+            PRIVAT,
+        );
+        g.timed(week, 2, (14, 0), (16, 0), tr!("Focus time"), "", ARBEIT);
         g.timed(
             week,
             2,
             (14, 30),
             (15, 30),
-            "Review Entwurf",
-            "Online",
+            tr!("Draft review"),
+            tr!("Online"),
             ARBEIT,
         );
         g.timed(
@@ -148,42 +181,42 @@ pub fn generate(monday: NaiveDate) -> (Vec<Event>, Vec<AllDay>, i32) {
             2,
             (15, 0),
             (15, 45),
-            "Rückruf Versicherung",
+            tr!("Call back insurance"),
             "",
             PRIVAT,
         );
-        g.timed(
-            week,
-            3,
-            (15, 0),
-            (15, 30),
-            "Telefonat Vermieter",
-            "",
-            PRIVAT,
-        );
+        g.timed(week, 3, (15, 0), (15, 30), tr!("Call landlord"), "", PRIVAT);
         g.timed(
             week,
             3,
             (19, 0),
             (20, 30),
-            "Chorprobe",
-            "Gemeindehaus",
+            tr!("Choir rehearsal"),
+            tr!("Community hall"),
             PRIVAT,
         );
-        g.timed(week, 4, (18, 0), (21, 0), "Kino", "Filmpalast", FAMILIE);
+        g.timed(
+            week,
+            4,
+            (18, 0),
+            (21, 0),
+            tr!("Movies"),
+            tr!("Film Palace"),
+            FAMILIE,
+        );
         g.timed(
             week,
             5,
             (10, 0),
             (12, 0),
-            "Wochenmarkt",
-            "Marktplatz",
+            tr!("Farmers' market"),
+            tr!("Market square"),
             PRIVAT,
         );
-        g.timed(week, 6, (16, 0), (17, 0), "Familie anrufen", "", FAMILIE);
-        g.all_day(week, 0, 3, "Projektwoche", ARBEIT);
-        g.all_day(week, 1, 1, "Müllabfuhr", PRIVAT);
-        g.all_day(week, 4, 1, "Geburtstag Oma", FAMILIE);
+        g.timed(week, 6, (16, 0), (17, 0), tr!("Call family"), "", FAMILIE);
+        g.all_day(week, 0, 3, tr!("Project week"), ARBEIT);
+        g.all_day(week, 1, 1, tr!("Trash collection"), PRIVAT);
+        g.all_day(week, 4, 1, tr!("Grandma's birthday"), FAMILIE);
     }
 
     let next_id = g.next_id;

@@ -96,7 +96,7 @@ export component EventPreview inherits Rectangle {
                         border-radius: 12px;
                         background: close-ta.has-hover ? Theme.hover-bg : transparent;
                         accessible-role: button;
-                        accessible-label: "Schließen";
+                        accessible-label: @tr("Close");
 
                         Text {
                             text: "×";
@@ -180,7 +180,7 @@ export component EventPreview inherits Rectangle {
                 alignment: end;
 
                 if root.details.can-delete: Button {
-                    text: "Löschen";
+                    text: @tr("Delete");
                     danger: true;
                     clicked => {
                         root.delete();
@@ -188,7 +188,7 @@ export component EventPreview inherits Rectangle {
                 }
 
                 if root.details.can-edit: Button {
-                    text: "Bearbeiten";
+                    text: @tr("Edit");
                     clicked => {
                         root.edit();
                     }

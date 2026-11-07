@@ -26,7 +26,7 @@ pub struct EventFields {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EditError {
-    #[error("Termin {0} nicht gefunden")]
+    #[error("{}", hora_i18n::tr!("Item {} not found", .0))]
     NotFound(String),
 }
 

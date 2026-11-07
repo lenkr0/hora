@@ -3,7 +3,7 @@
 // Kalender, übergeordnete Aufgabe, Beschreibung.
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Fmt, Locale } from "theme.slint";
 import { Button, TextField } from "controls.slint";
 import { Select, SelectOption, TextArea } from "inputs.slint";
 import { Modal } from "dialogs.slint";
@@ -57,7 +57,7 @@ export component TaskDialog inherits Modal {
             root.calendar, root.parent, root.description);
     }
 
-    title: draft.is-new ? "Neue Aufgabe" : "Aufgabe bearbeiten";
+    title: draft.is-new ? @tr("New task") : @tr("Edit task");
     card-width: 560px;
     close => {
         root.cancel();
@@ -70,8 +70,8 @@ export component TaskDialog inherits Modal {
         spacing: 14px;
 
         title-field := TextField {
-            label: "Titel";
-            placeholder: "Was muss erledigt werden?";
+            label: @tr("Title");
+            placeholder: @tr("What needs to be done?");
             text <=> root.title-text;
             accepted => {
                 root.submit();
@@ -82,17 +82,17 @@ export component TaskDialog inherits Modal {
             spacing: 10px;
 
             Select {
-                label: "Fällig";
+                label: @tr("Due");
                 dots: false;
                 enabled: !draft.times-locked;
-                options: [{ id: 0, name: "Kein Fälligkeitsdatum" }, { id: 1, name: "Nur Datum" }, { id: 2, name: "Datum und Uhrzeit" }];
+                options: [{ id: 0, name: @tr("No due date") }, { id: 1, name: @tr("Date only") }, { id: 2, name: @tr("Date and time") }];
                 selected <=> root.due-mode;
                 horizontal-stretch: 3;
             }
 
             if root.due-mode > 0: TextField {
-                label: "Datum";
-                placeholder: "TT.MM.JJJJ";
+                label: @tr("Date");
+                placeholder: Locale.date-placeholder;
                 enabled: !draft.times-locked;
                 text <=> root.due-date;
                 min-width: 112px;
@@ -103,8 +103,8 @@ export component TaskDialog inherits Modal {
             }
 
             if root.due-mode == 2: TextField {
-                label: "Uhrzeit";
-                placeholder: "18:00";
+                label: @tr("Time");
+                placeholder: Fmt.hhmm(1080);
                 enabled: !draft.times-locked;
                 text <=> root.due-time;
                 min-width: 76px;
@@ -115,8 +115,8 @@ export component TaskDialog inherits Modal {
             }
 
             if root.due-mode > 0: TextField {
-                label: "Beginn (optional)";
-                placeholder: "TT.MM.JJJJ";
+                label: @tr("Start (optional)");
+                placeholder: Locale.date-placeholder;
                 enabled: !draft.times-locked;
                 text <=> root.start-date;
                 horizontal-stretch: 3;
@@ -134,15 +134,15 @@ export component TaskDialog inherits Modal {
             spacing: 10px;
 
             Select {
-                label: "Priorität";
+                label: @tr("Priority");
                 dots: false;
-                options: [{ id: 0, name: "Keine" }, { id: 1, name: "Hoch" }, { id: 2, name: "Mittel" }, { id: 3, name: "Niedrig" }];
+                options: [{ id: 0, name: @tr("Priority" => "None") }, { id: 1, name: @tr("Priority" => "High") }, { id: 2, name: @tr("Priority" => "Medium") }, { id: 3, name: @tr("Priority" => "Low") }];
                 selected <=> root.priority;
                 horizontal-stretch: 1;
             }
 
             Select {
-                label: "Kalender";
+                label: @tr("Calendar");
                 options: root.calendar-options;
                 selected <=> root.calendar;
                 enabled: !draft.calendar-locked;
@@ -151,14 +151,14 @@ export component TaskDialog inherits Modal {
         }
 
         Select {
-            label: "Übergeordnete Aufgabe";
+            label: @tr("Parent task");
             dots: false;
             options: root.parent-options;
             selected <=> root.parent;
         }
 
         TextArea {
-            label: "Beschreibung";
+            label: @tr("Description");
             text <=> root.description;
         }
 
@@ -189,7 +189,7 @@ export component TaskDialog inherits Modal {
             spacing: 8px;
 
             if draft.can-delete: Button {
-                text: "Löschen";
+                text: @tr("Delete");
                 danger: true;
                 clicked => {
                     root.delete();
@@ -197,7 +197,7 @@ export component TaskDialog inherits Modal {
             }
 
             if draft.can-add-subtask: Button {
-                text: "+ Teilaufgabe";
+                text: @tr("+ Subtask");
                 clicked => {
                     root.add-subtask();
                 }
@@ -208,14 +208,14 @@ export component TaskDialog inherits Modal {
             }
 
             Button {
-                text: "Abbrechen";
+                text: @tr("Cancel");
                 clicked => {
                     root.cancel();
                 }
             }
 
             Button {
-                text: "Speichern";
+                text: @tr("Save");
                 primary: true;
                 clicked => {
                     root.submit();

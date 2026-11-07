@@ -173,7 +173,7 @@ export component CommandPalette inherits Rectangle {
                 text <=> root.text;
                 selection-background-color: Theme.accent.with-alpha(0.3);
                 selection-foreground-color: Theme.ink;
-                accessible-label: "Suchen oder Befehl eingeben";
+                accessible-label: @tr("Search or enter a command");
                 edited => {
                     root.query(self.text);
                 }
@@ -182,7 +182,7 @@ export component CommandPalette inherits Rectangle {
             if input.text == "": Text {
                 x: 48px;
                 height: parent.height;
-                text: "Suchen, Befehl oder z. B. „Zahnarzt morgen 15 Uhr“";
+                text: @tr("Search, command or e.g. “Dentist tomorrow 3pm”");
                 font-size: 16px;
                 color: Theme.ink-3;
                 vertical-alignment: center;
@@ -307,7 +307,7 @@ export component CommandPalette inherits Rectangle {
             if root.items.length == 0: Text {
                 width: list.width;
                 height: 64px;
-                text: "Keine Treffer";
+                text: @tr("No results");
                 font-size: 13.5px;
                 color: Theme.ink-3;
                 horizontal-alignment: center;
@@ -350,7 +350,7 @@ export component CommandPalette inherits Rectangle {
             }
 
             Text {
-                text: "Navigieren";
+                text: @tr("Navigate");
                 font-size: 12px;
                 color: Theme.ink-3;
                 vertical-alignment: center;
@@ -364,12 +364,12 @@ export component CommandPalette inherits Rectangle {
                 alignment: center;
 
                 Keycap {
-                    text: "Eingabe";
+                    text: @tr("Key" => "Enter");
                 }
             }
 
             Text {
-                text: "Auswählen";
+                text: @tr("Select");
                 font-size: 12px;
                 color: Theme.ink-3;
                 vertical-alignment: center;
@@ -388,7 +388,7 @@ export component CommandPalette inherits Rectangle {
             }
 
             Text {
-                text: "Schließen";
+                text: @tr("Close");
                 font-size: 12px;
                 color: Theme.ink-3;
                 vertical-alignment: center;

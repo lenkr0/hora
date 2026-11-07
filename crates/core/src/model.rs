@@ -40,7 +40,7 @@ pub enum ModelError {
     Parse(#[from] ParseError),
     #[error("{0}")]
     Time(#[from] TimeError),
-    #[error("{component} ohne {property}")]
+    #[error("{}", hora_i18n::tr!("{} without {}", component, property))]
     Missing {
         component: &'static str,
         property: &'static str,

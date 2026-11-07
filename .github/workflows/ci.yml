@@ -45,6 +45,9 @@ jobs:
       - name: Lizenzliste der Crates aktuell
         run: python tools/third-party-licenses.py --check
 
+      - name: Übersetzungen vollständig
+        run: python tools/i18n.py check
+
       # rust-version in Cargo.toml (Slint 1.18 braucht 1.92)
       - name: Mindestversion von Rust
         run: |
@@ -59,6 +62,8 @@ jobs:
           $env:HORA_DATA_DIR = Join-Path $env:RUNNER_TEMP 'hora-selftest'
           $env:HORA_CREDENTIALS = 'memory'
           $env:HORA_THEME = 'light'
+          # Der Selbsttest prüft die deutschen Beispieldaten; Englisch prüfen die Unit-Tests
+          $env:HORA_LANGUAGE = 'de'
           target\debug\hora.exe --size 1440x900 --selftest
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
@@ -79,7 +84,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Unit-Tests der plattformunabhängigen Crates
-        run: cargo test -p hora-core -p hora-caldav -p hora-storage --locked
+        run: cargo test -p hora-i18n -p hora-core -p hora-caldav -p hora-storage --locked
 
       - name: Integrationstests gegen Radicale und Baïkal
         run: cargo test -p hora-caldav --test servers --locked -- --ignored --test-threads=1

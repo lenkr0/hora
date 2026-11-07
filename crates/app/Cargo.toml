@@ -20,6 +20,7 @@ skia = ["slint/renderer-skia"]
 devtools = ["dep:png"]
 
 [dependencies]
+hora-i18n.workspace = true
 hora-core.workspace = true
 hora-caldav.workspace = true
 hora-storage.workspace = true

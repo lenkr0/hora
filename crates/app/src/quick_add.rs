@@ -12,6 +12,7 @@ use crate::editing::{self, DialogInput, ReminderInput};
 use crate::forms::{DraftTimes, describe, format_date, format_time, short_day};
 use crate::repeat::RuleFields;
 use crate::{AppWindow, QuickPreview, State, calendar_color, reminders, rgb, tasks};
+use hora_i18n::{dates, tr};
 
 /// Ergebnis der Auslegung
 pub struct Plan {
@@ -49,7 +50,6 @@ pub fn plan(state: &State, text: &str, force_task: bool) -> Plan {
     parsed.task |= force_task;
     let when = parsed.when(now);
     let kind = if parsed.task { Kind::Todo } else { Kind::Event };
-    let what = if parsed.task { "Aufgaben" } else { "Termine" };
     let mut problem = String::new();
     let calendar = match &parsed.calendar {
         Some(name) => {
@@ -61,23 +61,25 @@ pub fn plan(state: &State, text: &str, force_task: bool) -> Plan {
                 .find(|c| c.name.to_lowercase().starts_with(&wanted))
                 .map(|c| c.id);
             if found.is_none() {
-                problem = format!("Kein Kalender „{name}“ für {what}.");
+                problem = if parsed.task {
+                    tr!("No calendar “{}” for tasks.", name)
+                } else {
+                    tr!("No calendar “{}” for events.", name)
+                };
             }
             found
         }
         None if parsed.task => {
             let found = tasks::default_calendar(state);
             if found.is_none() {
-                problem = "Kein Kalender für Aufgaben verfügbar.".into();
+                problem = tr!("No calendar for tasks available.").into();
             }
             found
         }
         None => event_calendar(state),
     };
     if calendar == Some(-1) && parsed.rule.is_some() {
-        problem =
-            "Beispieltermine können sich nicht wiederholen; bitte zuerst ein Konto verbinden."
-                .into();
+        problem = tr!("Sample events can't repeat; please connect an account first.").into();
     }
     Plan {
         parsed,
@@ -121,7 +123,7 @@ pub fn preview(state: &State, text: &str) -> QuickPreview {
         ),
         When::Due { day, time: Some(t) } => format!("{}, {}", short_day(*day), format_time(*t)),
         When::Due { day, time: None } => short_day(*day),
-        When::Undated => "ohne Fälligkeitsdatum".into(),
+        When::Undated => tr!("no due date").into(),
     };
     let repeat = match (&p.rule, start_value(&plan.when, home)) {
         (Some(_), Some(start)) => {
@@ -135,7 +137,7 @@ pub fn preview(state: &State, text: &str) -> QuickPreview {
     };
     let (calendar, color) = match plan.calendar {
         Some(-1) => (
-            "Beispieltermine (nur auf diesem Gerät)".to_string(),
+            tr!("Sample events (only on this device)").to_string(),
             rgb(crate::DEMO_COLOR),
         ),
         Some(id) => state
@@ -160,7 +162,7 @@ pub fn preview(state: &State, text: &str) -> QuickPreview {
         (false, None) if !all_day && plan.calendar != Some(-1) => state
             .settings
             .default_reminder
-            .map(|m| format!("{} (Standard)", reminders::label(m, false)))
+            .map(|m| tr!("{} (default)", reminders::label(m, false)))
             .unwrap_or_default(),
         _ => String::new(),
     };
@@ -171,7 +173,8 @@ pub fn preview(state: &State, text: &str) -> QuickPreview {
     };
     QuickPreview {
         valid: !p.title.is_empty() && plan.calendar.is_some() && plan.problem.is_empty(),
-        kind: if p.task { "Aufgabe" } else { "Termin" }.into(),
+        kind: if p.task { tr!("Task") } else { tr!("Event") }.into(),
+        task: p.task,
         title: title.into(),
         when: when.into(),
         location: p.location.clone().unwrap_or_default().into(),
@@ -195,7 +198,7 @@ pub fn submit(
     let plan = plan(state, text, force_task);
     let p = &plan.parsed;
     if p.title.is_empty() && !open {
-        return Err("Bitte einen Titel eingeben.".into());
+        return Err(tr!("Please enter a title.").into());
     }
     if !plan.problem.is_empty() && !open {
         return Err(plan.problem.clone());
@@ -204,8 +207,8 @@ pub fn submit(
     if p.task {
         let (due_mode, due_date, due_time) = match plan.when {
             When::Due { day, time: Some(t) } => (2, format_date(day), format_time(t)),
-            When::Due { day, time: None } => (1, format_date(day), "18:00".to_string()),
-            _ => (0, String::new(), "18:00".to_string()),
+            When::Due { day, time: None } => (1, format_date(day), dates::clock(18, 0)),
+            _ => (0, String::new(), dates::clock(18, 0)),
         };
         let input = tasks::TaskInput {
             title: p.title.clone(),

@@ -47,7 +47,7 @@ component DayHeader inherits Rectangle {
         HorizontalLayout {
             spacing: 10px;
             accessible-role: button;
-            accessible-label: root.entry.label + ", " + root.entry.date-text + (root.entry.today ? ", heute" : "") + " – Tag öffnen";
+            accessible-label: root.entry.today ? @tr("{}, {}, today – open day", root.entry.label, root.entry.date-text) : @tr("{}, {} – open day", root.entry.label, root.entry.date-text);
 
             Text {
                 text: root.entry.label;
@@ -83,7 +83,7 @@ component DayHeader inherits Rectangle {
                 background: Theme.accent-strong;
 
                 today-text := Text {
-                    text: "Heute";
+                    text: @tr("Today");
                     font-size: 11px;
                     font-weight: 600;
                     color: Theme.accent-contrast;
@@ -94,7 +94,7 @@ component DayHeader inherits Rectangle {
         }
 
         if root.entry.empty: Text {
-            text: "Keine Termine";
+            text: @tr("No events");
             font-size: 12.5px;
             color: Theme.ink-3;
             vertical-alignment: center;
@@ -110,10 +110,10 @@ component DayHeader inherits Rectangle {
         border-radius: 6px;
         background: add-ta.has-hover ? Theme.hover-bg : transparent;
         accessible-role: button;
-        accessible-label: "Termin am " + root.entry.date-text + " hinzufügen";
+        accessible-label: @tr("Add event on {}", root.entry.date-text);
 
         add-text := Text {
-            text: "+ Hinzufügen";
+            text: @tr("+ Add");
             font-size: 12.5px;
             font-weight: 500;
             color: add-ta.has-hover ? Theme.accent-strong : Theme.ink-3;
@@ -146,7 +146,7 @@ component AgendaItem inherits Rectangle {
     drop-shadow-color: Theme.shadow-event;
     forward-focus: fs;
     accessible-role: button;
-    accessible-label: (root.entry.task ? "Aufgabe " : "") + root.entry.time + " " + root.entry.title + (root.entry.sub != "" ? ", " + root.entry.sub : "");
+    accessible-label: (root.entry.task ? @tr("Task") + " " : "") + root.entry.time + " " + root.entry.title + (root.entry.sub != "" ? ", " + root.entry.sub : "");
     animate background { duration: Theme.dur-fast; }
 
     function show() {

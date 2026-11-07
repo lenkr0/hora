@@ -1,113 +1,69 @@
-//! Datum und Uhrzeit auf Deutsch: Eingaben im Termin-Dialog lesen und
-//! Zeiträume für Vorschau und Titel beschreiben.
+//! Datum und Uhrzeit: Eingaben im Termin-Dialog lesen und Zeiträume für
+//! Vorschau und Titel beschreiben. Namen und Satzbau je Sprache, Zahlenformate
+//! nach Windows-Region (siehe hora_i18n::dates).
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use hora_core::Tz;
 use hora_core::time::{DateTimeValue, local_to_utc};
+use hora_i18n::{dates, tr};
 
-pub const WEEKDAYS: [&str; 7] = [
-    "Montag",
-    "Dienstag",
-    "Mittwoch",
-    "Donnerstag",
-    "Freitag",
-    "Samstag",
-    "Sonntag",
-];
-pub const WEEKDAYS_SHORT: [&str; 7] = ["Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa.", "So."];
-pub const MONTHS: [&str; 12] = [
-    "Januar",
-    "Februar",
-    "März",
-    "April",
-    "Mai",
-    "Juni",
-    "Juli",
-    "August",
-    "September",
-    "Oktober",
-    "November",
-    "Dezember",
-];
-pub const MONTHS_SHORT: [&str; 12] = [
-    "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez.",
+/// Wörter für heute, morgen, übermorgen in allen Sprachen von Hora
+const RELATIVE_DAYS: [(&str, i64); 22] = [
+    ("today", 0),
+    ("tomorrow", 1),
+    ("day after tomorrow", 2),
+    ("heute", 0),
+    ("morgen", 1),
+    ("übermorgen", 2),
+    ("uebermorgen", 2),
+    ("aujourd'hui", 0),
+    ("demain", 1),
+    ("après-demain", 2),
+    ("hoy", 0),
+    ("mañana", 1),
+    ("pasado mañana", 2),
+    ("oggi", 0),
+    ("domani", 1),
+    ("dopodomani", 2),
+    ("vandaag", 0),
+    ("overmorgen", 2),
+    ("dziś", 0),
+    ("dzisiaj", 0),
+    ("jutro", 1),
+    ("pojutrze", 2),
 ];
 
-/// "4.11.2026", "04.11.26", "4.11." / "4.11" (Jahr von `today`), "2026-11-04",
-/// "heute", "morgen", "übermorgen".
+/// Datum nach Windows-Region ("4.11.2026", "11/4/2026"), auch ohne Jahr oder
+/// mit zweistelligem Jahr, ISO ("2026-11-04") und Wörter wie "today", "morgen".
 pub fn parse_date(input: &str, today: NaiveDate) -> Option<NaiveDate> {
     let s = input.trim().to_lowercase();
-    match s.as_str() {
-        "heute" => return Some(today),
-        "morgen" => return today.succ_opt(),
-        "übermorgen" | "uebermorgen" => return today.checked_add_signed(Duration::days(2)),
-        _ => {}
+    if let Some((_, days)) = RELATIVE_DAYS.iter().find(|(word, _)| *word == s) {
+        return today.checked_add_signed(Duration::days(*days));
     }
-    if let Ok(d) = NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
-        return Some(d);
-    }
-    let parts: Vec<&str> = s.trim_end_matches('.').split('.').map(str::trim).collect();
-    let day: u32 = parts.first()?.parse().ok()?;
-    let month: u32 = parts.get(1)?.parse().ok()?;
-    let year: i32 = match parts.get(2) {
-        None | Some(&"") => today.year(),
-        Some(y) if y.len() <= 2 => 2000 + y.parse::<i32>().ok()?,
-        Some(y) => y.parse().ok()?,
-    };
-    if parts.len() > 3 {
-        return None;
-    }
-    NaiveDate::from_ymd_opt(year, month, day)
+    dates::parse_numeric(&s, today.year())
 }
 
-/// "9", "09", "930", "0930", "9:30", "9.30", "21:05", "9 Uhr", "9:30 Uhr".
+/// "9", "930", "9:30", "9.30", "21:05", "9 Uhr", "9pm", "9:30 am", "9h30"
 pub fn parse_time(input: &str) -> Option<NaiveTime> {
-    let s = input.trim().to_lowercase();
-    let s = s.strip_suffix("uhr").unwrap_or(&s).trim();
-    let (hour, minute) = if let Some((h, m)) = s.split_once([':', '.']) {
-        (h.trim().parse::<u32>().ok()?, m.trim().parse::<u32>().ok()?)
-    } else if s.chars().all(|c| c.is_ascii_digit()) && !s.is_empty() {
-        match s.len() {
-            1 | 2 => (s.parse().ok()?, 0),
-            3 | 4 => {
-                let (h, m) = s.split_at(s.len() - 2);
-                (h.parse().ok()?, m.parse().ok()?)
-            }
-            _ => return None,
-        }
-    } else {
-        return None;
-    };
-    NaiveTime::from_hms_opt(hour, minute, 0)
+    dates::parse_time(input)
 }
 
 pub fn format_date(d: NaiveDate) -> String {
-    d.format("%d.%m.%Y").to_string()
+    dates::numeric(d)
 }
 
 pub fn format_time(t: NaiveTime) -> String {
-    format!("{:02}:{:02}", t.hour(), t.minute())
+    dates::time(t)
 }
 
-/// "Mi., 4. Nov."
+/// "Wed, 4 Nov", "Mi., 4. Nov."
 pub fn short_day(d: NaiveDate) -> String {
-    format!(
-        "{} {}. {}",
-        WEEKDAYS_SHORT[d.weekday().num_days_from_monday() as usize],
-        d.day(),
-        MONTHS_SHORT[d.month0() as usize]
-    )
+    dates::short_weekday_date(d)
 }
 
-/// "Mittwoch, 4. November 2026"
+/// "Wednesday, 4 November 2026", "Mittwoch, 4. November 2026"
 pub fn long_day(d: NaiveDate) -> String {
-    format!(
-        "{}, {}. {} {}",
-        WEEKDAYS[d.weekday().num_days_from_monday() as usize],
-        d.day(),
-        MONTHS[d.month0() as usize],
-        d.year()
-    )
+    dates::full_date(d)
 }
 
 /// Zeitraum für die Vorschau. `end` ist bei ganztägigen Terminen der Tag nach
@@ -116,10 +72,10 @@ pub fn describe(start: NaiveDateTime, end: NaiveDateTime, all_day: bool) -> Stri
     if all_day {
         let last = (end.date() - Duration::days(1)).max(start.date());
         return if last == start.date() {
-            format!("{} · ganztägig", short_day(start.date()))
+            tr!("{} · all day", short_day(start.date()))
         } else {
-            format!(
-                "{} – {} · ganztägig",
+            tr!(
+                "{} – {} · all day",
                 short_day(start.date()),
                 short_day(last)
             )
@@ -130,7 +86,7 @@ pub fn describe(start: NaiveDateTime, end: NaiveDateTime, all_day: bool) -> Stri
             && end.date() == start.date().succ_opt().unwrap_or(end.date()))
     {
         let end_text = if end.time() == NaiveTime::MIN && end.date() != start.date() {
-            "24:00".to_string()
+            dates::clock(24, 0)
         } else {
             format_time(end.time())
         };
@@ -149,6 +105,10 @@ pub fn describe(start: NaiveDateTime, end: NaiveDateTime, all_day: bool) -> Stri
             format_time(end.time())
         )
     }
+}
+
+fn at_hour(hour: u32) -> NaiveTime {
+    NaiveTime::from_hms_opt(hour, 0, 0).unwrap_or_default()
 }
 
 /// Felder des Termin-Dialogs als Text.
@@ -170,9 +130,9 @@ impl DraftTimes {
             return DraftTimes {
                 all_day: true,
                 start_date: format_date(*first),
-                start_time: "09:00".into(),
+                start_time: format_time(at_hour(9)),
                 end_date: format_date(last),
-                end_time: "10:00".into(),
+                end_time: format_time(at_hour(10)),
             };
         }
         let s = start.to_utc(home).with_timezone(&home).naive_local();
@@ -195,31 +155,32 @@ impl DraftTimes {
         home: Tz,
         original: Option<&DateTimeValue>,
     ) -> Result<(DateTimeValue, DateTimeValue), String> {
+        let example = format_date(today);
         let start_date = parse_date(&self.start_date, today)
-            .ok_or("Beginn: Datum nicht erkannt (z. B. 04.11.2026)")?;
+            .ok_or_else(|| tr!("Start: date not recognized (e.g. {})", example))?;
         let end_date = if self.end_date.trim().is_empty() {
             start_date
         } else {
             parse_date(&self.end_date, today)
-                .ok_or("Ende: Datum nicht erkannt (z. B. 04.11.2026)")?
+                .ok_or_else(|| tr!("End: date not recognized (e.g. {})", example))?
         };
         if self.all_day {
             if end_date < start_date {
-                return Err("Das Ende liegt vor dem Beginn.".into());
+                return Err(tr!("The end is before the start.").into());
             }
             return Ok((
                 DateTimeValue::Date(start_date),
                 DateTimeValue::Date(end_date + Duration::days(1)),
             ));
         }
-        let start_time =
-            parse_time(&self.start_time).ok_or("Beginn: Uhrzeit nicht erkannt (z. B. 9:30)")?;
-        let end_time =
-            parse_time(&self.end_time).ok_or("Ende: Uhrzeit nicht erkannt (z. B. 10:30)")?;
+        let start_time = parse_time(&self.start_time)
+            .ok_or_else(|| tr!("Start: time not recognized (e.g. {})", dates::clock(9, 30)))?;
+        let end_time = parse_time(&self.end_time)
+            .ok_or_else(|| tr!("End: time not recognized (e.g. {})", dates::clock(10, 30)))?;
         let start = start_date.and_time(start_time);
         let end = end_date.and_time(end_time);
         if end <= start {
-            return Err("Das Ende muss nach dem Beginn liegen.".into());
+            return Err(tr!("The end must be after the start.").into());
         }
         let keep = original.filter(|v| !v.is_date());
         let value = |naive: NaiveDateTime| match keep {
@@ -234,6 +195,7 @@ impl DraftTimes {
 mod tests {
     use super::*;
     use chrono_tz::Europe::Berlin;
+    use hora_i18n::{Lang, with_language};
 
     fn date(y: i32, m: u32, d: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, d).unwrap()
@@ -256,6 +218,8 @@ mod tests {
         assert_eq!(parse_date(" 2026-11-04 ", today()), Some(date(2026, 11, 4)));
         assert_eq!(parse_date("morgen", today()), Some(date(2026, 11, 5)));
         assert_eq!(parse_date("Übermorgen", today()), Some(date(2026, 11, 6)));
+        assert_eq!(parse_date("tomorrow", today()), Some(date(2026, 11, 5)));
+        assert_eq!(parse_date("demain", today()), Some(date(2026, 11, 5)));
         assert_eq!(parse_date("31.2.2026", today()), None);
         assert_eq!(parse_date("Dienstag", today()), None);
         assert_eq!(parse_date("1.2.3.4", today()), None);
@@ -272,6 +236,7 @@ mod tests {
         assert_eq!(parse_time("21:05"), Some(time(21, 5)));
         assert_eq!(parse_time("9 Uhr"), Some(time(9, 0)));
         assert_eq!(parse_time("9:30 uhr"), Some(time(9, 30)));
+        assert_eq!(parse_time("9:30 pm"), Some(time(21, 30)));
         assert_eq!(parse_time("25:00"), None);
         assert_eq!(parse_time("9:61"), None);
         assert_eq!(parse_time("abends"), None);
@@ -283,25 +248,37 @@ mod tests {
         let at = |d: NaiveDate, h, m| d.and_time(time(h, m));
         assert_eq!(
             describe(at(today(), 9, 0), at(today(), 10, 30), false),
-            "Mi. 4. Nov. · 09:00–10:30"
+            "Wed, 4 Nov · 09:00–10:30"
         );
         assert_eq!(
             describe(at(today(), 23, 0), at(date(2026, 11, 5), 0, 0), false),
-            "Mi. 4. Nov. · 23:00–24:00"
+            "Wed, 4 Nov · 23:00–24:00"
         );
         assert_eq!(
             describe(at(today(), 22, 0), at(date(2026, 11, 5), 6, 0), false),
-            "Mi. 4. Nov., 22:00 – Do. 5. Nov., 06:00"
+            "Wed, 4 Nov, 22:00 – Thu, 5 Nov, 06:00"
         );
         assert_eq!(
             describe(at(today(), 0, 0), at(date(2026, 11, 5), 0, 0), true),
-            "Mi. 4. Nov. · ganztägig"
+            "Wed, 4 Nov · all day"
         );
         assert_eq!(
             describe(at(today(), 0, 0), at(date(2026, 11, 7), 0, 0), true),
-            "Mi. 4. Nov. – Fr. 6. Nov. · ganztägig"
+            "Wed, 4 Nov – Fri, 6 Nov · all day"
         );
-        assert_eq!(long_day(today()), "Mittwoch, 4. November 2026");
+        assert_eq!(long_day(today()), "Wednesday, 4 November 2026");
+    }
+
+    #[test]
+    fn descriptions_in_german() {
+        with_language(Lang::De, || {
+            let at = |d: NaiveDate, h, m| d.and_time(time(h, m));
+            assert_eq!(
+                describe(at(today(), 0, 0), at(date(2026, 11, 7), 0, 0), true),
+                "Mi., 4. Nov. – Fr., 6. Nov. · ganztägig"
+            );
+            assert_eq!(long_day(today()), "Mittwoch, 4. November 2026");
+        });
     }
 
     #[test]
@@ -371,7 +348,7 @@ mod tests {
         };
         assert_eq!(
             base.to_values(today(), Berlin, None),
-            Err("Das Ende muss nach dem Beginn liegen.".into())
+            Err("The end must be after the start.".into())
         );
         let bad_time = DraftTimes {
             start_time: "abends".into(),
@@ -381,7 +358,7 @@ mod tests {
             bad_time
                 .to_values(today(), Berlin, None)
                 .unwrap_err()
-                .starts_with("Beginn: Uhrzeit")
+                .starts_with("Start: time")
         );
         let bad_date = DraftTimes {
             end_date: "32.1.".into(),
@@ -391,7 +368,7 @@ mod tests {
             bad_date
                 .to_values(today(), Berlin, None)
                 .unwrap_err()
-                .starts_with("Ende: Datum")
+                .starts_with("End: date")
         );
     }
 }

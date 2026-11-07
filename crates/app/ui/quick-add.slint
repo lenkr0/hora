@@ -10,8 +10,9 @@ import { Modal } from "dialogs.slint";
 export struct QuickPreview {
     // Es gibt etwas anzulegen
     valid: bool,
-    // "Termin" oder "Aufgabe"
+    // "Event" oder "Task" (schon übersetzt)
     kind: string,
+    task: bool,
     title: string,
     when: string,
     location: string,
@@ -60,7 +61,7 @@ export component QuickAddDialog inherits Modal {
 
     property <QuickPreview> result: root.preview(input.text);
 
-    title: "Schnell eintragen";
+    title: @tr("Quick add");
     card-width: 600px;
     close => {
         root.cancel();
@@ -102,7 +103,7 @@ export component QuickAddDialog inherits Modal {
                     text <=> root.text;
                     selection-background-color: Theme.accent.with-alpha(0.3);
                     selection-foreground-color: Theme.ink;
-                    accessible-label: "Schnelleingabe";
+                    accessible-label: @tr("Quick add");
                     accepted => {
                         root.submit(self.text, false);
                     }
@@ -111,7 +112,7 @@ export component QuickAddDialog inherits Modal {
                 if input.text == "": Text {
                     x: 16px;
                     height: parent.height;
-                    text: "z. B. Zahnarzt morgen 15 Uhr bei Dr. Weber";
+                    text: @tr("e.g. Dentist tomorrow 3pm at Dr. Weber");
                     font-size: 16px;
                     color: Theme.ink-3;
                     vertical-alignment: center;
@@ -131,7 +132,7 @@ export component QuickAddDialog inherits Modal {
                 spacing: 6px;
 
                 if input.text == "": Text {
-                    text: "Datum, Uhrzeit, Ort und Wiederholung werden erkannt, auf Deutsch und Englisch: „Mathe jeden Montag 8 Uhr bis 9:30 Raum 204“, „todo Milch kaufen bis Freitag“, „Lunch tomorrow 1pm #Arbeit“.";
+                    text: @tr("Date, time, location and repetition are recognized, in English and German: “Math every Monday 8am to 9:30 room 204”, “todo buy milk by Friday”, “Lunch tomorrow 1pm #work”.");
                     font-size: 13px;
                     color: Theme.ink-3;
                     wrap: word-wrap;
@@ -146,10 +147,10 @@ export component QuickAddDialog inherits Modal {
                         Rectangle {
                             width: 10px;
                             height: 10px;
-                            border-radius: root.result.kind == "Aufgabe" ? 5px : 3px;
-                            border-width: root.result.kind == "Aufgabe" ? 1.5px : 0px;
+                            border-radius: root.result.task ? 5px : 3px;
+                            border-width: root.result.task ? 1.5px : 0px;
                             border-color: root.result.calendar-color;
-                            background: root.result.kind == "Aufgabe" ? transparent : root.result.calendar-color;
+                            background: root.result.task ? transparent : root.result.calendar-color;
                         }
                     }
 
@@ -175,27 +176,27 @@ export component QuickAddDialog inherits Modal {
                     spacing: 2px;
 
                     PreviewRow {
-                        label: root.result.kind == "Aufgabe" ? "Fällig" : "Wann";
+                        label: root.result.task ? @tr("Due") : @tr("When");
                         value: root.result.when;
                     }
 
                     PreviewRow {
-                        label: "Ort";
+                        label: @tr("Location");
                         value: root.result.location;
                     }
 
                     PreviewRow {
-                        label: "Wiederholung";
+                        label: @tr("Repeats");
                         value: root.result.repeat;
                     }
 
                     PreviewRow {
-                        label: "Erinnerung";
+                        label: @tr("Reminder");
                         value: root.result.reminder;
                     }
 
                     PreviewRow {
-                        label: "Kalender";
+                        label: @tr("Calendar");
                         value: root.result.calendar;
                     }
                 }
@@ -213,7 +214,7 @@ export component QuickAddDialog inherits Modal {
             spacing: 8px;
 
             Text {
-                text: "Eingabe legt an · Umschalt+Eingabe öffnet den Dialog";
+                text: @tr("Enter creates · Shift+Enter opens the dialog");
                 font-size: 12px;
                 color: Theme.ink-3;
                 vertical-alignment: center;
@@ -221,7 +222,7 @@ export component QuickAddDialog inherits Modal {
             }
 
             Button {
-                text: "Im Dialog öffnen";
+                text: @tr("Open in dialog");
                 enabled: input.text != "";
                 clicked => {
                     root.submit(input.text, true);
@@ -229,7 +230,7 @@ export component QuickAddDialog inherits Modal {
             }
 
             Button {
-                text: "Anlegen";
+                text: @tr("Create");
                 primary: true;
                 enabled: root.result.valid;
                 clicked => {

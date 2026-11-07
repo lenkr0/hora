@@ -126,6 +126,8 @@ try {
     $env:HORA_DATA_DIR = "$work\data"
     $env:HORA_CREDENTIALS = 'memory'
     $env:HORA_THEME = $Theme
+    # Die Prüfungen erwarten deutsche Texte und Beispieldaten
+    $env:HORA_LANGUAGE = 'de'
     $editArgs = @()
     if ($EditTest) { $editArgs += '--edit-test', '--reminder-check' }
     $firstRun = & $Exe --size 1440x900 --connect "$base/" $user $password @editArgs --snapshot $Snapshot
@@ -252,6 +254,6 @@ try {
 }
 finally {
     docker rm -f $name 2>$null | Out-Null
-    Remove-Item Env:HORA_DATA_DIR, Env:HORA_CREDENTIALS, Env:HORA_THEME -ErrorAction SilentlyContinue
+    Remove-Item Env:HORA_DATA_DIR, Env:HORA_CREDENTIALS, Env:HORA_THEME, Env:HORA_LANGUAGE -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
 }

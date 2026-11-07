@@ -12,6 +12,7 @@ use hora_core::quick;
 use crate::forms::{describe, short_day};
 use crate::items::Source;
 use crate::{State, View, calendar_color, journal, tasks};
+use hora_i18n::tr;
 
 /// Was ein Eintrag der Palette tut
 #[derive(Debug, Clone, PartialEq)]
@@ -80,148 +81,148 @@ fn commands() -> Vec<Command> {
     };
     vec![
         c(
-            "NAVIGATION",
-            "Zu heute wechseln",
+            tr!("NAVIGATION"),
+            tr!("Go to today"),
             "heute today",
             "T",
             Action::Today,
         ),
         c(
-            "NAVIGATION",
-            "Zu morgen wechseln",
+            tr!("NAVIGATION"),
+            tr!("Go to tomorrow"),
             "morgen tomorrow",
             "",
             Action::Tomorrow,
         ),
         c(
-            "NAVIGATION",
-            "Tagesansicht",
+            tr!("NAVIGATION"),
+            tr!("Day view"),
             "tag day ansicht",
             "D",
             Action::View(View::Day),
         ),
         c(
-            "NAVIGATION",
-            "3-Tage-Ansicht",
+            tr!("NAVIGATION"),
+            tr!("3-day view"),
             "drei tage three days ansicht",
             "X",
             Action::View(View::ThreeDays),
         ),
         c(
-            "NAVIGATION",
-            "Wochenansicht",
+            tr!("NAVIGATION"),
+            tr!("Week view"),
             "woche week ansicht",
             "W",
             Action::View(View::Week),
         ),
         c(
-            "NAVIGATION",
-            "Monatsansicht",
+            tr!("NAVIGATION"),
+            tr!("Month view"),
             "monat month ansicht",
             "M",
             Action::View(View::Month),
         ),
         c(
-            "NAVIGATION",
-            "Jahresansicht",
+            tr!("NAVIGATION"),
+            tr!("Year view"),
             "jahr year ansicht",
             "J",
             Action::View(View::Year),
         ),
         c(
-            "NAVIGATION",
-            "Agendaansicht",
+            tr!("NAVIGATION"),
+            tr!("Agenda view"),
             "agenda liste list ansicht",
             "L",
             Action::View(View::Agenda),
         ),
         c(
-            "NAVIGATION",
-            "Aufgabenansicht",
+            tr!("NAVIGATION"),
+            tr!("Tasks view"),
             "aufgaben tasks todo ansicht",
             "A",
             Action::View(View::Tasks),
         ),
         c(
-            "NAVIGATION",
-            "Journal",
+            tr!("NAVIGATION"),
+            tr!("Journal"),
             "journal tagebuch notizen einträge ansicht",
             "B",
             Action::View(View::Journal),
         ),
         c(
-            "NAVIGATION",
-            "Zurück",
+            tr!("NAVIGATION"),
+            tr!("Previous"),
             "zurück vorherige vorheriger previous back woche monat",
             ",",
             Action::Prev,
         ),
         c(
-            "NAVIGATION",
-            "Weiter",
+            tr!("NAVIGATION"),
+            tr!("Next"),
             "weiter nächste nächster next woche monat",
             ".",
             Action::Next,
         ),
         c(
-            "AKTIONEN",
-            "Termin erstellen",
+            tr!("ACTIONS"),
+            tr!("Create event"),
             "neu neuer termin new event erstellen",
             "N",
             Action::NewEvent,
         ),
         c(
-            "AKTIONEN",
-            "Neue Aufgabe",
+            tr!("ACTIONS"),
+            tr!("New task"),
             "neu aufgabe task todo erstellen",
             "",
             Action::NewTask,
         ),
         c(
-            "AKTIONEN",
-            "Neuer Journaleintrag",
+            tr!("ACTIONS"),
+            tr!("New journal entry"),
             "neu neuer journal eintrag tagebuch notiz schreiben",
             "",
             Action::NewJournal,
         ),
         c(
-            "AKTIONEN",
-            "Schnell eintragen",
+            tr!("ACTIONS"),
+            tr!("Quick add"),
             "schnell quick eingabe eintragen",
             "Q",
             Action::Quick,
         ),
         c(
-            "AKTIONEN",
-            "Kalender synchronisieren",
+            tr!("ACTIONS"),
+            tr!("Sync calendars"),
             "sync abgleichen synchronisieren aktualisieren",
             "F5",
             Action::Sync,
         ),
         c(
-            "AKTIONEN",
-            "Konto hinzufügen",
+            tr!("ACTIONS"),
+            tr!("Add account"),
             "konto account caldav server verbinden",
             "",
             Action::AddAccount,
         ),
         c(
-            "EINSTELLUNGEN",
-            "Einstellungen öffnen",
+            tr!("SETTINGS"),
+            tr!("Open settings"),
             "einstellungen settings optionen erinnerungen autostart",
-            "Strg+,",
+            tr!("Ctrl+,"),
             Action::Settings,
         ),
         c(
-            "EINSTELLUNGEN",
-            "Theme wechseln (Hell → Dunkel → System)",
+            tr!("SETTINGS"),
+            tr!("Switch theme (Light → Dark → System)"),
             "theme hell dunkel dark light modus design",
             "",
             Action::Theme,
         ),
         c(
-            "EINSTELLUNGEN",
-            "Über Hora",
+            tr!("SETTINGS"),
+            tr!("About Hora"),
             "über about version lizenz",
             "",
             Action::About,
@@ -305,7 +306,7 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
     if q.is_empty() {
         for c in commands()
             .into_iter()
-            .filter(|c| c.group != "EINSTELLUNGEN" || c.title.starts_with("Einst"))
+            .filter(|c| !matches!(c.action, Action::Theme | Action::About))
         {
             out.push(Entry {
                 group: c.group,
@@ -332,8 +333,8 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
     if parsed.title.is_empty() {
         if let Some(date) = parsed.date {
             out.push(Entry {
-                group: "NAVIGATION",
-                title: format!("Zu {} wechseln", short_day(date)),
+                group: tr!("NAVIGATION"),
+                title: tr!("Go to {}", short_day(date)),
                 detail: String::new(),
                 badge: String::new(),
                 badge_color: None,
@@ -350,7 +351,7 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
                 (last + Duration::days(1)).and_time(chrono::NaiveTime::MIN),
                 true,
             ),
-            quick::When::Due { day, .. } => format!("fällig {}", short_day(day)),
+            quick::When::Due { day, .. } => tr!("due {}", short_day(day)),
             quick::When::Undated => String::new(),
         };
         let mut detail = when;
@@ -358,21 +359,17 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
             detail.push_str(&format!(" · {loc}"));
         }
         let calendar = match plan.calendar {
-            Some(-1) => Some(("Beispieltermine".to_string(), crate::DEMO_COLOR)),
+            Some(-1) => Some((tr!("Sample events").to_string(), crate::DEMO_COLOR)),
             Some(id) => calendar_info.get(&id).cloned(),
             None => None,
         };
         create = Some(Entry {
-            group: "SCHNELL HINZUFÜGEN",
-            title: format!(
-                "{}{}",
-                if parsed.task {
-                    "Aufgabe: "
-                } else {
-                    "Erstellen: "
-                },
-                parsed.title
-            ),
+            group: tr!("QUICK ADD"),
+            title: if parsed.task {
+                tr!("Task: {}", parsed.title)
+            } else {
+                tr!("Create: {}", parsed.title)
+            },
             detail: if plan.problem.is_empty() {
                 detail
             } else {
@@ -403,17 +400,20 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
             });
         }
     }
-    if matches("kalender calendar beispieltermine", &q) {
+    let calendar_words = format!("kalender calendar {}", tr!("Calendar")).to_lowercase();
+    let demo_words = format!(
+        "{calendar_words} beispieltermine sample {}",
+        tr!("Sample events")
+    )
+    .to_lowercase();
+    if matches(&demo_words, &q) {
         out.push(Entry {
-            group: "KALENDER",
-            title: format!(
-                "Beispieltermine {}",
-                if state.demo_visible {
-                    "ausblenden"
-                } else {
-                    "einblenden"
-                }
-            ),
+            group: tr!("CALENDARS"),
+            title: if state.demo_visible {
+                tr!("Hide {}", tr!("Sample events"))
+            } else {
+                tr!("Show {}", tr!("Sample events"))
+            },
             detail: String::new(),
             badge: String::new(),
             badge_color: Some(crate::DEMO_COLOR),
@@ -423,20 +423,16 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
     }
     for calendar in &state.calendars {
         if matches(
-            &format!("kalender calendar {}", calendar.name).to_lowercase(),
+            &format!("{calendar_words} {}", calendar.name).to_lowercase(),
             &q,
         ) {
             out.push(Entry {
-                group: "KALENDER",
-                title: format!(
-                    "{} {}",
-                    calendar.name,
-                    if calendar.visible {
-                        "ausblenden"
-                    } else {
-                        "einblenden"
-                    }
-                ),
+                group: tr!("CALENDARS"),
+                title: if calendar.visible {
+                    tr!("Hide {}", calendar.name)
+                } else {
+                    tr!("Show {}", calendar.name)
+                },
                 detail: String::new(),
                 badge: String::new(),
                 badge_color: calendar_info.get(&calendar.id).map(|c| c.1),
@@ -474,7 +470,7 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
         }
         let calendar = calendar_info.get(&doc.calendar_id).cloned();
         out.push(Entry {
-            group: "TERMINE",
+            group: tr!("EVENTS"),
             title: if o.summary.trim().is_empty() {
                 doc.summary.clone()
             } else {
@@ -549,14 +545,14 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
             }
             let place = location.trim();
             out.push(Entry {
-                group: "TERMINE",
+                group: tr!("EVENTS"),
                 title,
                 detail: if place.is_empty() {
                     when
                 } else {
                     format!("{when} · {place}")
                 },
-                badge: "Beispieltermine".into(),
+                badge: tr!("Sample events").into(),
                 badge_color: Some(crate::DEMO_COLOR),
                 shortcut: String::new(),
                 action: Action::OpenEvent {
@@ -580,14 +576,14 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
             continue;
         }
         let mut detail = match t.due {
-            Some(due) => format!("fällig {}", tasks::due_label(&due, utc_now, home)),
-            None => "ohne Fälligkeitsdatum".into(),
+            Some(due) => tr!("due {}", tasks::due_label(&due, utc_now, home)),
+            None => tr!("no due date").into(),
         };
         if t.done {
-            detail.push_str(" · erledigt");
+            detail.push_str(&format!(" · {}", tr!("done")));
         }
         out.push(Entry {
-            group: "AUFGABEN",
+            group: tr!("TASKS"),
             title: t.info.summary.clone(),
             detail,
             badge: t.calendar_name.clone(),
@@ -627,9 +623,9 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
             }
         }
         out.push(Entry {
-            group: "JOURNAL",
+            group: tr!("JOURNAL"),
             title: if e.info.summary.trim().is_empty() {
-                "Eintrag ohne Titel".into()
+                tr!("Untitled entry").into()
             } else {
                 e.info.summary.trim().to_string()
             },
@@ -674,7 +670,7 @@ mod tests {
             .filter(|c| matches(&format!("{} {}", c.title, c.keywords).to_lowercase(), &q))
             .map(|c| c.title)
             .collect();
-        assert_eq!(hits, vec!["Wochenansicht"]);
+        assert_eq!(hits, vec!["Week view"]);
         assert!(!matches("irgendwas", &[]));
         assert!(matches("einstellungen settings", &words("SETT")));
     }

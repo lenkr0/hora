@@ -4,7 +4,7 @@
 // Titel, Tags, Kalender, Text (Schreiben/Lesen) und Speicherstand.
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Locale } from "theme.slint";
 import { Button, FocusRing } from "controls.slint";
 
 export struct JournalRow {
@@ -109,7 +109,7 @@ component EntryLine inherits Rectangle {
     border-radius: Theme.radius-md;
     background: root.entry.selected ? Theme.accent-soft : ta.has-hover ? Theme.hover-bg : transparent;
     accessible-role: list-item;
-    accessible-label: (root.entry.title != "" ? root.entry.title : "Eintrag ohne Titel") + ", " + root.entry.day + ". " + root.entry.month;
+    accessible-label: @tr("{0}, {1} {2}", root.entry.title != "" ? root.entry.title : @tr("Untitled entry"), root.entry.day, root.entry.month);
     accessible-item-selected: root.entry.selected;
 
     if root.entry.selected: Rectangle {
@@ -166,7 +166,7 @@ component EntryLine inherits Rectangle {
         y: 15px;
         width: parent.width - 80px;
         height: 20px;
-        text: root.entry.title != "" ? root.entry.title : "Eintrag ohne Titel";
+        text: root.entry.title != "" ? root.entry.title : @tr("Untitled entry");
         font-size: 15px;
         font-weight: 500;
         color: root.entry.title != "" ? Theme.ink : Theme.ink-3;
@@ -179,7 +179,7 @@ component EntryLine inherits Rectangle {
         y: 39px;
         width: parent.width - 80px;
         height: 36px;
-        text: root.entry.preview != "" ? root.entry.preview : "Noch kein Text";
+        text: root.entry.preview != "" ? root.entry.preview : @tr("No text yet");
         font-size: 12px;
         color: root.entry.preview != "" ? Theme.ink-2 : Theme.ink-3;
         wrap: word-wrap;
@@ -443,7 +443,7 @@ export component JournalView inherits Rectangle {
                 }
 
                 Text {
-                    text: root.count == 1 ? "Eintrag" : "Einträge";
+                    text: @tr("entry" | "entries" % root.count);
                     font-size: 14px;
                     color: Theme.ink-2;
                     vertical-alignment: center;
@@ -451,7 +451,7 @@ export component JournalView inherits Rectangle {
             }
 
             Segmented {
-                labels: ["Monat", "Alle"];
+                labels: [@tr("Month"), @tr("All")];
                 current: root.mode;
                 select(i) => {
                     root.set-mode(i);
@@ -462,7 +462,7 @@ export component JournalView inherits Rectangle {
                 alignment: center;
 
                 Button {
-                    text: "+ Neuer Eintrag";
+                    text: @tr("+ New entry");
                     primary: true;
                     enabled: root.can-add;
                     clicked => {
@@ -551,7 +551,7 @@ export component JournalView inherits Rectangle {
                     spacing: 8px;
 
                     Text {
-                        text: "Noch nichts geschrieben";
+                        text: @tr("Nothing written yet");
                         font-family: Theme.serif;
                         font-size: 24px;
                         color: Theme.ink;
@@ -559,7 +559,7 @@ export component JournalView inherits Rectangle {
                     }
 
                     Text {
-                        text: root.can-add ? "Halte deine Tage fest – einen Eintrag nach dem anderen." : root.can-create-calendar ? "Keiner deiner Kalender nimmt Journaleinträge an." : "Füge ein CalDAV-Konto hinzu, um Journaleinträge zu speichern.";
+                        text: root.can-add ? @tr("Capture your days – one entry at a time.") : root.can-create-calendar ? @tr("None of your calendars accepts journal entries.") : @tr("Add a CalDAV account to save journal entries.");
                         font-size: 14px;
                         color: Theme.ink-3;
                         horizontal-alignment: center;
@@ -571,7 +571,7 @@ export component JournalView inherits Rectangle {
                         padding-top: 8px;
 
                         Button {
-                            text: root.create-busy ? "Wird angelegt …" : "Journal-Kalender anlegen";
+                            text: root.create-busy ? @tr("Creating…") : @tr("Create journal calendar");
                             primary: true;
                             enabled: !root.create-busy;
                             clicked => {
@@ -593,7 +593,7 @@ export component JournalView inherits Rectangle {
                         padding-top: 8px;
 
                         Button {
-                            text: "Schreib etwas";
+                            text: @tr("Write something");
                             clicked => {
                                 root.new-entry();
                             }
@@ -636,10 +636,10 @@ export component JournalView inherits Rectangle {
                                 border-radius: 6px;
                                 background: back-ta.has-hover ? Theme.ink-raw.with-alpha(0.06) : transparent;
                                 accessible-role: button;
-                                accessible-label: "Alle Einträge";
+                                accessible-label: @tr("All entries");
 
                                 back-text := Text {
-                                    text: "← Alle Einträge";
+                                    text: @tr("← All entries");
                                     font-size: 13px;
                                     color: Theme.ink-2;
                                     vertical-alignment: center;
@@ -662,7 +662,7 @@ export component JournalView inherits Rectangle {
                             Rectangle {
                                 width: date-row.preferred-width;
                                 accessible-role: button;
-                                accessible-label: "Datum ändern: " + root.weekday-long + ", " + root.day-num + ". " + root.month-year;
+                                accessible-label: @tr("Change date: {0}, {1} {2}", root.weekday-long, root.day-num, root.month-year);
 
                                 date-row := HorizontalLayout {
                                     spacing: 12px;
@@ -729,7 +729,7 @@ export component JournalView inherits Rectangle {
                                         font-size: 14px;
                                         color: Theme.ink;
                                         single-line: true;
-                                        accessible-label: "Datum (TT.MM.JJJJ)";
+                                        accessible-label: @tr("Date ({})", Locale.date-placeholder);
                                         accepted => {
                                             root.set-date(self.text);
                                             if root.date-error == "" {
@@ -779,7 +779,7 @@ export component JournalView inherits Rectangle {
                                         border-color: cal.selected ? cal.color.with-alpha(0.6) : Theme.line;
                                         background: cal.selected ? cal.color.with-alpha(Theme.dark ? 0.18 : 0.10) : cal-ta.has-hover ? Theme.ink-raw.with-alpha(0.04) : transparent;
                                         accessible-role: radio-button;
-                                        accessible-label: "Kalender " + cal.name;
+                                        accessible-label: @tr("Calendar {}", cal.name);
                                         accessible-checked: cal.selected;
 
                                         cal-row := HorizontalLayout {
@@ -823,7 +823,7 @@ export component JournalView inherits Rectangle {
 
                                 GlyphButton {
                                     icon: @image-url("icons/trash.svg");
-                                    label: "Eintrag löschen";
+                                    label: @tr("Delete entry");
                                     danger: true;
                                     clicked => {
                                         root.delete();
@@ -849,7 +849,7 @@ export component JournalView inherits Rectangle {
                                 vertical-alignment: center;
                                 selection-background-color: Theme.accent.with-alpha(0.3);
                                 selection-foreground-color: Theme.ink;
-                                accessible-label: "Titel";
+                                accessible-label: @tr("Title");
                                 edited => {
                                     root.edited();
                                 }
@@ -869,7 +869,7 @@ export component JournalView inherits Rectangle {
 
                             if root.write && root.title == "": Text {
                                 height: parent.height;
-                                text: "Titel (optional)";
+                                text: @tr("Title (optional)");
                                 font-family: Theme.serif;
                                 font-size: 28px;
                                 color: Theme.ink-4;
@@ -879,7 +879,7 @@ export component JournalView inherits Rectangle {
                             if !root.write: Text {
                                 width: parent.width - 12px;
                                 height: parent.height;
-                                text: root.title != "" ? root.title : "Eintrag ohne Titel";
+                                text: root.title != "" ? root.title : @tr("Untitled entry");
                                 font-family: Theme.serif;
                                 font-size: 28px;
                                 color: root.title != "" ? Theme.ink : Theme.ink-3;
@@ -922,7 +922,7 @@ export component JournalView inherits Rectangle {
                                             border-radius: 8px;
                                             background: x-ta.has-hover ? Theme.ink-raw.with-alpha(0.08) : transparent;
                                             accessible-role: button;
-                                            accessible-label: "Tag " + tag + " entfernen";
+                                            accessible-label: @tr("Remove tag {}", tag);
                                             accessible-action-default => {
                                                 root.remove-tag(i);
                                             }
@@ -955,7 +955,7 @@ export component JournalView inherits Rectangle {
                                     font-size: 12px;
                                     color: Theme.ink;
                                     single-line: true;
-                                    accessible-label: "Tag hinzufügen";
+                                    accessible-label: @tr("Add tag");
                                     accepted => {
                                         if self.text != "" {
                                             root.add-tag(self.text);
@@ -974,7 +974,7 @@ export component JournalView inherits Rectangle {
 
                                 if tag-input.text == "": Text {
                                     height: parent.height;
-                                    text: "+ Tag";
+                                    text: @tr("+ Tag");
                                     font-size: 12px;
                                     color: tag-input.has-focus ? Theme.ink-4 : Theme.ink-3;
                                     vertical-alignment: center;
@@ -1025,7 +1025,7 @@ export component JournalView inherits Rectangle {
                                 color: Theme.ink-2;
                                 selection-background-color: Theme.accent.with-alpha(0.3);
                                 selection-foreground-color: Theme.ink;
-                                accessible-label: "Text";
+                                accessible-label: @tr("Text");
                                 edited => {
                                     root.edited();
                                 }
@@ -1040,7 +1040,7 @@ export component JournalView inherits Rectangle {
                             }
 
                             if root.body == "": Text {
-                                text: "Schreibe etwas …";
+                                text: @tr("Write something…");
                                 font-size: 15px;
                                 color: Theme.ink-4;
                             }
@@ -1074,7 +1074,7 @@ export component JournalView inherits Rectangle {
                             }
 
                             if root.blocks.length == 0: Text {
-                                text: "Noch kein Text";
+                                text: @tr("No text yet");
                                 font-size: 15px;
                                 color: Theme.ink-3;
                             }
@@ -1096,7 +1096,7 @@ export component JournalView inherits Rectangle {
                         spacing: 14px;
 
                         if !root.read-only: Segmented {
-                            labels: ["Schreiben", "Lesen"];
+                            labels: [@tr("Write"), @tr("Read")];
                             current: root.write ? 0 : 1;
                             tab-w: 84px;
                             tab-h: 26px;
@@ -1112,7 +1112,7 @@ export component JournalView inherits Rectangle {
                         }
 
                         Text {
-                            text: root.read-only ? "Schreibgeschützter Kalender" : root.write ? (root.words == 1 ? "1 Wort" : root.words + " Wörter") + "  ·  Strg + B / I zum Formatieren" : "Markdown wird unterstützt";
+                            text: root.read-only ? @tr("Read-only calendar") : root.write ? @tr("{n} word" | "{n} words" % root.words) + "  ·  " + @tr("Ctrl + B / I to format") : @tr("Markdown is supported");
                             font-size: 11.5px;
                             color: Theme.ink-3;
                             vertical-alignment: center;

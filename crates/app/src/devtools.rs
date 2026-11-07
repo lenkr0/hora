@@ -415,9 +415,9 @@ fn run_task_edits(app: &AppWindow) {
     // Neue Aufgabe mit Fälligkeit und Priorität, dann eine Teilaufgabe dazu
     app.invoke_task_new();
     let draft = app.get_task_draft();
-    let due = (chrono::Local::now().date_naive() + chrono::Duration::days(8))
-        .format("%d.%m.%Y")
-        .to_string();
+    // Im Zahlenformat der Region, wie es ein Nutzer eintippen würde
+    let due =
+        crate::forms::format_date(chrono::Local::now().date_naive() + chrono::Duration::days(8));
     app.invoke_task_save(
         "Bericht schreiben".into(),
         2,
@@ -1535,6 +1535,103 @@ impl Selftest {
                     ),
                 );
                 app.invoke_set_view(2);
+            }
+            // Sprache im laufenden Betrieb wechseln (Index 0 = Windows, 1 = en, 2 = de, 3 = fr)
+            61 => {
+                app.set_settings_language(1);
+                app.invoke_language_changed();
+            }
+            62 => {
+                let rows = self
+                    .state
+                    .borrow()
+                    .rows
+                    .iter()
+                    .map(|r| r.title.to_string())
+                    .collect::<Vec<_>>();
+                let week = app.get_week_label().to_string();
+                self.check(
+                    "Englisch: Beispieltermine und Kalenderwoche",
+                    rows.iter().any(|t| t == "Math")
+                        && week.starts_with('W')
+                        && hora_i18n::language() == hora_i18n::Lang::En,
+                    format!(
+                        "Woche „{week}“, Termine {:?}",
+                        rows.iter().take(3).collect::<Vec<_>>()
+                    ),
+                );
+                app.set_settings_language(3);
+                app.invoke_language_changed();
+            }
+            63 => {
+                let rows = self
+                    .state
+                    .borrow()
+                    .rows
+                    .iter()
+                    .map(|r| r.title.to_string())
+                    .collect::<Vec<_>>();
+                let mini = app.get_mini_month().to_string();
+                self.check(
+                    "Französisch: Termine und Monatsname",
+                    rows.iter().any(|t| t == "Maths")
+                        && mini.chars().next().is_some_and(char::is_uppercase)
+                        && app
+                            .global::<crate::Locale>()
+                            .get_weekday_letter()
+                            .row_data(3)
+                            .as_deref()
+                            == Some("J"),
+                    format!(
+                        "Monat „{mini}“, Termine {:?}",
+                        rows.iter().take(3).collect::<Vec<_>>()
+                    ),
+                );
+                // Feste Formate: 24 Stunden, Tag.Monat.Jahr
+                app.set_settings_formats(1);
+                app.invoke_formats_changed();
+            }
+            64 => {
+                let locale = app.global::<crate::Locale>();
+                let placeholder = locale.get_date_placeholder().to_string();
+                self.check(
+                    "Format 24 h mit Punkt",
+                    !locale.get_hour12() && placeholder == "JJ.MM.AAAA",
+                    format!("12 h {} Platzhalter „{placeholder}“", locale.get_hour12()),
+                );
+                app.set_settings_formats(3);
+                app.invoke_formats_changed();
+            }
+            65 => {
+                let locale = app.global::<crate::Locale>();
+                self.check(
+                    "Format 12 h, Monat/Tag/Jahr",
+                    locale.get_hour12() && locale.get_date_placeholder() == "MM/JJ/AAAA",
+                    format!(
+                        "12 h {} Platzhalter „{}“",
+                        locale.get_hour12(),
+                        locale.get_date_placeholder()
+                    ),
+                );
+                // Zurück: Deutsch, Windows-Format
+                app.set_settings_formats(0);
+                app.invoke_formats_changed();
+                app.set_settings_language(2);
+                app.invoke_language_changed();
+            }
+            66 => {
+                let rows = self
+                    .state
+                    .borrow()
+                    .rows
+                    .iter()
+                    .map(|r| r.title.to_string())
+                    .collect::<Vec<_>>();
+                self.check(
+                    "Zurück auf Deutsch",
+                    rows.iter().any(|t| t == "Mathe") && app.get_week_label().starts_with("KW"),
+                    format!("Woche „{}“", app.get_week_label()),
+                );
                 self.step = 99;
             }
             100 => {

@@ -8,6 +8,7 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+hora-i18n.workspace = true
 keyring-core.workspace = true
 thiserror.workspace = true
 
@@ -21,6 +22,7 @@ windows = { workspace = true, features = [
 ] }
 windows-sys = { workspace = true, features = [
     "Win32_Foundation",
+    "Win32_Globalization",
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_System_LibraryLoader",

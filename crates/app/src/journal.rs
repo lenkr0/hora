@@ -12,8 +12,8 @@ use chrono::{Datelike, Days, NaiveDate, Utc};
 use hora_core::journal::{self, JournalFields, JournalInfo};
 use hora_core::model::{CalendarObject, Kind};
 
-use crate::forms::{MONTHS_SHORT, WEEKDAYS_SHORT};
 use crate::{DEMO_COLOR, State, calendar_color, editing};
+use hora_i18n::{dates, tr};
 
 /// Kalender-ID der Beispiel-Einträge (wie bei den Beispielterminen)
 pub const DEMO: i64 = -1;
@@ -107,7 +107,7 @@ pub fn collect(state: &mut State) -> Vec<Entry> {
                     day: info.day(home).unwrap_or(today),
                     info,
                     color: DEMO_COLOR,
-                    calendar_name: "Beispieltermine".into(),
+                    calendar_name: tr!("Sample events").into(),
                     read_only: false,
                     draft: false,
                 });
@@ -150,7 +150,7 @@ pub fn calendars(state: &State) -> Vec<(i64, String, u32)> {
         .map(|(i, c)| (c.id, c.name.clone(), calendar_color(c, i)))
         .collect();
     if state.demo_visible {
-        out.push((DEMO, "Beispieltermine".into(), DEMO_COLOR));
+        out.push((DEMO, tr!("Sample events").into(), DEMO_COLOR));
     }
     out
 }
@@ -178,7 +178,7 @@ fn href_in(state: &State, calendar_id: i64, uid: &str) -> Result<String, String>
 
 /// Neuer, leerer Entwurf am Tag `day`
 pub fn new_draft(state: &State, day: NaiveDate) -> Result<Entry, String> {
-    let calendar_id = default_calendar(state).ok_or("Kein Kalender nimmt Journaleinträge an.")?;
+    let calendar_id = default_calendar(state).ok_or(tr!("No calendar accepts journal entries."))?;
     let uid = editing::new_uid();
     let href = href_in(state, calendar_id, &uid)?;
     let (name, color) = calendars(state)
@@ -217,13 +217,13 @@ fn load(state: &State, entry: &Entry) -> Result<CalendarObject, String> {
             .iter()
             .find(|(h, _)| *h == entry.href)
             .map(|(_, o)| o.clone())
-            .ok_or_else(|| "Der Eintrag ist nicht mehr vorhanden.".to_string());
+            .ok_or_else(|| tr!("The entry no longer exists.").to_string());
     }
     let resource = state
         .store
         .resource(entry.calendar_id, &entry.href)
         .map_err(|e| e.to_string())?
-        .ok_or("Der Eintrag ist nicht mehr vorhanden.")?;
+        .ok_or(tr!("The entry no longer exists."))?;
     CalendarObject::parse(&resource.ics).map_err(|e| e.to_string())
 }
 
@@ -256,7 +256,7 @@ pub enum Saved {
 /// Eintrag mit den Feldern des Editors speichern
 pub fn save(state: &mut State, entry: &Entry, fields: &JournalFields) -> Result<Saved, String> {
     if entry.read_only {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     let home = state.home;
     let now = Utc::now();
@@ -292,7 +292,7 @@ pub fn delete(state: &mut State, entry: &Entry) -> Result<(), String> {
         return Ok(());
     }
     if entry.read_only {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     if entry.calendar_id == DEMO {
         state.demo_journals.retain(|(h, _)| *h != entry.href);
@@ -316,7 +316,7 @@ pub fn move_to(state: &mut State, entry: &Entry, target: i64) -> Result<String, 
         .into_iter()
         .find(|c| c.0 == target)
         .map(|c| (c.1, c.2))
-        .ok_or("Dieser Kalender nimmt keine Journaleinträge an.")?;
+        .ok_or(tr!("This calendar does not accept journal entries."))?;
     let href = href_in(state, target, &entry.uid)?;
     if entry.draft {
         let mut draft = entry.clone();
@@ -329,7 +329,7 @@ pub fn move_to(state: &mut State, entry: &Entry, target: i64) -> Result<String, 
         return Ok(key);
     }
     if entry.read_only {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     let object = load(state, entry)?;
     put(state, target, &href, object)?;
@@ -340,12 +340,17 @@ pub fn move_to(state: &mut State, entry: &Entry, target: i64) -> Result<String, 
     Ok(key_of(target, &href))
 }
 
-/// Tag des Eintrags für Liste und Editor: ("6", "FR.", "NOV. 2026")
+/// Tag des Eintrags für Liste und Editor: ("6", "FRI", "NOV 2026")
 pub fn date_labels(day: NaiveDate) -> (String, String, String) {
     (
         day.day().to_string(),
-        WEEKDAYS_SHORT[day.weekday().num_days_from_monday() as usize].to_uppercase(),
-        format!("{} {}", MONTHS_SHORT[day.month0() as usize], day.year()).to_uppercase(),
+        dates::weekday_short(day.weekday().num_days_from_monday() as usize).to_uppercase(),
+        format!(
+            "{} {}",
+            dates::month_short(day.month0() as usize),
+            day.year()
+        )
+        .to_uppercase(),
     )
 }
 
@@ -578,30 +583,38 @@ pub fn format(text: &str, anchor: usize, cursor: usize, marker: &str) -> (String
 /// Beispiel-Einträge für den Start ohne Konto
 pub fn sample(today: NaiveDate, now: chrono::DateTime<Utc>) -> Vec<(String, CalendarObject)> {
     let home = chrono_tz::Europe::Berlin;
-    let entries: [(u64, &str, &str, &[&str]); 4] = [
+    let entries: [(u64, &str, &str, Vec<&str>); 4] = [
         (
             0,
-            "Lauftreff im Nebel",
-            "Heute früh mit der Gruppe **10 km** gelaufen, der Park lag komplett im Nebel.\n\n- Tempo locker, *5:40* pro Kilometer\n- Nächstes Mal Stirnlampe mitnehmen\n\n> Die ersten drei Kilometer sind immer die schwersten.",
-            &["Sport", "draußen"],
+            tr!("Running club in the fog"),
+            tr!(
+                "Ran **10 km** with the group this morning, the park was completely covered in fog.\n\n- Easy pace, *5:40* per kilometer\n- Bring a headlamp next time\n\n> The first three kilometers are always the hardest."
+            ),
+            vec![tr!("Sport"), tr!("outdoors")],
         ),
         (
             2,
-            "Elternabend vorbereiten",
-            "## Themen\n\n1. Klassenfahrt im Mai\n2. Neue Hausaufgaben-Regeln\n3. Weihnachtsfeier\n\nUnterlagen liegen im Ordner *Schule*.",
-            &["Schule"],
+            tr!("Prepare parents' evening"),
+            tr!(
+                "## Topics\n\n1. Class trip in May\n2. New homework rules\n3. Christmas party\n\nThe documents are in the *School* folder."
+            ),
+            vec![tr!("School")],
         ),
         (
             5,
             "",
-            "Abends noch lange mit Oma telefoniert. Sie erzählt wieder vom Garten und will im Frühjahr Tomaten ziehen.",
-            &["Familie"],
+            tr!(
+                "Long phone call with Grandma this evening. She talked about her garden again and wants to grow tomatoes in spring."
+            ),
+            vec![tr!("Family")],
         ),
         (
             9,
-            "Rückblick Oktober",
-            "Viel geschafft: Umzug geplant, Steuer erledigt, endlich wieder regelmäßig gelaufen.\n\n---\n\nFür November: **mehr lesen**, weniger Bildschirm.",
-            &[],
+            tr!("October review"),
+            tr!(
+                "Got a lot done: planned the move, finished the taxes, finally running regularly again.\n\n---\n\nFor November: **read more**, less screen time."
+            ),
+            vec![],
         ),
     ];
     entries
@@ -701,11 +714,17 @@ mod tests {
     }
 
     #[test]
-    fn date_labels_are_german_capitals() {
+    fn date_labels_are_capitals() {
         assert_eq!(
             date_labels(day(2026, 11, 6)),
-            ("6".into(), "FR.".into(), "NOV. 2026".into())
+            ("6".into(), "FRI".into(), "NOV 2026".into())
         );
+        hora_i18n::with_language(hora_i18n::Lang::De, || {
+            assert_eq!(
+                date_labels(day(2026, 11, 6)),
+                ("6".into(), "FR.".into(), "NOV. 2026".into())
+            );
+        });
     }
 
     #[test]

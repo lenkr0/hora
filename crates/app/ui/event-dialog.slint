@@ -1,7 +1,7 @@
 // Termin anlegen/bearbeiten, Löschen bestätigen, Konflikte auflösen.
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Fmt, Locale } from "theme.slint";
 import { Button, FocusRing, TextField } from "controls.slint";
 import { Checkbox, Select, SelectOption, TextArea } from "inputs.slint";
 import { Modal } from "dialogs.slint";
@@ -136,7 +136,7 @@ component ReminderPill inherits Rectangle {
             border-radius: 11px;
             background: remove-ta.has-hover ? Theme.ink-raw.with-alpha(0.08) : transparent;
             accessible-role: button;
-            accessible-label: "Erinnerung entfernen: " + root.text;
+            accessible-label: @tr("Remove reminder: {}", root.text);
             accessible-action-default => {
                 root.remove();
             }
@@ -191,11 +191,11 @@ component ReminderAdd inherits Rectangle {
     border-color: fs.has-focus ? Theme.accent : Theme.line;
     background: ta.has-hover ? Theme.hover-bg : transparent;
     accessible-role: button;
-    accessible-label: "Erinnerung hinzufügen";
+    accessible-label: @tr("Add reminder");
     accessible-value: root.valid ? root.options[root.highlight].name : "";
 
     label := Text {
-        text: fs.has-focus && root.valid ? "+ " + root.options[root.highlight].name : "+ Erinnerung";
+        text: fs.has-focus && root.valid ? "+ " + root.options[root.highlight].name : @tr("+ Reminder");
         font-size: 13px;
         font-weight: 500;
         color: Theme.accent;
@@ -319,10 +319,15 @@ export component EventDialog inherits Modal {
     };
     property <bool> repeating: root.repeat >= 1 && root.repeat <= 4;
     property <int> start-weekday: root.weekday-of(root.start-date);
-    property <bool> singular: root.interval == "1" || root.interval == "";
-    property <[string]> units: root.singular ? ["Tag", "Woche", "Monat", "Jahr"] : ["Tage", "Wochen", "Monate", "Jahre"];
-    property <[string]> day-short: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-    property <[string]> day-long: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+    property <int> interval-n: root.interval.is-float() ? root.interval.to-float() : 1;
+    property <[string]> units: [
+        @tr("day" | "days" % root.interval-n),
+        @tr("week" | "weeks" % root.interval-n),
+        @tr("month" | "months" % root.interval-n),
+        @tr("year" | "years" % root.interval-n)
+    ];
+    property <[string]> day-short: Locale.weekday-header;
+    property <[string]> day-long: Locale.weekday-long;
 
     function submit() {
         root.save(root.title-text, root.all-day, root.start-date, root.start-time, root.end-date, root.end-time,
@@ -346,7 +351,7 @@ export component EventDialog inherits Modal {
         root.weekdays = root.has-day(effective, i) ? effective - Math.pow(2, i) : effective + Math.pow(2, i);
     }
 
-    title: draft.is-new ? "Neuer Termin" : "Termin bearbeiten";
+    title: draft.is-new ? @tr("New event") : @tr("Edit event");
     card-width: 600px;
     close => {
         root.cancel();
@@ -359,8 +364,8 @@ export component EventDialog inherits Modal {
         spacing: 14px;
 
         title-field := TextField {
-            label: "Titel";
-            placeholder: "z. B. Zahnarzt";
+            label: @tr("Title");
+            placeholder: @tr("e.g. Dentist");
             text <=> root.title-text;
             accepted => {
                 root.submit();
@@ -368,7 +373,7 @@ export component EventDialog inherits Modal {
         }
 
         Checkbox {
-            text: "Ganztägig";
+            text: @tr("All day");
             checked <=> root.all-day;
         }
 
@@ -376,8 +381,8 @@ export component EventDialog inherits Modal {
             spacing: 10px;
 
             TextField {
-                label: "Beginn";
-                placeholder: "TT.MM.JJJJ";
+                label: @tr("Start");
+                placeholder: Locale.date-placeholder;
                 text <=> root.start-date;
                 horizontal-stretch: 3;
                 accepted => {
@@ -386,8 +391,8 @@ export component EventDialog inherits Modal {
             }
 
             if !root.all-day: TextField {
-                label: "Uhrzeit";
-                placeholder: "09:00";
+                label: @tr("Time");
+                placeholder: Fmt.hhmm(540);
                 text <=> root.start-time;
                 horizontal-stretch: 2;
                 accepted => {
@@ -396,8 +401,8 @@ export component EventDialog inherits Modal {
             }
 
             TextField {
-                label: "Ende";
-                placeholder: "TT.MM.JJJJ";
+                label: @tr("End");
+                placeholder: Locale.date-placeholder;
                 text <=> root.end-date;
                 horizontal-stretch: 3;
                 accepted => {
@@ -406,8 +411,8 @@ export component EventDialog inherits Modal {
             }
 
             if !root.all-day: TextField {
-                label: "Uhrzeit";
-                placeholder: "10:00";
+                label: @tr("Time");
+                placeholder: Fmt.hhmm(600);
                 text <=> root.end-time;
                 horizontal-stretch: 2;
                 accepted => {
@@ -420,17 +425,17 @@ export component EventDialog inherits Modal {
             spacing: 10px;
 
             Select {
-                label: "Wiederholen";
+                label: @tr("Repeat");
                 dots: false;
                 options: draft.custom-rule
-                    ? [{ id: 0, name: "Nie" }, { id: 1, name: "Täglich" }, { id: 2, name: "Wöchentlich" }, { id: 3, name: "Monatlich" }, { id: 4, name: "Jährlich" }, { id: 5, name: "Eigene Regel" }]
-                    : [{ id: 0, name: "Nie" }, { id: 1, name: "Täglich" }, { id: 2, name: "Wöchentlich" }, { id: 3, name: "Monatlich" }, { id: 4, name: "Jährlich" }];
+                    ? [{ id: 0, name: @tr("Never") }, { id: 1, name: @tr("Daily") }, { id: 2, name: @tr("Weekly") }, { id: 3, name: @tr("Monthly") }, { id: 4, name: @tr("Yearly") }, { id: 5, name: @tr("Custom rule") }]
+                    : [{ id: 0, name: @tr("Never") }, { id: 1, name: @tr("Daily") }, { id: 2, name: @tr("Weekly") }, { id: 3, name: @tr("Monthly") }, { id: 4, name: @tr("Yearly") }];
                 selected <=> root.repeat;
                 horizontal-stretch: 4;
             }
 
             if root.repeating: TextField {
-                label: "alle";
+                label: @tr("every");
                 text <=> root.interval;
                 width: 56px;
                 accepted => {
@@ -451,16 +456,16 @@ export component EventDialog inherits Modal {
             }
 
             if root.repeating: Select {
-                label: "Endet";
+                label: @tr("Ends");
                 dots: false;
-                options: [{ id: 0, name: "Nie" }, { id: 1, name: "Am Datum" }, { id: 2, name: "Nach Anzahl" }];
+                options: [{ id: 0, name: @tr("Never") }, { id: 1, name: @tr("On date") }, { id: 2, name: @tr("After count") }];
                 selected <=> root.rule-end;
                 horizontal-stretch: 4;
             }
 
             if root.repeating && root.rule-end == 1: TextField {
-                label: "Bis einschließlich";
-                placeholder: "TT.MM.JJJJ";
+                label: @tr("Until (inclusive)");
+                placeholder: Locale.date-placeholder;
                 text <=> root.until;
                 horizontal-stretch: 4;
                 accepted => {
@@ -469,7 +474,7 @@ export component EventDialog inherits Modal {
             }
 
             if root.repeating && root.rule-end == 2: TextField {
-                label: "Anzahl Termine";
+                label: @tr("Number of events");
                 text <=> root.count;
                 horizontal-stretch: 4;
                 accepted => {
@@ -486,7 +491,7 @@ export component EventDialog inherits Modal {
             spacing: 6px;
 
             Text {
-                text: "An Tagen";
+                text: @tr("On days");
                 font-size: 13px;
                 font-weight: 500;
                 color: Theme.ink-2;
@@ -508,19 +513,19 @@ export component EventDialog inherits Modal {
         }
 
         if root.repeat == 3: Select {
-            label: "Im Monat";
+            label: @tr("Each month");
             dots: false;
             options: [
-                { id: 0, name: "Am selben Tag des Monats" },
-                { id: 1, name: "Am selben Wochentag (z. B. 2. Mittwoch)" },
-                { id: 2, name: "Am letzten gleichen Wochentag" }
+                { id: 0, name: @tr("On the same day of the month") },
+                { id: 1, name: @tr("On the same weekday (e.g. 2nd Wednesday)") },
+                { id: 2, name: @tr("On the last such weekday") }
             ];
             selected <=> root.monthly;
         }
 
         if root.repeat != 0: Text {
             text: root.repeat == 5
-                ? "Eigene Wiederholungsregel aus einem anderen Programm. Sie bleibt erhalten, solange hier nichts anderes gewählt wird."
+                ? @tr("Custom repeat rule from another app. It is kept as long as nothing else is selected here.")
                 : root.rule-summary(root.rule, root.start-date);
             font-size: 12px;
             color: Theme.ink-3;
@@ -531,7 +536,7 @@ export component EventDialog inherits Modal {
             spacing: 6px;
 
             Text {
-                text: "Erinnerungen";
+                text: @tr("Reminders");
                 font-size: 13px;
                 font-weight: 500;
                 color: Theme.ink-2;
@@ -561,7 +566,7 @@ export component EventDialog inherits Modal {
             spacing: 10px;
 
             Select {
-                label: "Kalender";
+                label: @tr("Calendar");
                 options: root.calendar-options;
                 selected <=> root.calendar;
                 enabled: !draft.calendar-locked;
@@ -569,7 +574,7 @@ export component EventDialog inherits Modal {
             }
 
             TextField {
-                label: "Ort";
+                label: @tr("Location");
                 text <=> root.location;
                 horizontal-stretch: 1;
                 accepted => {
@@ -579,7 +584,7 @@ export component EventDialog inherits Modal {
         }
 
         TextArea {
-            label: "Beschreibung";
+            label: @tr("Description");
             text <=> root.description;
         }
 
@@ -610,7 +615,7 @@ export component EventDialog inherits Modal {
             spacing: 8px;
 
             if draft.can-delete: Button {
-                text: "Löschen";
+                text: @tr("Delete");
                 danger: true;
                 clicked => {
                     root.delete();
@@ -622,14 +627,14 @@ export component EventDialog inherits Modal {
             }
 
             Button {
-                text: "Abbrechen";
+                text: @tr("Cancel");
                 clicked => {
                     root.cancel();
                 }
             }
 
             Button {
-                text: "Speichern";
+                text: @tr("Save");
                 primary: true;
                 clicked => {
                     root.submit();
@@ -649,7 +654,7 @@ export component ScopeDialog inherits Modal {
     callback chosen(int);
     callback dismissed();
 
-    title: root.deleting ? "Termin einer Serie löschen" : "Termin einer Serie ändern";
+    title: root.deleting ? @tr("Delete recurring event") : @tr("Change recurring event");
     card-width: 360px;
     close => {
         root.dismissed();
@@ -666,7 +671,7 @@ export component ScopeDialog inherits Modal {
         spacing: 16px;
 
         Text {
-            text: root.deleting ? "Welche Termine sollen gelöscht werden?" : "Für welche Termine gilt die Änderung?";
+            text: root.deleting ? @tr("Which events should be deleted?") : @tr("Which events should the change apply to?");
             font-size: 14px;
             color: Theme.ink-2;
             wrap: word-wrap;
@@ -676,7 +681,7 @@ export component ScopeDialog inherits Modal {
             spacing: 8px;
 
             Button {
-                text: "Alle Termine der Serie";
+                text: @tr("All events in the series");
                 primary: !root.deleting;
                 danger: root.deleting;
                 width: parent.width;
@@ -686,7 +691,7 @@ export component ScopeDialog inherits Modal {
             }
 
             following-button := Button {
-                text: "Dieser und alle folgenden";
+                text: @tr("This and all following");
                 primary: !root.deleting;
                 danger: root.deleting;
                 width: parent.width;
@@ -696,7 +701,7 @@ export component ScopeDialog inherits Modal {
             }
 
             this-button := Button {
-                text: "Nur dieser Termin";
+                text: @tr("Only this event");
                 primary: !root.deleting;
                 danger: root.deleting;
                 width: parent.width;
@@ -709,7 +714,7 @@ export component ScopeDialog inherits Modal {
             }
 
             Button {
-                text: "Abbrechen";
+                text: @tr("Cancel");
                 width: parent.width;
                 clicked => {
                     root.dismissed();
@@ -721,7 +726,7 @@ export component ScopeDialog inherits Modal {
 
 export component ConfirmDialog inherits Modal {
     in property <string> message;
-    in property <string> confirm-label: "Löschen";
+    in property <string> confirm-label: @tr("Delete");
     callback accepted();
     callback dismissed();
 
@@ -745,7 +750,7 @@ export component ConfirmDialog inherits Modal {
             spacing: 8px;
 
             Button {
-                text: "Abbrechen";
+                text: @tr("Cancel");
                 clicked => {
                     root.dismissed();
                 }
@@ -768,7 +773,7 @@ export component ConflictDialog inherits Modal {
     callback take-server();
     callback later();
 
-    title: "Konflikt beim Speichern";
+    title: @tr("Conflict while saving");
     card-width: 480px;
     close => {
         root.later();
@@ -789,14 +794,14 @@ export component ConflictDialog inherits Modal {
             spacing: 8px;
 
             Button {
-                text: "Server-Version übernehmen";
+                text: @tr("Use server version");
                 clicked => {
                     root.take-server();
                 }
             }
 
             Button {
-                text: "Meine Version behalten";
+                text: @tr("Keep my version");
                 primary: true;
                 clicked => {
                     root.keep-mine();

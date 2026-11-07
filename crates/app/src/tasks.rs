@@ -14,6 +14,7 @@ use hora_core::time::{DateTimeValue, local_to_utc};
 
 use crate::forms::{format_date, format_time, parse_date, parse_time, short_day};
 use crate::{State, calendar_color, editing};
+use hora_i18n::{dates, tr};
 
 /// Eine Aufgabe in der Liste (bei Serien: ein Vorkommen)
 #[derive(Debug, Clone, PartialEq)]
@@ -77,12 +78,12 @@ pub enum Group {
 impl Group {
     pub fn title(self) -> &'static str {
         match self {
-            Group::Overdue => "ÜBERFÄLLIG",
-            Group::Today => "HEUTE",
-            Group::Week => "DIESE WOCHE",
-            Group::Later => "SPÄTER",
-            Group::NoDate => "KEIN FÄLLIGKEITSDATUM",
-            Group::Done => "ERLEDIGT",
+            Group::Overdue => tr!("OVERDUE"),
+            Group::Today => tr!("TODAY"),
+            Group::Week => tr!("THIS WEEK"),
+            Group::Later => tr!("LATER"),
+            Group::NoDate => tr!("NO DUE DATE"),
+            Group::Done => tr!("DONE"),
         }
     }
 }
@@ -225,14 +226,14 @@ fn due_day(due: &DateTimeValue, home: Tz) -> NaiveDate {
     }
 }
 
-/// "Heute, 18:00", "Morgen", "Fr., 13. Nov.", "04.01.2027"
+/// "Today, 18:00", "Tomorrow", "Fri, 13 Nov", "04.01.2027"
 pub fn due_label(due: &DateTimeValue, now: DateTime<Utc>, home: Tz) -> String {
     let today = now.with_timezone(&home).date_naive();
     let day = due_day(due, home);
     let name = match (day - today).num_days() {
-        -1 => "Gestern".to_string(),
-        0 => "Heute".to_string(),
-        1 => "Morgen".to_string(),
+        -1 => tr!("Yesterday").to_string(),
+        0 => tr!("Today").to_string(),
+        1 => tr!("Tomorrow").to_string(),
         _ if day.year() == today.year() => short_day(day),
         _ => format_date(day),
     };
@@ -395,7 +396,7 @@ fn emit(
         .collect();
     let is_collapsed = collapsed.contains(&items[i].uid);
     let context = match (depth, parent_of(i)) {
-        (0, Some(p)) => format!("Unteraufgabe von „{}“", items[p].info.summary),
+        (0, Some(p)) => tr!("Subtask of “{}”", items[p].info.summary),
         _ => String::new(),
     };
     out.push(Row {
@@ -452,7 +453,7 @@ fn load(state: &State, calendar_id: i64, href: &str) -> Result<CalendarObject, S
         .store
         .resource(calendar_id, href)
         .map_err(|e| e.to_string())?
-        .ok_or("Die Aufgabe ist nicht mehr vorhanden.")?;
+        .ok_or(tr!("The task no longer exists."))?;
     CalendarObject::parse(&resource.ics).map_err(|e| e.to_string())
 }
 
@@ -461,7 +462,7 @@ fn load(state: &State, calendar_id: i64, href: &str) -> Result<CalendarObject, S
 pub fn toggle(state: &mut State, items: &[TaskItem], index: usize) -> Result<(), String> {
     let item = &items[index];
     if item.read_only {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     let done = !item.done;
     let now = Utc::now();
@@ -497,7 +498,7 @@ pub fn toggle(state: &mut State, items: &[TaskItem], index: usize) -> Result<(),
 pub fn delete(state: &mut State, items: &[TaskItem], index: usize) -> Result<usize, String> {
     let item = &items[index];
     if item.read_only {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     let mut targets = vec![index];
     targets.extend(descendants(items, index));
@@ -583,18 +584,19 @@ impl TaskInput {
     ) -> Result<TaskFields, String> {
         let title = self.title.trim();
         if title.is_empty() {
-            return Err("Bitte einen Titel eingeben.".into());
+            return Err(tr!("Please enter a title.").into());
         }
         let due = match self.due_mode {
             0 => None,
             mode => {
                 let day = parse_date(&self.due_date, today)
-                    .ok_or("Fällig: Datum nicht erkannt (z. B. 13.11.2026)")?;
+                    .ok_or_else(|| tr!("Due: date not recognized (e.g. {})", format_date(today)))?;
                 if mode == 1 {
                     Some(DateTimeValue::Date(day))
                 } else {
-                    let time = parse_time(&self.due_time)
-                        .ok_or("Fällig: Uhrzeit nicht erkannt (z. B. 18:00)")?;
+                    let time = parse_time(&self.due_time).ok_or_else(|| {
+                        tr!("Due: time not recognized (e.g. {})", dates::clock(18, 0))
+                    })?;
                     let local = day.and_time(time);
                     Some(match existing.filter(|v| !v.is_date()) {
                         Some(v) => v.moved_to(local_to_utc(local, v.zone(home)), home),
@@ -606,10 +608,11 @@ impl TaskInput {
         let start = match (self.start_date.trim(), &due) {
             ("", _) | (_, None) => None,
             (text, Some(due)) => {
-                let day = parse_date(text, today)
-                    .ok_or("Beginn: Datum nicht erkannt (z. B. 09.11.2026)")?;
+                let day = parse_date(text, today).ok_or_else(|| {
+                    tr!("Start: date not recognized (e.g. {})", format_date(today))
+                })?;
                 if day > due_day(due, home) {
-                    return Err("Der Beginn liegt nach der Fälligkeit.".into());
+                    return Err(tr!("The start is after the due date.").into());
                 }
                 Some(DateTimeValue::Date(day))
             }
@@ -641,10 +644,10 @@ pub fn save(
             .find(|i| &i.uid == parent && !(i.recurring && i.occurrence.is_some() && i.done));
         match parent_item {
             Some(p) if p.calendar_id != input.calendar => {
-                return Err("Die übergeordnete Aufgabe liegt in einem anderen Kalender.".into());
+                return Err(tr!("The parent task is in a different calendar.").into());
             }
             Some(p) if p.recurring => {
-                return Err("Wiederkehrende Aufgaben können keine Unteraufgaben haben.".into());
+                return Err(tr!("Recurring tasks can't have subtasks.").into());
             }
             _ => {}
         }
@@ -654,7 +657,7 @@ pub fn save(
                     .iter()
                     .any(|d| &items[*d].uid == parent))
         {
-            return Err("Eine Aufgabe kann nicht in ihrer eigenen Unteraufgabe liegen.".into());
+            return Err(tr!("A task can't be inside its own subtask.").into());
         }
     }
     match editing {
@@ -671,7 +674,7 @@ pub fn save(
         Some(e) => {
             let item = &items[e];
             if item.read_only {
-                return Err("Dieser Kalender ist schreibgeschützt.".into());
+                return Err(tr!("This calendar is read-only.").into());
             }
             let mut fields = input.fields(today, home, item.info.due.as_ref())?;
             if item.recurring {
@@ -694,8 +697,8 @@ pub fn draft_due(item: &TaskItem, home: Tz) -> (i32, String, String, String) {
         .map(|s| format_date(due_day(&s, home)))
         .unwrap_or_default();
     match item.due {
-        None => (0, String::new(), "18:00".into(), String::new()),
-        Some(DateTimeValue::Date(d)) => (1, format_date(d), "18:00".into(), start),
+        None => (0, String::new(), dates::clock(18, 0), String::new()),
+        Some(DateTimeValue::Date(d)) => (1, format_date(d), dates::clock(18, 0), start),
         Some(due) => {
             let local = due.to_utc(home).with_timezone(&home).naive_local();
             (
@@ -794,10 +797,14 @@ mod tests {
         assert_eq!(group_of(None, now, Berlin), Group::NoDate);
         assert_eq!(
             due_label(&zoned("2026-11-05 18:00"), now, Berlin),
-            "Heute, 18:00"
+            "Today, 18:00"
         );
-        assert_eq!(due_label(&day(2026, 11, 6), now, Berlin), "Morgen");
-        assert_eq!(due_label(&day(2026, 11, 13), now, Berlin), "Fr. 13. Nov.");
+        assert_eq!(due_label(&day(2026, 11, 6), now, Berlin), "Tomorrow");
+        assert_eq!(due_label(&day(2026, 11, 13), now, Berlin), "Fri, 13 Nov");
+        hora_i18n::with_language(hora_i18n::Lang::De, || {
+            assert_eq!(due_label(&day(2026, 11, 6), now, Berlin), "Morgen");
+            assert_eq!(due_label(&day(2026, 11, 13), now, Berlin), "Fr., 13. Nov.");
+        });
         assert_eq!(due_label(&day(2027, 1, 4), now, Berlin), "04.01.2027");
     }
 
@@ -822,13 +829,13 @@ mod tests {
         assert_eq!(
             shape,
             vec![
-                "# HEUTE 1",
+                "# TODAY 1",
                 "muell",
-                "# SPÄTER 1",
+                "# LATER 1",
                 "umzug",
                 "  kartons",
                 "  strom",
-                "# ERLEDIGT 1",
+                "# DONE 1",
                 "alt"
             ]
         );
@@ -855,7 +862,7 @@ mod tests {
             .iter()
             .find(|r| r.header.is_none() && items[r.item].uid == "strom")
             .unwrap();
-        assert_eq!(strom.context, "Unteraufgabe von „umzug“");
+        assert_eq!(strom.context, "Subtask of “umzug”");
         assert_eq!(descendants(&items, 0), vec![1, 2]);
     }
 

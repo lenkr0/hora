@@ -1,6 +1,7 @@
 //! Hora im Infobereich: Symbol mit Menü, Fenster ausblenden und zurückholen,
 //! Autostart und Windows-Benachrichtigungen.
 
+use hora_i18n::tr;
 use std::path::{Path, PathBuf};
 
 use hora_platform::notify::{AUMID, Notifier, Toast};
@@ -23,6 +24,20 @@ pub const MENU_QUIT: u32 = 4;
 /// Symbol für Benachrichtigungen und Infocenter
 const ICON_PNG: &[u8] = include_bytes!("../assets/hora.png");
 
+/// Menü im Infobereich, in der aktuellen Sprache
+fn tray_menu() -> Vec<MenuItem> {
+    vec![
+        MenuItem {
+            default: true,
+            ..MenuItem::new(MENU_OPEN, tr!("Open Hora"))
+        },
+        MenuItem::new(MENU_SYNC, tr!("Sync now")),
+        MenuItem::new(MENU_SETTINGS, tr!("Settings…")),
+        MenuItem::separator(),
+        MenuItem::new(MENU_QUIT, tr!("Quit")),
+    ]
+}
+
 /// Benachrichtigungen und Infobereich; fehlt etwas, läuft Hora ohne weiter
 pub struct Shell {
     pub notifier: Option<Notifier>,
@@ -37,26 +52,13 @@ impl Shell {
         data_dir: &Path,
         on_tray: impl Fn(TrayEvent) + Send + 'static,
     ) -> Shell {
-        let menu = vec![
-            MenuItem {
-                default: true,
-                ..MenuItem::new(MENU_OPEN, "Hora öffnen")
-            },
-            MenuItem::new(MENU_SYNC, "Jetzt abgleichen"),
-            MenuItem::new(MENU_SETTINGS, "Einstellungen …"),
-            MenuItem::separator(),
-            MenuItem::new(MENU_QUIT, "Beenden"),
-        ];
-        let tray = Tray::new(instance_name, "Hora", menu, on_tray)
+        let tray = Tray::new(instance_name, "Hora", tray_menu(), on_tray)
             .map_err(|e| crate::log::write(&format!("Infobereich: {e}")))
             .ok();
         let (notifier, notifier_error) =
             match Notifier::new(AUMID, "Hora", icon_file(data_dir).as_deref()) {
                 Ok(n) => (Some(n), None),
-                Err(e) => (
-                    None,
-                    Some(format!("Benachrichtigungen nicht verfügbar: {e}")),
-                ),
+                Err(e) => (None, Some(tr!("Notifications not available: {}", e))),
             };
         Shell {
             notifier,
@@ -66,6 +68,13 @@ impl Shell {
     }
 
     /// Hinweis für die Einstellungen, wenn Benachrichtigungen nicht ankommen
+    /// Texte nach einem Sprachwechsel erneuern
+    pub fn relabel(&self) {
+        if let Some(tray) = &self.tray {
+            tray.set_menu(tray_menu());
+        }
+    }
+
     pub fn status(&self) -> String {
         match &self.notifier {
             Some(n) => n.blocked().unwrap_or_default(),

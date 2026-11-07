@@ -1,39 +1,38 @@
-# Hinweise zu Drittanbieter-Werken
+# Third-party notices
 
 ## Calino
 
-Design (Farben, Typografie, Abstände, Rundungen, Animationen) und Verhalten
-dieser App sind der Open-Source-App **Calino** nachempfunden; Teile der Logik
-(z. B. Einrasten beim Ziehen, Spaltenaufteilung überlappender Termine,
-Schnelleingabe) sind aus dem TypeScript-Quelltext nach Rust übertragen.
+The design (colors, typography, spacing, corner radii, animations) and
+behavior of this app are modeled on the open-source app **Calino**; parts of
+the logic (e.g. snapping while dragging, column layout of overlapping events,
+quick add) were ported from its TypeScript source to Rust.
 
-- Projekt: https://github.com/Ivan-Malinovski/calino
+- Project: https://github.com/Ivan-Malinovski/calino
 - Copyright (c) 2025 Ivan Malinovski
-- Lizenz: MIT, vollständiger Text in [`THIRD_PARTY_LICENSES/Calino-LICENSE.txt`](THIRD_PARTY_LICENSES/Calino-LICENSE.txt)
+- License: MIT, full text in [`THIRD_PARTY_LICENSES/Calino-LICENSE.txt`](THIRD_PARTY_LICENSES/Calino-LICENSE.txt)
 
-## Newsreader (Schrift)
+## Newsreader (font)
 
-Eingebettet in `crates/app/ui/fonts/`, statische Instanzen aus Google Fonts.
+Embedded in `crates/app/ui/fonts/`, static instances from Google Fonts.
 
 - Copyright 2020 The Newsreader Project Authors (https://github.com/productiontype/Newsreader)
-- Lizenz: SIL Open Font License 1.1, Text in [`THIRD_PARTY_LICENSES/Newsreader-OFL.txt`](THIRD_PARTY_LICENSES/Newsreader-OFL.txt)
+- License: SIL Open Font License 1.1, text in [`THIRD_PARTY_LICENSES/Newsreader-OFL.txt`](THIRD_PARTY_LICENSES/Newsreader-OFL.txt)
 
-## Slint (UI-Framework)
+## Slint (UI framework)
 
-Genutzt unter der **Slint Royalty-free License 2.0** (Desktop-Anwendungen,
-kostenlos). Bedingung ist ein sichtbarer Hinweis auf Slint; dafür zeigt der
-Über-Dialog der App (Seitenleiste → „Über Hora“) das `AboutSlint`-Widget.
+Used under the **Slint Royalty-free License 2.0** (desktop applications, free
+of charge). It requires a visible attribution to Slint; the app's About dialog
+(sidebar → "About Hora") shows the `AboutSlint` widget for this.
 
 - https://slint.dev
-- Lizenztext: https://github.com/slint-ui/slint/blob/master/LICENSES/LicenseRef-Slint-Royalty-free-2.0.md
+- License text: https://github.com/slint-ui/slint/blob/master/LICENSES/LicenseRef-Slint-Royalty-free-2.0.md
 
-## Rust-Bibliotheken
+## Rust libraries
 
-Alle Crates, die in `hora.exe` eingehen, mit Version, Lizenzangabe und ihren
-Lizenztexten stehen in
+All crates that go into `hora.exe`, with version, license and their license
+texts, are listed in
 [`THIRD_PARTY_LICENSES/Rust-Crates.txt`](THIRD_PARTY_LICENSES/Rust-Crates.txt)
-(erzeugt mit `python tools/third-party-licenses.py`). Fast alle stehen unter
-MIT und/oder Apache-2.0; dazu Unicode-3.0, BSD, ISC, Zlib, BSL-1.0 und
-CDLA-Permissive-2.0 (`webpki-roots`). `option-ext` steht unter der MPL-2.0;
-sein Quelltext ist unverändert unter https://crates.io/crates/option-ext
-erhältlich.
+(generated with `python tools/third-party-licenses.py`). Almost all are under
+MIT and/or Apache-2.0; also Unicode-3.0, BSD, ISC, Zlib, BSL-1.0 and
+CDLA-Permissive-2.0 (`webpki-roots`). `option-ext` is under the MPL-2.0; its
+unmodified source is available at https://crates.io/crates/option-ext.

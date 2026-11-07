@@ -93,7 +93,7 @@ component TaskLine inherits Rectangle {
     animate background { duration: Theme.dur-fast; }
     forward-focus: fs;
     accessible-role: list-item;
-    accessible-label: root.entry.title + (root.entry.done ? ", erledigt" : "") + (root.entry.due != "" ? ", fällig " + root.entry.due : "");
+    accessible-label: root.entry.title + (root.entry.done ? ", " + @tr("done") : "") + (root.entry.due != "" ? ", " + @tr("due {}", root.entry.due) : "");
 
     row-ta := TouchArea {
         mouse-cursor: MouseCursor.pointer;
@@ -144,7 +144,7 @@ component TaskLine inherits Rectangle {
                 background: root.entry.done ? root.entry.color : check-ta.has-hover ? root.entry.color.with-alpha(0.15) : transparent;
                 animate background { duration: Theme.dur-fast; }
                 accessible-role: checkbox;
-                accessible-label: root.entry.done ? "Als nicht erledigt markieren" : "Als erledigt markieren";
+                accessible-label: root.entry.done ? @tr("Mark as not done") : @tr("Mark as done");
                 accessible-checkable: true;
                 accessible-checked: root.entry.done;
                 accessible-action-default => {
@@ -187,7 +187,7 @@ component TaskLine inherits Rectangle {
                 if root.entry.has-children: Rectangle {
                     width: 18px;
                     accessible-role: button;
-                    accessible-label: root.entry.collapsed ? "Unteraufgaben ausklappen" : "Unteraufgaben einklappen";
+                    accessible-label: root.entry.collapsed ? @tr("Expand subtasks") : @tr("Collapse subtasks");
                     accessible-action-default => {
                         root.collapse();
                     }
@@ -292,14 +292,14 @@ component TaskLine inherits Rectangle {
                 }
 
                 if root.entry.priority > 0: Text {
-                    text: root.entry.priority == 1 ? "Priorität hoch" : root.entry.priority == 2 ? "Priorität mittel" : "Priorität niedrig";
+                    text: root.entry.priority == 1 ? @tr("High priority") : root.entry.priority == 2 ? @tr("Medium priority") : @tr("Low priority");
                     font-size: 12px;
                     color: root.entry.priority == 1 ? Theme.error : root.entry.priority == 2 ? Theme.warning-text : Theme.ink-3;
                     vertical-alignment: bottom;
                 }
 
                 if root.entry.recurring: Text {
-                    text: "wiederkehrend";
+                    text: @tr("recurring");
                     font-size: 12px;
                     color: Theme.ink-3;
                     vertical-alignment: bottom;
@@ -322,7 +322,7 @@ component FilterTabs inherits Rectangle {
     in property <int> done;
     callback select(int);
 
-    property <[string]> labels: ["Alle", "Aktiv", "Erledigt"];
+    property <[string]> labels: [@tr("All"), @tr("Active"), @tr("Task filter" => "Done")];
     property <[int]> counts: [root.active + root.done, root.active, root.done];
     property <length> tab-w: 92px;
 
@@ -447,14 +447,14 @@ export component TasksView inherits Rectangle {
                     }
 
                     Text {
-                        text: "aktiv";
+                        text: @tr("active");
                         font-size: 14px;
                         color: Theme.ink-2;
                         vertical-alignment: center;
                     }
 
                     Text {
-                        text: "·  " + root.done-count + " erledigt";
+                        text: "·  " + @tr("{} done", root.done-count);
                         font-size: 14px;
                         color: Theme.ink-3;
                         vertical-alignment: center;
@@ -474,7 +474,7 @@ export component TasksView inherits Rectangle {
                     alignment: center;
 
                     Button {
-                        text: "+ Aufgabe erstellen";
+                        text: @tr("+ Create task");
                         primary: true;
                         enabled: root.can-add;
                         clicked => {
@@ -503,7 +503,7 @@ export component TasksView inherits Rectangle {
                     single-line: true;
                     selection-background-color: Theme.accent.with-alpha(0.3);
                     selection-foreground-color: Theme.ink;
-                    accessible-label: "Neue Aufgabe";
+                    accessible-label: @tr("New task");
                     accepted => {
                         if self.text != "" {
                             root.quick-add(self.text);
@@ -515,7 +515,7 @@ export component TasksView inherits Rectangle {
                 if composer.text == "": Text {
                     x: 16px;
                     height: parent.height;
-                    text: root.can-add ? "Was muss erledigt werden?" : "Kein Kalender für Aufgaben verfügbar";
+                    text: root.can-add ? @tr("What needs to be done?") : @tr("No calendar for tasks available");
                     font-size: 14.5px;
                     color: Theme.ink-3;
                     vertical-alignment: center;
@@ -557,7 +557,7 @@ export component TasksView inherits Rectangle {
 
                     if root.rows.length == 0: Text {
                         height: 120px;
-                        text: root.filter == 2 ? "Noch nichts erledigt." : "Keine offenen Aufgaben. Oben eintippen und Eingabe drücken.";
+                        text: root.filter == 2 ? @tr("Nothing done yet.") : @tr("No open tasks. Type above and press Enter.");
                         font-size: 14px;
                         color: Theme.ink-3;
                         horizontal-alignment: center;

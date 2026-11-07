@@ -3,7 +3,7 @@
 // (NotificationSettings.tsx, GeneralSettings.tsx).
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Fmt } from "theme.slint";
 import { Button, FocusRing } from "controls.slint";
 import { Select, SelectOption } from "inputs.slint";
 import { Modal } from "dialogs.slint";
@@ -125,13 +125,19 @@ export component SettingsDialog inherits Modal {
     in-out property <bool> show-tasks;
     in-out property <bool> task-reminders;
     in property <[SelectOption]> default-reminder-options;
+    in-out property <int> language;
+    in property <[SelectOption]> language-options;
+    callback language-changed();
+    in-out property <int> formats;
+    in property <[SelectOption]> format-options;
+    callback formats-changed();
     // Zustand der Windows-Benachrichtigungen, z. B. "ausgeschaltet"
     in property <string> status;
     callback changed();
     callback test-notification();
     callback dismiss();
 
-    title: "Einstellungen";
+    title: @tr("Settings");
     card-width: 540px;
     close => {
         root.dismiss();
@@ -144,15 +150,15 @@ export component SettingsDialog inherits Modal {
         spacing: 0px;
 
         GroupLabel {
-            text: "ERINNERUNGEN";
+            text: @tr("REMINDERS");
         }
 
         Row {
-            label: "Terminerinnerungen";
-            description: "Windows-Benachrichtigung vor Beginn von Terminen, auch wenn Hora im Infobereich liegt";
+            label: @tr("Event reminders");
+            description: @tr("Windows notification before events start, even when Hora is in the notification area");
 
             first := Toggle {
-                label: "Terminerinnerungen";
+                label: @tr("Event reminders");
                 checked <=> root.reminders;
                 toggled => {
                     root.changed();
@@ -163,8 +169,8 @@ export component SettingsDialog inherits Modal {
         Divider { }
 
         Row {
-            label: "Standarderinnerung";
-            description: "Erinnerung, mit der neue Termine beginnen";
+            label: @tr("Default reminder");
+            description: @tr("Reminder that new events start with");
 
             Select {
                 label: "";
@@ -181,11 +187,11 @@ export component SettingsDialog inherits Modal {
         Divider { }
 
         Row {
-            label: "Erinnerungen an Fälligkeitstermine";
-            description: "Benachrichtigen, wenn eine Aufgabe fällig ist: zur Fälligkeitszeit, bei Aufgaben nur mit Datum um 9:00 Uhr";
+            label: @tr("Task due reminders");
+            description: @tr("Notify when a task is due: at the due time, or at {} for tasks with only a date", Fmt.hhmm(540));
 
             Toggle {
-                label: "Erinnerungen an Fälligkeitstermine";
+                label: @tr("Task due reminders");
                 checked <=> root.task-reminders;
                 toggled => {
                     root.changed();
@@ -196,11 +202,11 @@ export component SettingsDialog inherits Modal {
         Divider { }
 
         Row {
-            label: "Testbenachrichtigung";
-            description: root.status != "" ? root.status : "Zeigt sofort eine Benachrichtigung, um Windows-Einstellungen und Ton zu prüfen";
+            label: @tr("Test notification");
+            description: root.status != "" ? root.status : @tr("Shows a notification right away to check Windows settings and sound");
 
             Button {
-                text: "Senden";
+                text: @tr("Send");
                 clicked => {
                     root.test-notification();
                 }
@@ -212,15 +218,15 @@ export component SettingsDialog inherits Modal {
         }
 
         GroupLabel {
-            text: "AUFGABEN";
+            text: @tr("TASKS");
         }
 
         Row {
-            label: "Aufgaben im Kalender anzeigen";
-            description: "Offene Aufgaben erscheinen in Woche und Monat am Tag ihrer Fälligkeit";
+            label: @tr("Show tasks in the calendar");
+            description: @tr("Open tasks appear in the week and month views on their due date");
 
             Toggle {
-                label: "Aufgaben im Kalender anzeigen";
+                label: @tr("Show tasks in the calendar");
                 checked <=> root.show-tasks;
                 toggled => {
                     root.changed();
@@ -233,15 +239,51 @@ export component SettingsDialog inherits Modal {
         }
 
         GroupLabel {
-            text: "PROGRAMM";
+            text: @tr("GENERAL");
         }
 
         Row {
-            label: "Mit Windows starten";
-            description: "Hora startet beim Anmelden unauffällig im Infobereich";
+            label: @tr("Language");
+            description: @tr("Language of menus, dates and notifications");
+
+            Select {
+                label: "";
+                dots: false;
+                width: 210px;
+                options: root.language-options;
+                selected <=> root.language;
+                changed selected => {
+                    root.language-changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: @tr("Date and time format");
+            description: @tr("Order of day, month and year; 12 or 24 hours");
+
+            Select {
+                label: "";
+                dots: false;
+                width: 250px;
+                options: root.format-options;
+                selected <=> root.formats;
+                changed selected => {
+                    root.formats-changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: @tr("Start with Windows");
+            description: @tr("Hora starts quietly in the notification area when you sign in");
 
             Toggle {
-                label: "Mit Windows starten";
+                label: @tr("Start with Windows");
                 checked <=> root.autostart;
                 toggled => {
                     root.changed();
@@ -252,11 +294,11 @@ export component SettingsDialog inherits Modal {
         Divider { }
 
         Row {
-            label: "Im Infobereich weiterlaufen";
-            description: "Schließen des Fensters beendet Hora nicht, damit Erinnerungen und Abgleich weiterlaufen";
+            label: @tr("Keep running in the notification area");
+            description: @tr("Closing the window doesn't quit Hora, so reminders and sync keep running");
 
             Toggle {
-                label: "Im Infobereich weiterlaufen";
+                label: @tr("Keep running in the notification area");
                 checked <=> root.keep-running;
                 toggled => {
                     root.changed();
@@ -272,7 +314,7 @@ export component SettingsDialog inherits Modal {
             alignment: end;
 
             Button {
-                text: "Fertig";
+                text: @tr("Done");
                 primary: true;
                 clicked => {
                     root.dismiss();

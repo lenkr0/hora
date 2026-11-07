@@ -99,10 +99,35 @@ export global Theme {
     out property <duration> dur-base: 200ms;
 }
 
+// Sprachabhängige Namen und Formate; die App setzt sie aus crates/i18n
+// (Sprache) und den Windows-Regionseinstellungen (12/24 Stunden, Datumsform).
+export global Locale {
+    in property <[string]> weekday-long: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    in property <[string]> weekday-header: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    in property <[string]> weekday-caps: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+    in property <[string]> weekday-letter: ["M", "T", "W", "T", "F", "S", "S"];
+    in property <string> date-placeholder: "DD.MM.YYYY";
+    in property <bool> hour12: false;
+}
+
 export global Fmt {
-    // Minuten seit Mitternacht als "HH:MM"
+    // Minuten seit Mitternacht als "09:30" oder "9:30 AM"
     pure public function hhmm(m: int) -> string {
-        return (m < 600 ? "0" : "") + "\{Math.floor(m / 60)}:" + (Math.mod(m, 60) < 10 ? "0" : "") + "\{Math.mod(m, 60)}";
+        let h = Math.floor(m / 60);
+        let mm = Math.mod(m, 60);
+        if Locale.hour12 && h < 24 {
+            let h12 = Math.mod(h, 12) == 0 ? 12 : Math.mod(h, 12);
+            return "\{h12}:" + (mm < 10 ? "0" : "") + "\{mm} " + (h < 12 ? "AM" : "PM");
+        }
+        return (h < 10 ? "0" : "") + "\{h}:" + (mm < 10 ? "0" : "") + "\{mm}";
+    }
+    // Beschriftung der Zeitachse: "08:00" oder "8 AM"
+    pure public function hour(h: int) -> string {
+        if Locale.hour12 {
+            let h12 = Math.mod(h, 12) == 0 ? 12 : Math.mod(h, 12);
+            return "\{h12} " + (h < 12 ? "AM" : "PM");
+        }
+        return (h < 10 ? "0" : "") + "\{h}:00";
     }
     pure public function range(start: int, dur: int) -> string {
         return hhmm(start) + " – " + hhmm(start + dur);

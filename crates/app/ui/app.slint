@@ -1,7 +1,7 @@
 // Hauptfenster. Kopfzeile nach Calino (CalendarHeader.module.css).
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme, Fmt } from "theme.slint";
+import { Theme, Fmt, Locale } from "theme.slint";
 import { EventItem, WeekLogic } from "event-card.slint";
 import { WeekView, DayInfo, AllDayItem } from "week-view.slint";
 import { MonthView, MonthCell, MonthChip } from "month-view.slint";
@@ -20,7 +20,7 @@ import { EventPreview, EventDetails } from "preview.slint";
 import { SelectOption } from "inputs.slint";
 import { IconButton } from "controls.slint";
 
-export { Theme, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit }
+export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit }
 
 component NavArrow inherits Rectangle {
     in property <image> icon;
@@ -71,7 +71,7 @@ component Navigator inherits Rectangle {
 
         NavArrow {
             icon: @image-url("icons/chevron-left.svg");
-            label: "Zurück";
+            label: @tr("Previous");
             clicked => {
                 root.prev();
             }
@@ -86,11 +86,11 @@ component Navigator inherits Rectangle {
             width: today-text.preferred-width + 36px;
             background: today-ta.has-hover ? Theme.hover-bg : transparent;
             accessible-role: button;
-            accessible-label: "Heute";
+            accessible-label: @tr("Today");
             animate background { duration: 140ms; }
 
             today-text := Text {
-                text: "Heute";
+                text: @tr("Today");
                 font-size: 14px;
                 font-weight: 500;
                 color: today-ta.has-hover ? Theme.accent-strong : Theme.ink;
@@ -112,7 +112,7 @@ component Navigator inherits Rectangle {
 
         NavArrow {
             icon: @image-url("icons/chevron-right.svg");
-            label: "Weiter";
+            label: @tr("Next");
             clicked => {
                 root.next();
             }
@@ -131,7 +131,7 @@ component SearchButton inherits Rectangle {
     border-radius: 10px;
     background: ta.has-hover ? Theme.ink-raw.with-alpha(0.07) : Theme.ink-raw.with-alpha(0.045);
     accessible-role: button;
-    accessible-label: "Suchen oder eintragen (Strg+K)";
+    accessible-label: @tr("Search or add (Ctrl+K)");
     accessible-action-default => {
         root.clicked();
     }
@@ -153,7 +153,7 @@ component SearchButton inherits Rectangle {
         }
 
         if !root.compact: Text {
-            text: "Suchen oder eintragen";
+            text: @tr("Search or add");
             font-size: 13px;
             color: Theme.ink-2;
             vertical-alignment: center;
@@ -170,7 +170,7 @@ component SearchButton inherits Rectangle {
                 border-color: Theme.line;
 
                 keys := Text {
-                    text: "Strg K";
+                    text: @tr("Ctrl K");
                     font-size: 10.5px;
                     color: Theme.ink-3;
                     horizontal-alignment: center;
@@ -249,7 +249,7 @@ component SyncStatus inherits HorizontalLayout {
 
         IconButton {
             icon: @image-url("icons/refresh.svg");
-            label: "Jetzt synchronisieren";
+            label: @tr("Sync now");
             icon-size: 14px;
             clicked => {
                 root.sync-now();
@@ -259,17 +259,51 @@ component SyncStatus inherits HorizontalLayout {
 }
 
 // Ansichtsumschalter nach Calino (.viewTabs): Tabs auf getönter Spur, aktiver
+// Reiterbeschriftungen und ihre Breiten. Die Texte sind je Sprache
+// verschieden lang; unsichtbare Texte liefern die Breite (Text + 2 × 12 px).
+component TabLabels {
+    out property <[string]> labels: [@tr("Day"), @tr("3 days"), @tr("Week"), @tr("Month"), @tr("Year"), @tr("Agenda"), @tr("Tasks"), @tr("Journal")];
+    out property <[length]> widths: [
+        t0.preferred-width + 24px, t1.preferred-width + 24px, t2.preferred-width + 24px, t3.preferred-width + 24px,
+        t4.preferred-width + 24px, t5.preferred-width + 24px, t6.preferred-width + 24px, t7.preferred-width + 24px
+    ];
+    out property <[length]> lefts: [
+        4px,
+        4px + root.widths[0] + 2px,
+        4px + root.widths[0] + root.widths[1] + 4px,
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + 6px,
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + 8px,
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + 10px,
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + root.widths[5] + 12px,
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + root.widths[5] + root.widths[6] + 14px
+    ];
+    out property <length> full-width: root.lefts[7] + root.widths[7] + 4px;
+
+    width: 0px;
+    height: 0px;
+
+    t0 := Text { text: root.labels[0]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t1 := Text { text: root.labels[1]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t2 := Text { text: root.labels[2]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t3 := Text { text: root.labels[3]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t4 := Text { text: root.labels[4]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t5 := Text { text: root.labels[5]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t6 := Text { text: root.labels[6]; font-size: 13px; font-weight: 500; opacity: 0; }
+    t7 := Text { text: root.labels[7]; font-size: 13px; font-weight: 500; opacity: 0; }
+}
+
 // Tab auf hellem, gleitendem Indikator
 component ViewTabs inherits Rectangle {
     in property <int> current;
     callback select(int);
 
-    property <[string]> labels: ["Tag", "3 Tage", "Woche", "Monat", "Jahr", "Agenda", "Aufgaben", "Journal"];
-    // Breite je Tab (Text plus 2 × 12 px) und linke Kante
-    property <[length]> widths: [48px, 64px, 66px, 62px, 52px, 70px, 82px, 72px];
-    property <[length]> lefts: [4px, 54px, 120px, 188px, 252px, 306px, 378px, 462px];
+    // Beschriftungen und Maße aus TabLabels (je Sprache verschieden breit)
+    in property <[string]> labels;
+    in property <[length]> widths;
+    in property <[length]> lefts;
+    in property <length> full-width;
 
-    width: 462px + 72px + 4px;
+    width: root.full-width;
     height: 40px;
     border-radius: 12px;
     background: Theme.ink-raw.with-alpha(0.045);
@@ -321,15 +355,15 @@ component ViewMenu inherits Rectangle {
     in property <int> current;
     callback select(int);
 
-    property <[string]> labels: ["Tag", "3 Tage", "Woche", "Monat", "Jahr", "Agenda", "Aufgaben", "Journal"];
-    property <[string]> keys: ["D", "X", "W", "M", "J", "L", "A", "B"];
+    in property <[string]> labels;
+    property <[string]> keys: ["D", "X", "W", "M", @tr("Shortcut" => "Y"), "L", "A", "B"];
 
     width: 136px;
     height: 40px;
     border-radius: 12px;
     background: Theme.ink-raw.with-alpha(0.045);
     accessible-role: combobox;
-    accessible-label: "Ansicht: " + root.labels[root.current];
+    accessible-label: @tr("View: {}", root.labels[root.current]);
     accessible-action-default => {
         menu.show();
     }
@@ -514,7 +548,7 @@ export component AppWindow inherits Window {
     in property <[SelectOption]> calendar-options;
     in property <string> event-error;
     in-out property <bool> confirm-open;
-    in property <string> confirm-title: "Termin löschen?";
+    in property <string> confirm-title: @tr("Delete event?");
     in property <string> confirm-message;
     in property <[TaskRow]> task-rows;
     in property <int> task-active-count;
@@ -542,6 +576,12 @@ export component AppWindow inherits Window {
     in-out property <bool> settings-keep-running: true;
     in-out property <bool> settings-show-tasks: true;
     in-out property <bool> settings-task-reminders: true;
+    // 0 = Windows-Sprache, danach die Sprachen in der Reihenfolge von Rust
+    in-out property <int> settings-language;
+    in property <[SelectOption]> language-options;
+    // 0 = Windows-Region, danach feste Formate (Reihenfolge von Rust)
+    in-out property <int> settings-formats;
+    in property <[SelectOption]> format-options;
     in property <[SelectOption]> default-reminder-options;
     in property <string> settings-status;
     in-out property <bool> scope-open;
@@ -580,6 +620,8 @@ export component AppWindow inherits Window {
     pure callback quick-preview(string) -> QuickPreview;
     callback quick-submit(string, bool);
     callback settings-changed();
+    callback language-changed();
+    callback formats-changed();
     callback test-notification();
     callback scope-chosen(int);
     callback scope-dismissed();
@@ -634,14 +676,19 @@ export component AppWindow inherits Window {
     // weil die Fensterbreite selbst vom Layout der Kopfzeile abhängt.
     property <bool> narrow: true;
     property <bool> small-title;
-    // Acht Reiter passen (mit Platz für den Titel) erst ab etwa 1400 px
+    // Acht Reiter passen (mit Platz für den Titel) erst ab etwa 1400 px;
+    // die Reiter sind je Sprache verschieden breit
     property <bool> compact-tabs;
+    property <length> tabs-width: tab-labels.full-width;
     function fit-header() {
         root.narrow = root.width < 1560px;
         root.small-title = root.width < 1360px;
-        root.compact-tabs = root.width < 1400px;
+        root.compact-tabs = root.width < 862px + root.tabs-width;
     }
     changed width => {
+        root.fit-header();
+    }
+    changed tabs-width => {
         root.fit-header();
     }
     init => {
@@ -916,6 +963,10 @@ export component AppWindow inherits Window {
                     alignment: center;
 
                     if !root.compact-tabs: ViewTabs {
+                        labels: tab-labels.labels;
+                        widths: tab-labels.widths;
+                        lefts: tab-labels.lefts;
+                        full-width: tab-labels.full-width;
                         current: root.view;
                         select(v) => {
                             root.set-view(v);
@@ -923,6 +974,7 @@ export component AppWindow inherits Window {
                     }
 
                     if root.compact-tabs: ViewMenu {
+                        labels: tab-labels.labels;
                         current: root.view;
                         select(v) => {
                             root.set-view(v);
@@ -1189,7 +1241,7 @@ export component AppWindow inherits Window {
                 spacing: 6px;
 
                 Text {
-                    text: "Synchronisierung";
+                    text: @tr("Sync");
                     font-size: 11.5px;
                     font-weight: 600;
                     letter-spacing: 0.6px;
@@ -1370,6 +1422,8 @@ export component AppWindow inherits Window {
         }
     }
 
+    tab-labels := TabLabels { }
+
     if root.settings-open: SettingsDialog {
         reminders <=> root.settings-reminders;
         default-reminder <=> root.settings-default-reminder;
@@ -1377,6 +1431,16 @@ export component AppWindow inherits Window {
         keep-running <=> root.settings-keep-running;
         show-tasks <=> root.settings-show-tasks;
         task-reminders <=> root.settings-task-reminders;
+        language <=> root.settings-language;
+        language-options: root.language-options;
+        language-changed => {
+            root.language-changed();
+        }
+        formats <=> root.settings-formats;
+        format-options: root.format-options;
+        formats-changed => {
+            root.formats-changed();
+        }
         default-reminder-options: root.default-reminder-options;
         status: root.settings-status;
         changed => {

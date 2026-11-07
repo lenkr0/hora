@@ -3,7 +3,7 @@
 // heute hervorgehoben; Klick auf den Monatsnamen öffnet den Monat.
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { Theme } from "theme.slint";
+import { Theme, Locale } from "theme.slint";
 
 export struct YearCell {
     // 0 = Feld vor dem Ersten bzw. nach dem Letzten
@@ -68,7 +68,7 @@ export component YearView inherits Rectangle {
             color: month-ta.has-hover ? Theme.accent-strong : Theme.ink;
             vertical-alignment: center;
             accessible-role: button;
-            accessible-label: month.name + " öffnen";
+            accessible-label: @tr("Open {}", month.name);
 
             month-ta := TouchArea {
                 mouse-cursor: MouseCursor.pointer;
@@ -78,7 +78,7 @@ export component YearView inherits Rectangle {
             }
         }
 
-        for name[i] in ["M", "D", "M", "D", "F", "S", "S"]: Text {
+        for name[i] in Locale.weekday-letter: Text {
             x: 8px + i * cell-w;
             y: head-h;
             width: cell-w;
@@ -101,7 +101,7 @@ export component YearView inherits Rectangle {
             height: cell-h;
             visible: cell.number > 0;
             accessible-role: button;
-            accessible-label: "\{cell.number}. " + month.name + (cell.count == 1 ? ", 1 Termin" : cell.count > 1 ? ", \{cell.count} Termine" : "");
+            accessible-label: @tr("{0} {1}", cell.number, month.name) + (cell.count > 0 ? ", " + @tr("{n} event" | "{n} events" % cell.count) : "");
 
             Rectangle {
                 width: disc;
@@ -151,7 +151,7 @@ export component YearView inherits Rectangle {
         width: 0px;
         height: 0px;
         accessible-role: table;
-        accessible-label: "Jahr, Pfeiltasten wählen den Tag, Eingabe öffnet ihn";
+        accessible-label: @tr("Year, arrow keys select the day, Enter opens it");
         key-pressed(e) => {
             if e.text == Key.LeftArrow {
                 root.cursor = Math.max(0, root.cursor - 1);

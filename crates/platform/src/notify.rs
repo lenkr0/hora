@@ -8,6 +8,7 @@
 //! "Schlummern" und "Schließen" sind Systemaktionen: Die erledigt Windows
 //! selbst. Ein Klick auf den Toast meldet sich bei Hora, solange es läuft.
 
+use hora_i18n::{tr, trn};
 #[cfg(not(windows))]
 use std::path::Path;
 
@@ -60,20 +61,28 @@ pub fn toast_xml(toast: &Toast) -> String {
     }
     xml.push_str("</binding></visual>");
     if toast.reminder {
-        xml.push_str(concat!(
-            "<actions>",
-            "<input id=\"snooze\" type=\"selection\" defaultInput=\"5\">",
-            "<selection id=\"5\" content=\"5 Minuten\"/>",
-            "<selection id=\"10\" content=\"10 Minuten\"/>",
-            "<selection id=\"15\" content=\"15 Minuten\"/>",
-            "<selection id=\"30\" content=\"30 Minuten\"/>",
-            "<selection id=\"60\" content=\"1 Stunde\"/>",
-            "</input>",
-            "<action activationType=\"system\" arguments=\"snooze\" hint-inputId=\"snooze\" content=\"Schlummern\"/>",
-            "<action activationType=\"system\" arguments=\"dismiss\" content=\"Schließen\"/>",
-            "</actions>",
-            "<audio src=\"ms-winsoundevent:Notification.Reminder\"/>",
+        xml.push_str("<actions><input id=\"snooze\" type=\"selection\" defaultInput=\"5\">");
+        for minutes in [5, 10, 15, 30] {
+            let label = trn!("{n} minute", "{n} minutes", minutes);
+            xml.push_str(&format!(
+                "<selection id=\"{minutes}\" content=\"{}\"/>",
+                escape(&label)
+            ));
+        }
+        let hour = trn!("{n} hour", "{n} hours", 1);
+        xml.push_str(&format!(
+            "<selection id=\"60\" content=\"{}\"/></input>",
+            escape(&hour)
         ));
+        xml.push_str(&format!(
+            "<action activationType=\"system\" arguments=\"snooze\" hint-inputId=\"snooze\" content=\"{}\"/>",
+            escape(tr!("Snooze"))
+        ));
+        xml.push_str(&format!(
+            "<action activationType=\"system\" arguments=\"dismiss\" content=\"{}\"/>",
+            escape(tr!("Dismiss"))
+        ));
+        xml.push_str("</actions><audio src=\"ms-winsoundevent:Notification.Reminder\"/>");
     }
     xml.push_str("</toast>");
     xml
@@ -142,13 +151,13 @@ mod imp {
             match self.notifier.Setting().ok()? {
                 NotificationSetting::Enabled => None,
                 NotificationSetting::DisabledForApplication => Some(
-                    "Benachrichtigungen für Hora sind in den Windows-Einstellungen ausgeschaltet."
+                    hora_i18n::tr!("Notifications for Hora are turned off in Windows settings.")
                         .into(),
                 ),
-                NotificationSetting::DisabledForUser => Some(
-                    "Benachrichtigungen sind in den Windows-Einstellungen ausgeschaltet.".into(),
-                ),
-                _ => Some("Benachrichtigungen sind durch eine Richtlinie gesperrt.".into()),
+                NotificationSetting::DisabledForUser => {
+                    Some(hora_i18n::tr!("Notifications are turned off in Windows settings.").into())
+                }
+                _ => Some(hora_i18n::tr!("Notifications are blocked by a policy.").into()),
             }
         }
 
@@ -227,7 +236,9 @@ impl Notifier {
         _display_name: &str,
         _icon: Option<&Path>,
     ) -> Result<Notifier, PlatformError> {
-        Err(PlatformError("Benachrichtigungen nur unter Windows".into()))
+        Err(PlatformError(
+            tr!("Notifications are only available on Windows").into(),
+        ))
     }
     pub fn blocked(&self) -> Option<String> {
         None

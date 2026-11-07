@@ -25,7 +25,7 @@ pub enum DateTimeValue {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-#[error("ungültiger Datums-/Zeitwert: {0}")]
+#[error("{}", hora_i18n::tr!("invalid date/time value: {}", .0))]
 pub struct TimeError(pub String);
 
 impl DateTimeValue {

@@ -11,9 +11,10 @@ use slint::{ModelRc, SharedString, StyledText, VecModel};
 
 use crate::journal::{self, BlockKind, DEMO, Entry, Saved};
 use crate::{
-    AppWindow, JournalBlock, JournalCalendar, JournalEdit, JournalRow, MONTHS, State, View, forms,
-    rgb, with_ui,
+    AppWindow, JournalBlock, JournalCalendar, JournalEdit, JournalRow, State, View, forms, rgb,
+    with_ui,
 };
+use hora_i18n::{dates, tr};
 
 /// Pause nach der letzten Eingabe, bis gespeichert wird (Calino: 500 ms)
 const SAVE_DELAY: Duration = Duration::from_millis(500);
@@ -39,13 +40,12 @@ fn calendar_can_be_created(state: &State) -> bool {
 /// Titel der Kopfzeile
 pub fn title(state: &State) -> String {
     if state.journal_all {
-        "Journal".into()
+        tr!("Journal").into()
     } else {
-        format!(
-            "{} {}",
-            MONTHS[state.anchor.month0() as usize],
-            state.anchor.year()
-        )
+        dates::capitalize(&dates::month_year(
+            state.anchor.year(),
+            state.anchor.month0() as usize,
+        ))
     }
 }
 
@@ -104,7 +104,7 @@ pub fn load(app: &AppWindow, state: &mut State) {
     app.set_journal_mode(i32::from(state.journal_all));
     app.set_journal_list_title(
         if state.journal_all {
-            "ALLE EINTRÄGE".to_string()
+            tr!("ALL ENTRIES").to_string()
         } else {
             title(state).to_uppercase()
         }
@@ -179,14 +179,16 @@ fn meta(app: &AppWindow, state: &State, entry: &Entry) {
     let (day, _, _) = journal::date_labels(entry.day);
     app.set_journal_day_num(day.into());
     app.set_journal_weekday_long(
-        forms::WEEKDAYS[entry.day.weekday().num_days_from_monday() as usize].into(),
+        dates::capitalize(dates::weekday(
+            entry.day.weekday().num_days_from_monday() as usize
+        ))
+        .into(),
     );
     app.set_journal_month_year(
-        format!(
-            "{} {}",
-            MONTHS[entry.day.month0() as usize],
-            entry.day.year()
-        )
+        dates::capitalize(&dates::month_year(
+            entry.day.year(),
+            entry.day.month0() as usize,
+        ))
         .into(),
     );
     app.set_journal_date_text(forms::format_date(entry.day).into());
@@ -218,24 +220,24 @@ fn meta(app: &AppWindow, state: &State, entry: &Entry) {
 /// (Stufe, Text): 0 gespeichert, 1 offen, 2 wird übertragen, 3 nur lokal, 4 Fehler
 fn status(state: &State, entry: &Entry) -> (i32, String) {
     if state.journal_dirty {
-        return (1, "Nicht gespeicherte Änderungen".into());
+        return (1, tr!("Unsaved changes").into());
     }
     if let Some(error) = &state.journal_error {
         return (4, error.clone());
     }
     if entry.draft {
-        return (0, "Neuer Eintrag".into());
+        return (0, tr!("New entry").into());
     }
     if entry.calendar_id == DEMO {
         // Wie die Beispieltermine nur im Speicher
-        return (3, "Beispiel, wird nicht dauerhaft gespeichert".into());
+        return (3, tr!("Sample, not saved permanently").into());
     }
     match state.store.pending_state(entry.calendar_id, &entry.href) {
-        Ok(None) => (0, "Gespeichert".into()),
-        Ok(Some((OpState::Pending, 0))) => (2, "Speichere …".into()),
-        Ok(Some((OpState::Pending, _))) => (3, "Lokal gespeichert, wird übertragen".into()),
-        Ok(Some((OpState::Conflict, _))) => (4, "Konflikt mit dem Server".into()),
-        Ok(Some((OpState::Failed, _))) => (4, "Synchronisierung fehlgeschlagen".into()),
+        Ok(None) => (0, tr!("Saved").into()),
+        Ok(Some((OpState::Pending, 0))) => (2, tr!("Saving…").into()),
+        Ok(Some((OpState::Pending, _))) => (3, tr!("Saved locally, uploading").into()),
+        Ok(Some((OpState::Conflict, _))) => (4, tr!("Conflict with the server").into()),
+        Ok(Some((OpState::Failed, _))) => (4, tr!("Sync failed").into()),
         Err(e) => (4, e.to_string()),
     }
 }
@@ -349,7 +351,7 @@ pub fn edited(app: &AppWindow, state: &mut State) {
     state.journal_dirty = true;
     state.journal_error = None;
     app.set_journal_status(1);
-    app.set_journal_status_text("Nicht gespeicherte Änderungen".into());
+    app.set_journal_status_text(tr!("Unsaved changes").into());
     app.set_journal_words(word_count(&app.get_journal_body()) as i32);
     state
         .journal_timer
@@ -444,11 +446,13 @@ pub fn remove_tag(app: &AppWindow, state: &mut State, index: usize) {
     });
 }
 
-/// Datum aus "TT.MM.JJJJ" (auch "heute", "morgen") setzen
+/// Datum aus dem Zahlenformat der Region (auch "today", "morgen") setzen
 pub fn set_date(app: &AppWindow, state: &mut State, text: &str) {
     let today = state.now().date();
     let Some(day) = forms::parse_date(text, today) else {
-        app.set_journal_date_error("Datum nicht erkannt (z. B. 06.11.2026)".into());
+        app.set_journal_date_error(
+            tr!("Date not recognized (e.g. {})", forms::format_date(today)).into(),
+        );
         return;
     };
     app.set_journal_date_error("".into());
@@ -493,15 +497,15 @@ pub fn ask_delete(app: &AppWindow, state: &mut State) {
         return;
     }
     let name = entry.info.summary.trim();
-    app.set_confirm_title("Journaleintrag löschen?".into());
+    app.set_confirm_title(tr!("Delete journal entry?").into());
     app.set_confirm_message(
         if name.is_empty() {
-            format!(
-                "Der Eintrag vom {} wird gelöscht.",
+            tr!(
+                "The entry from {} will be deleted.",
                 forms::format_date(entry.day)
             )
         } else {
-            format!("„{name}“ wird gelöscht.")
+            tr!("“{}” will be deleted.", name)
         }
         .into(),
     );

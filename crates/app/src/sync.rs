@@ -2,6 +2,7 @@
 //! abgleichen, ohne die Oberfläche zu blockieren. Der Thread hat eine eigene
 //! Schreibverbindung zur Datenbank; Ergebnisse meldet er über `notify`.
 
+use hora_i18n::tr;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -187,18 +188,20 @@ fn create_calendar(
         .map_err(|e| e.to_string())?
         .into_iter()
         .find(|a| a.id == account_id)
-        .ok_or("Konto nicht mehr vorhanden")?;
+        .ok_or(tr!("Account no longer exists"))?;
     let home = account
         .home_url
         .as_deref()
         .and_then(|h| Url::parse(h).ok())
-        .ok_or("Das Konto meldet keinen Ort für neue Kalender.")?;
+        .ok_or(tr!(
+            "The account doesn't report a location for new calendars."
+        ))?;
     let client = client_for(store, account_id)?;
     let slug = format!("hora-{}-{:x}", name.to_lowercase(), unix_now());
     client
         .make_calendar(&home, &slug, name, None, components)
         .map(|_| ())
-        .map_err(|e| format!("Kalender anlegen: {e}"))
+        .map_err(|e| tr!("Create calendar: {}", e))
 }
 
 fn credential_key() -> String {
@@ -222,14 +225,14 @@ fn add_account(
         .iter()
         .any(|a| a.url == address.as_str() && a.username == username)
     {
-        return Err("Dieses Konto ist bereits eingerichtet.".into());
+        return Err(tr!("This account is already set up.").into());
     }
     let client = Client::new(username, password);
     let discovery = client
         .discover(address.as_str())
         .map_err(|e| e.to_string())?;
     if discovery.calendars.is_empty() {
-        return Err("Anmeldung hat geklappt, aber der Server meldet keine Kalender.".into());
+        return Err(tr!("Sign-in worked, but the server reports no calendars.").into());
     }
     let key = credential_key();
     credentials::save(&key, password).map_err(|e| e.to_string())?;
@@ -260,11 +263,11 @@ fn client_for(store: &Store, account_id: i64) -> Result<Client, String> {
     let account = accounts
         .iter()
         .find(|a| a.id == account_id)
-        .ok_or("Konto nicht mehr vorhanden")?;
+        .ok_or(tr!("Account no longer exists"))?;
     match credentials::load(&account.credential_key) {
         Ok(Some(password)) => Ok(Client::new(&account.username, &password)),
-        Ok(None) => Err(format!(
-            "{}: Passwort fehlt im Anmeldeinformationsspeicher",
+        Ok(None) => Err(tr!(
+            "{}: password missing from Credential Manager",
             account.name
         )),
         Err(e) => Err(format!("{}: {e}", account.name)),
@@ -337,11 +340,11 @@ fn push_pending(store: &mut Store, notify: &impl Fn(Update)) -> Vec<String> {
                     status: 500..=599, ..
                 }),
             ) => {
-                errors.push(format!("Änderung wartet: {e}"));
+                errors.push(tr!("Change waiting: {}", e));
                 store.retry_pending_later(op.id, now + retry_delay(op.attempts), &e.to_string())
             }
             Err(e) => {
-                errors.push(format!("Änderung abgelehnt: {e}"));
+                errors.push(tr!("Change rejected: {}", e));
                 store.mark_pending(op.id, OpState::Failed, &e.to_string())
             }
         };
@@ -359,7 +362,7 @@ fn resolve_conflict(store: &mut Store, op_id: i64, keep_mine: bool) -> Result<()
         .map_err(|e| e.to_string())?
         .into_iter()
         .find(|o| o.id == op_id)
-        .ok_or("Konflikt ist schon aufgelöst")?;
+        .ok_or(tr!("Conflict is already resolved"))?;
     if !keep_mine {
         return store.discard_pending(op.id).map_err(|e| e.to_string());
     }
@@ -505,7 +508,7 @@ mod tests {
 
         let errors = push_pending(&mut store, &|_| {});
         assert!(
-            errors.iter().any(|e| e.contains("nicht erreichbar")),
+            errors.iter().any(|e| e.contains("not reachable")),
             "{errors:?}"
         );
         let ops = store.pending_ops().unwrap();

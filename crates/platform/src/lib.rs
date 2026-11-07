@@ -13,6 +13,7 @@ use std::time::Duration;
 pub mod autostart;
 pub mod credentials;
 pub mod instance;
+pub mod locale;
 pub mod notify;
 pub mod registry;
 pub mod tray;

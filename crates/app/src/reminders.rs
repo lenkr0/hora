@@ -16,6 +16,7 @@ use hora_platform::notify::Toast;
 
 use crate::State;
 use crate::forms::{format_date, format_time, short_day};
+use hora_i18n::{tr, trn};
 
 /// So weit im Voraus wird geplant
 const LOOKAHEAD: Duration = Duration::hours(6);
@@ -126,7 +127,7 @@ pub fn plan(state: &mut State, from: DateTime<Utc>, to: DateTime<Utc>) -> Vec<Pl
                 at: due.at,
                 calendar_id: resource.calendar_id,
                 title: if o.summary.trim().is_empty() {
-                    "(ohne Titel)".into()
+                    tr!("(untitled)").into()
                 } else {
                     o.summary.clone()
                 },
@@ -160,7 +161,7 @@ pub fn plan(state: &mut State, from: DateTime<Utc>, to: DateTime<Utc>) -> Vec<Pl
                 at: r.at,
                 calendar_id: resource.calendar_id,
                 title: if r.summary.trim().is_empty() {
-                    "(ohne Titel)".into()
+                    tr!("(untitled)").into()
                 } else {
                     r.summary.clone()
                 },
@@ -177,31 +178,35 @@ pub fn plan(state: &mut State, from: DateTime<Utc>, to: DateTime<Utc>) -> Vec<Pl
     out
 }
 
-/// "Fällig in 15 Minuten · 18:00", "Fällig heute", "Überfällig seit 5 Min. · 18:00"
+/// "Due in 15 minutes · 18:00", "Due today", "Overdue by 5 min · 18:00"
 fn task_text(p: &Planned, now: DateTime<Utc>, home: Tz) -> String {
     let local = p.start.with_timezone(&home).naive_local();
     let today = now.with_timezone(&home).date_naive();
-    let day = match (local.date() - today).num_days() {
-        -1 => "gestern".to_string(),
-        0 => "heute".to_string(),
-        1 => "morgen".to_string(),
-        _ => format!("am {}", short_day(local.date())),
-    };
+    let days = (local.date() - today).num_days();
     if p.all_day {
-        return format!("Fällig {day}");
+        return match days {
+            -1 => tr!("Due yesterday").to_string(),
+            0 => tr!("Due today").to_string(),
+            1 => tr!("Due tomorrow").to_string(),
+            _ => tr!("Due on {}", short_day(local.date())),
+        };
     }
     let time = format_time(local.time());
     let minutes = ((p.start - now).num_seconds() as f64 / 60.0).round() as i64;
     match minutes {
-        m if m < 0 => format!("Überfällig seit {} Min. · {time}", -m),
-        0 => format!("Jetzt fällig · {time}"),
-        1 => format!("Fällig in 1 Minute · {time}"),
-        m if m < 120 => format!("Fällig in {m} Minuten · {time}"),
-        _ => format!("Fällig {day} um {time}"),
+        m if m < 0 => tr!("Overdue by {} min · {}", -m, time),
+        0 => tr!("Due now · {}", time),
+        m if m < 120 => trn!("Due in {n} minute · {}", "Due in {n} minutes · {}", m, time),
+        _ => match days {
+            -1 => tr!("Due yesterday at {}", time),
+            0 => tr!("Due today at {}", time),
+            1 => tr!("Due tomorrow at {}", time),
+            _ => tr!("Due on {} at {}", short_day(local.date()), time),
+        },
     }
 }
 
-/// "In 15 Minuten · 15:00–16:00", "Morgen · ganztägig", "Läuft seit 5 Min. · …"
+/// "In 15 minutes · 15:00–16:00", "Tomorrow · all day", "Running for 5 min · …"
 pub fn when_text(p: &Planned, now: DateTime<Utc>, home: Tz) -> String {
     if p.task {
         return task_text(p, now, home);
@@ -210,16 +215,20 @@ pub fn when_text(p: &Planned, now: DateTime<Utc>, home: Tz) -> String {
     let (start, end, today) = (local(p.start), local(p.end), local(now).date());
     let days = (start.date() - today).num_days();
     let day = match days {
-        0 => "Heute".to_string(),
-        1 => "Morgen".to_string(),
-        2 => "Übermorgen".to_string(),
+        0 => tr!("Today").to_string(),
+        1 => tr!("Tomorrow").to_string(),
+        2 => tr!("Day after tomorrow").to_string(),
         _ => short_day(start.date()),
     };
     if p.all_day {
         let started = p.start <= now;
-        return format!(
-            "{} · ganztägig",
-            if started { "Heute".to_string() } else { day }
+        return tr!(
+            "{} · all day",
+            if started {
+                tr!("Today").to_string()
+            } else {
+                day
+            }
         );
     }
     let range = if end.date() == start.date() {
@@ -234,10 +243,9 @@ pub fn when_text(p: &Planned, now: DateTime<Utc>, home: Tz) -> String {
     };
     let minutes = ((p.start - now).num_seconds() as f64 / 60.0).round() as i64;
     let when = match minutes {
-        m if m < 0 => format!("Läuft seit {} Min.", -m),
-        0 => "Jetzt".to_string(),
-        1 => "In 1 Minute".to_string(),
-        m if m < 120 => format!("In {m} Minuten"),
+        m if m < 0 => tr!("Running for {} min", -m),
+        0 => tr!("Now").to_string(),
+        m if m < 120 => trn!("In {n} minute", "In {n} minutes", m),
         _ => day,
     };
     format!("{when} · {range}")
@@ -263,11 +271,20 @@ pub fn toast_for(p: &Planned, now: DateTime<Utc>, home: Tz) -> Toast {
     }
 }
 
-fn plural(n: i64, one: &str, many: &str) -> String {
-    format!("{n} {}", if n == 1 { one } else { many })
+/// Dauer ohne Richtung: "15 minutes", "2 days"
+fn amount(m: i64) -> String {
+    if m % 10080 == 0 {
+        trn!("{n} week", "{n} weeks", m / 10080)
+    } else if m % 1440 == 0 {
+        trn!("{n} day", "{n} days", m / 1440)
+    } else if m % 60 == 0 {
+        trn!("{n} hour", "{n} hours", m / 60)
+    } else {
+        trn!("{n} minute", "{n} minutes", m)
+    }
 }
 
-/// Beschriftung einer Vorgabe: "15 Minuten vorher", "Am Vortag um 09:00"
+/// Beschriftung einer Vorgabe: "15 minutes before", "The day before at 09:00"
 pub fn label(minutes: i64, all_day: bool) -> String {
     if all_day {
         let offset = -minutes;
@@ -275,31 +292,44 @@ pub fn label(minutes: i64, all_day: bool) -> String {
         let at = NaiveTime::from_hms_opt((time / 60) as u32, (time % 60) as u32, 0)
             .map_or_else(String::new, format_time);
         return match days {
-            0 => format!("Am Tag um {at}"),
-            -1 => format!("Am Vortag um {at}"),
-            -7 => format!("1 Woche vorher um {at}"),
-            d if d < 0 => format!("{} vorher um {at}", plural(-d, "Tag", "Tage")),
-            d => format!("{} danach um {at}", plural(d, "Tag", "Tage")),
+            0 => tr!("On the day at {}", at),
+            -1 => tr!("The day before at {}", at),
+            -7 => tr!("1 week before at {}", at),
+            d if d < 0 => trn!("{n} day before at {}", "{n} days before at {}", -d, at),
+            d => trn!("{n} day after at {}", "{n} days after at {}", d, at),
         };
     }
-    let (m, suffix) = if minutes >= 0 {
-        (minutes, "vorher")
-    } else {
-        (-minutes, "danach")
-    };
-    if m == 0 {
-        return "Zum Zeitpunkt des Termins".into();
+    if minutes == 0 {
+        return tr!("At time of event").into();
     }
-    let amount = if m % 10080 == 0 {
-        plural(m / 10080, "Woche", "Wochen")
+    let m = minutes.abs();
+    let before = minutes > 0;
+    if m % 10080 == 0 {
+        let n = m / 10080;
+        if before {
+            trn!("{n} week before", "{n} weeks before", n)
+        } else {
+            trn!("{n} week after", "{n} weeks after", n)
+        }
     } else if m % 1440 == 0 {
-        plural(m / 1440, "Tag", "Tage")
+        let n = m / 1440;
+        if before {
+            trn!("{n} day before", "{n} days before", n)
+        } else {
+            trn!("{n} day after", "{n} days after", n)
+        }
     } else if m % 60 == 0 {
-        plural(m / 60, "Stunde", "Stunden")
+        let n = m / 60;
+        if before {
+            trn!("{n} hour before", "{n} hours before", n)
+        } else {
+            trn!("{n} hour after", "{n} hours after", n)
+        }
+    } else if before {
+        trn!("{n} minute before", "{n} minutes before", m)
     } else {
-        plural(m, "Minute", "Minuten")
-    };
-    format!("{amount} {suffix}")
+        trn!("{n} minute after", "{n} minutes after", m)
+    }
 }
 
 /// Beschriftung eines Alarms, den der Dialog nur anzeigt und behält
@@ -307,8 +337,8 @@ pub fn alarm_label(alarm: &Alarm, all_day: bool, home: Tz) -> String {
     match alarm.trigger {
         Trigger::Absolute(at) => {
             let local = at.with_timezone(&home).naive_local();
-            format!(
-                "Am {} um {}",
+            tr!(
+                "On {} at {}",
                 format_date(local.date()),
                 format_time(local.time().with_second(0).unwrap_or_default())
             )
@@ -317,13 +347,13 @@ pub fn alarm_label(alarm: &Alarm, all_day: bool, home: Tz) -> String {
             offset,
             from_end: true,
         } => match -offset.num_minutes() {
-            0 => "Zum Ende des Termins".into(),
-            m if m > 0 => format!("{} vor Ende", label(m, false).trim_end_matches(" vorher")),
-            m => format!("{} nach Ende", label(-m, false).trim_end_matches(" vorher")),
+            0 => tr!("At end of event").into(),
+            m if m > 0 => tr!("{} before end", amount(m)),
+            m => tr!("{} after end", amount(-m)),
         },
         Trigger::Relative { .. } => alarm
             .minutes_before()
-            .map_or_else(|| "Erinnerung".into(), |m| label(m, all_day)),
+            .map_or_else(|| tr!("Reminder").into(), |m| label(m, all_day)),
     }
 }
 
@@ -365,21 +395,18 @@ mod tests {
         p.task = true;
         assert_eq!(
             when_text(&p, at("2026-11-10 17:45"), Berlin),
-            "Fällig in 15 Minuten · 18:00"
+            "Due in 15 minutes · 18:00"
         );
         assert_eq!(
             when_text(&p, at("2026-11-10 18:10"), Berlin),
-            "Überfällig seit 10 Min. · 18:00"
+            "Overdue by 10 min · 18:00"
         );
         assert_eq!(
             when_text(&p, at("2026-11-09 18:00"), Berlin),
-            "Fällig morgen um 18:00"
+            "Due tomorrow at 18:00"
         );
         p.all_day = true;
-        assert_eq!(
-            when_text(&p, at("2026-11-10 09:00"), Berlin),
-            "Fällig heute"
-        );
+        assert_eq!(when_text(&p, at("2026-11-10 09:00"), Berlin), "Due today");
         assert!(
             toast_for(&p, at("2026-11-10 09:00"), Berlin)
                 .launch
@@ -389,17 +416,27 @@ mod tests {
 
     #[test]
     fn labels_follow_calino() {
-        assert_eq!(label(0, false), "Zum Zeitpunkt des Termins");
-        assert_eq!(label(1, false), "1 Minute vorher");
-        assert_eq!(label(15, false), "15 Minuten vorher");
-        assert_eq!(label(60, false), "1 Stunde vorher");
-        assert_eq!(label(90, false), "90 Minuten vorher");
-        assert_eq!(label(2880, false), "2 Tage vorher");
-        assert_eq!(label(10080, false), "1 Woche vorher");
-        assert_eq!(label(-540, true), "Am Tag um 09:00");
-        assert_eq!(label(900, true), "Am Vortag um 09:00");
-        assert_eq!(label(2340, true), "2 Tage vorher um 09:00");
-        assert_eq!(label(9540, true), "1 Woche vorher um 09:00");
+        assert_eq!(label(0, false), "At time of event");
+        assert_eq!(label(1, false), "1 minute before");
+        assert_eq!(label(15, false), "15 minutes before");
+        assert_eq!(label(60, false), "1 hour before");
+        assert_eq!(label(90, false), "90 minutes before");
+        assert_eq!(label(2880, false), "2 days before");
+        assert_eq!(label(10080, false), "1 week before");
+        assert_eq!(label(-540, true), "On the day at 09:00");
+        assert_eq!(label(900, true), "The day before at 09:00");
+        assert_eq!(label(2340, true), "2 days before at 09:00");
+        assert_eq!(label(9540, true), "1 week before at 09:00");
+        hora_i18n::with_language(hora_i18n::Lang::De, || {
+            assert_eq!(label(15, false), "15 Minuten vorher");
+            assert_eq!(label(60, false), "1 Stunde vorher");
+            assert_eq!(label(900, true), "Am Vortag um 09:00");
+        });
+        hora_i18n::with_language(hora_i18n::Lang::Pl, || {
+            assert_eq!(label(2, false), "2 minuty wcześniej");
+            assert_eq!(label(5, false), "5 minut wcześniej");
+            assert_eq!(label(22, false), "22 minuty wcześniej");
+        });
     }
 
     #[test]
@@ -411,18 +448,18 @@ mod tests {
             "2026-11-10 15:00",
             "2026-11-10 16:00",
         );
-        assert_eq!(when_text(&p, now, Berlin), "In 15 Minuten · 15:00–16:00");
+        assert_eq!(when_text(&p, now, Berlin), "In 15 minutes · 15:00–16:00");
         assert_eq!(
             when_text(&p, at("2026-11-10 15:05"), Berlin),
-            "Läuft seit 5 Min. · 15:00–16:00"
+            "Running for 5 min · 15:00–16:00"
         );
         assert_eq!(
             when_text(&p, at("2026-11-10 15:00"), Berlin),
-            "Jetzt · 15:00–16:00"
+            "Now · 15:00–16:00"
         );
         assert_eq!(
             when_text(&p, at("2026-11-09 15:00"), Berlin),
-            "Morgen · 15:00–16:00"
+            "Tomorrow · 15:00–16:00"
         );
         let mut whole = planned(
             "b",
@@ -433,13 +470,13 @@ mod tests {
         whole.all_day = true;
         assert_eq!(
             when_text(&whole, at("2026-11-09 09:00"), Berlin),
-            "Morgen · ganztägig"
+            "Tomorrow · all day"
         );
         let toast = toast_for(&p, now, Berlin);
         assert_eq!(
             toast.lines,
             vec![
-                "In 15 Minuten · 15:00–16:00".to_string(),
+                "In 15 minutes · 15:00–16:00".to_string(),
                 "Praxis".to_string()
             ]
         );

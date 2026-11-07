@@ -36,14 +36,13 @@ use hora_storage::{Account, Calendar, OpState, PendingSummary, Store};
 use slint::{Color, ComponentHandle, Model, ModelRc, SharedString, VecModel};
 
 use editing::{DialogInput, ReminderInput, SeriesAction};
-use forms::{DraftTimes, MONTHS};
+use forms::DraftTimes;
+use hora_i18n::{Lang, dates, tr, trn};
 use items::{Item, Source};
 use sync::{Command, Update, Worker};
 use view::Placement;
 
 slint::include_modules!();
-
-const DAY_NAMES: [&str; 7] = ["MO", "DI", "MI", "DO", "FR", "SA", "SO"];
 
 /// Calino CALENDAR_COLORS, für Kalender ohne eigene Farbe
 const CALENDAR_COLORS: [u32; 12] = [
@@ -293,11 +292,11 @@ fn calendar_color(calendar: &Calendar, index: usize) -> u32 {
         .unwrap_or(CALENDAR_COLORS[index % CALENDAR_COLORS.len()])
 }
 
-/// "November 2026", über Monatsgrenzen "Okt. – Nov. 2026" bzw. "Dez. 2026 – Jan. 2027"
+/// "November 2026", über Monatsgrenzen "Oct – Nov 2026" bzw. "Dec 2026 – Jan 2027"
 fn month_title(first: NaiveDate, last: NaiveDate) -> String {
-    let short = |d: NaiveDate| forms::MONTHS_SHORT[d.month0() as usize];
+    let short = |d: NaiveDate| dates::capitalize(dates::month_short(d.month0() as usize));
     if first.month() == last.month() && first.year() == last.year() {
-        format!("{} {}", MONTHS[first.month0() as usize], first.year())
+        dates::capitalize(&dates::month_year(first.year(), first.month0() as usize))
     } else if first.year() == last.year() {
         format!("{} – {} {}", short(first), short(last), last.year())
     } else {
@@ -315,7 +314,7 @@ fn view_title(view: View, anchor: NaiveDate, first: NaiveDate, days: i64) -> Str
     match view {
         View::Day => forms::long_day(anchor),
         View::Month | View::Agenda => {
-            format!("{} {}", MONTHS[anchor.month0() as usize], anchor.year())
+            dates::capitalize(&dates::month_year(anchor.year(), anchor.month0() as usize))
         }
         View::Year => anchor.year().to_string(),
         _ => month_title(first, first + Days::new(days as u64 - 1)),
@@ -342,8 +341,8 @@ fn apply_layout(items: &mut [EventItem]) {
 fn calendar_rows(state: &State) -> Vec<CalendarRow> {
     let mut rows = vec![CalendarRow {
         id: -1,
-        account: "Auf diesem Gerät".into(),
-        name: "Beispieltermine".into(),
+        account: tr!("On this device").into(),
+        name: tr!("Sample events").into(),
         color: rgb(DEMO_COLOR),
         visible: state.demo_visible,
         read_only: false,
@@ -400,7 +399,7 @@ fn calendar_options(state: &mut State) -> Vec<SelectOption> {
     if state.demo_visible || options.is_empty() {
         options.push(SelectOption {
             id: -1,
-            name: "Beispieltermine (nur auf diesem Gerät)".into(),
+            name: tr!("Sample events (only on this device)").into(),
             color: rgb(DEMO_COLOR),
         });
         ids.push(-1);
@@ -415,14 +414,16 @@ fn load_week(app: &AppWindow, state: &mut State, first: NaiveDate, days: i64, ke
         .map(|i| {
             let date = first + Days::new(i as u64);
             DayInfo {
-                name: DAY_NAMES[date.weekday().num_days_from_monday() as usize].into(),
+                name: dates::weekday_header(date.weekday().num_days_from_monday() as usize)
+                    .to_uppercase()
+                    .into(),
                 number: date.day().to_string().into(),
                 today: date == today,
             }
         })
         .collect();
     app.set_days(ModelRc::new(VecModel::from(infos)));
-    app.set_week_label(format!("KW {}", first.iso_week().week()).into());
+    app.set_week_label(tr!("W{}", first.iso_week().week()).into());
 
     let home = state.home;
     let mut rows: Vec<(String, EventItem)> = Vec::new();
@@ -683,7 +684,7 @@ fn load_year(app: &AppWindow, state: &State, first: NaiveDate, keep_order: bool)
         .map(|(m, cells)| {
             let start = NaiveDate::from_ymd_opt(year, m as u32 + 1, 1).unwrap_or(first);
             YearMonth {
-                name: MONTHS[m].into(),
+                name: dates::capitalize(dates::month(m)).into(),
                 start: start.ordinal0() as i32,
                 days: ModelRc::new(VecModel::from(
                     cells
@@ -723,7 +724,7 @@ fn load_mini(app: &AppWindow, state: &State) {
             }
         })
         .collect();
-    app.set_mini_month(MONTHS[state.mini_month.month0() as usize].into());
+    app.set_mini_month(dates::capitalize(dates::month(state.mini_month.month0() as usize)).into());
     app.set_mini_year(state.mini_month.year().to_string().into());
     app.set_mini_days(ModelRc::new(VecModel::from(days)));
 }
@@ -735,7 +736,7 @@ fn load_view(app: &AppWindow, state: &mut State, keep_order: bool) {
     state.items = items::collect(state, first, days);
     app.set_view(state.view.index());
     if state.view == View::Tasks {
-        app.set_month_title("Aufgaben".into());
+        app.set_month_title(tr!("Tasks").into());
     } else if state.view == View::Journal {
         app.set_month_title(journal_ui::title(state).into());
     } else {
@@ -766,38 +767,36 @@ fn update_now(app: &AppWindow, state: &State) {
     app.set_now_min(minutes_of(now));
 }
 
-fn plural(n: i64, one: &str, many: &str) -> String {
-    format!("{n} {}", if n == 1 { one } else { many })
-}
-
 fn update_sync_status(app: &AppWindow, state: &State) {
     let p = state.pending;
     let (code, text, detail) = if state.accounts.is_empty() {
         (0, String::new(), String::new())
     } else if state.sync.running {
-        (2, "Synchronisiere …".to_string(), String::new())
+        (2, tr!("Syncing…").to_string(), String::new())
     } else if p.conflicts > 0 {
         (
             3,
-            format!(
-                "{} beim Speichern",
-                plural(p.conflicts, "Konflikt", "Konflikte")
+            trn!(
+                "{n} conflict while saving",
+                "{n} conflicts while saving",
+                p.conflicts
             ),
             String::new(),
         )
     } else if p.failed > 0 {
         (
             3,
-            format!(
-                "{} vom Server abgelehnt",
-                plural(p.failed, "Änderung", "Änderungen")
+            trn!(
+                "{n} change rejected by the server",
+                "{n} changes rejected by the server",
+                p.failed
             ),
             state.sync.errors.join("\n"),
         )
     } else if let Some(first) = state.sync.errors.first() {
         let more = state.sync.errors.len() - 1;
         let text = if more > 0 {
-            format!("{first} (+{more} weitere)")
+            tr!("{} (+{} more)", first, more)
         } else {
             first.clone()
         };
@@ -805,20 +804,21 @@ fn update_sync_status(app: &AppWindow, state: &State) {
     } else if p.waiting > 0 {
         (
             2,
-            format!(
-                "{} warten auf Übertragung",
-                plural(p.waiting, "Änderung", "Änderungen")
+            trn!(
+                "{n} change waiting to upload",
+                "{n} changes waiting to upload",
+                p.waiting
             ),
             String::new(),
         )
     } else if let Some(last) = state.sync.last {
         (
             1,
-            format!("Synchronisiert {}", last.format("%H:%M")),
+            tr!("Synced {}", dates::clock(last.hour(), last.minute())),
             String::new(),
         )
     } else {
-        (1, "Noch nicht synchronisiert".to_string(), String::new())
+        (1, tr!("Not synced yet").to_string(), String::new())
     };
     app.set_sync_state(code);
     app.set_sync_text(text.into());
@@ -851,17 +851,20 @@ fn check_conflicts(app: &AppWindow, state: &mut State) {
         .and_then(|ics| hora_core::model::CalendarObject::parse(ics).ok())
         .and_then(|o| o.events().0.into_iter().next())
         .map(|e| e.summary)
-        .unwrap_or_else(|| "Ein Termin".into());
-    let action = if op.operation == hora_storage::Operation::Delete {
-        "Löschen"
-    } else {
-        "deine Änderung"
-    };
+        .unwrap_or_else(|| tr!("An event").into());
     state.conflict = Some(op.id);
     app.set_conflict_message(
-        format!(
-            "„{title}“ wurde auf dem Server geändert, bevor {action} übertragen war. Welche Fassung soll gelten?"
-        )
+        if op.operation == hora_storage::Operation::Delete {
+            tr!(
+                "“{}” was changed on the server before your deletion was uploaded. Which version should apply?",
+                title
+            )
+        } else {
+            tr!(
+                "“{}” was changed on the server before your change was uploaded. Which version should apply?",
+                title
+            )
+        }
         .into(),
     );
     app.set_conflict_open(true);
@@ -961,7 +964,7 @@ fn details(state: &mut State, item: &Item) -> EventDetails {
                 format!("{} · {}", c.name, account)
             })
             .unwrap_or_default(),
-        _ => "Beispieltermine (nur auf diesem Gerät)".to_string(),
+        _ => tr!("Sample events (only on this device)").to_string(),
     };
     let rule = editing::series_rule(state, item)
         .map(|(rule, start)| repeat::describe_rule(&rule, &start, state.home));
@@ -971,7 +974,7 @@ fn details(state: &mut State, item: &Item) -> EventDetails {
                 read_only: true, ..
             },
             _,
-        ) => "Dieser Kalender ist schreibgeschützt.".to_string(),
+        ) => tr!("This calendar is read-only.").to_string(),
         (_, Some(rule)) => rule,
         _ => String::new(),
     };
@@ -1125,11 +1128,11 @@ fn reminder_presets(minutes: &[i64], all_day: bool) -> ModelRc<SelectOption> {
     ModelRc::new(VecModel::from(options))
 }
 
-/// Auswahl der Standarderinnerung: "Keine" und die Vorgaben
+/// Auswahl der Standarderinnerung: "None" und die Vorgaben
 fn default_reminder_options() -> ModelRc<SelectOption> {
     let mut options = vec![SelectOption {
         id: -1,
-        name: "Keine".into(),
+        name: tr!("No reminder").into(),
         color: Color::default(),
     }];
     options.extend(reminders::TIMED.iter().map(|m| SelectOption {
@@ -1236,6 +1239,8 @@ fn on_toast(launch: String) {
 }
 
 fn open_settings(app: &AppWindow, state: &State) {
+    app.set_settings_language(language_index(&language_choice(&state.store)));
+    app.set_settings_formats(format_index(&format_choice(&state.store)));
     app.set_settings_reminders(state.settings.reminders);
     app.set_settings_default_reminder(default_reminder_index(state.settings.default_reminder));
     app.set_settings_keep_running(state.settings.keep_running);
@@ -1304,7 +1309,7 @@ fn load_tasks(app: &AppWindow, state: &mut State) {
             None => {
                 let t = &state.tasks[r.item];
                 let title = if t.info.summary.trim().is_empty() {
-                    "(ohne Titel)"
+                    tr!("(untitled)")
                 } else {
                     t.info.summary.trim()
                 };
@@ -1408,7 +1413,7 @@ fn open_task_dialog(
     let mut parent_ids: Vec<Option<String>> = vec![None];
     let mut parent_names: Vec<SelectOption> = vec![SelectOption {
         id: 0,
-        name: "Keine".into(),
+        name: tr!("No parent task").into(),
         color: Color::default(),
     }];
     for t in &state.tasks {
@@ -1439,12 +1444,13 @@ fn open_task_dialog(
                 .zip(t.info.start.or(t.info.due))
                 .map(|(r, start)| repeat::describe_rule(r, &start, home))
                 .unwrap_or_default();
-            format!(
-                "Wiederkehrende Aufgabe: {rule}. Bisher {} erledigt. Die Fälligkeit gilt für die Serie.",
+            tr!(
+                "Recurring task: {}. Completed {} times so far. The due date applies to the series.",
+                rule,
                 t.completed_count
             )
         }
-        Some(t) if t.read_only => "Dieser Kalender ist schreibgeschützt.".into(),
+        Some(t) if t.read_only => tr!("This calendar is read-only.").into(),
         _ => String::new(),
     };
     let writable = item.as_ref().is_some_and(|t| !t.read_only);
@@ -1489,16 +1495,20 @@ fn open_task_dialog(
 fn ask_delete_task(app: &AppWindow, state: &mut State, task: tasks::TaskItem) {
     let index = state.tasks.iter().position(|t| same_task(t, &task));
     let subtasks = index.map_or(0, |i| tasks::descendants(&state.tasks, i).len());
-    let mut message = format!("„{}“ wird gelöscht.", task.info.summary);
-    if subtasks == 1 {
-        message.push_str(" Die Teilaufgabe auch.");
-    } else if subtasks > 1 {
-        message.push_str(&format!(" Die {subtasks} Teilaufgaben auch."));
+    let mut message = tr!("“{}” will be deleted.", task.info.summary);
+    if subtasks > 0 {
+        message.push(' ');
+        message.push_str(&trn!(
+            "So will its subtask.",
+            "So will its {n} subtasks.",
+            subtasks
+        ));
     }
     if task.recurring {
-        message.push_str(" Gelöscht wird die ganze Serie.");
+        message.push(' ');
+        message.push_str(tr!("The whole series will be deleted."));
     }
-    app.set_confirm_title("Aufgabe löschen?".into());
+    app.set_confirm_title(tr!("Delete task?").into());
     app.set_confirm_message(message.into());
     state.deleting_task = Some(task);
     app.set_confirm_open(true);
@@ -1510,8 +1520,8 @@ fn ask_delete(app: &AppWindow, state: &mut State, item: Item) {
         ask_scope(app, state, SeriesAction::Delete { item }, true);
         return;
     }
-    app.set_confirm_title("Termin löschen?".into());
-    app.set_confirm_message(format!("„{}“ wird gelöscht.", item.title).into());
+    app.set_confirm_title(tr!("Delete event?").into());
+    app.set_confirm_message(tr!("“{}” will be deleted.", item.title).into());
     state.deleting = Some(item);
     app.set_confirm_open(true);
 }
@@ -1666,7 +1676,7 @@ fn palette_query(app: &AppWindow, state: &mut State, query: &str) {
         }
         let task = matches!(entry.action, palette::Action::OpenTask { .. })
             || (matches!(entry.action, palette::Action::Create(_))
-                && entry.title.starts_with("Aufgabe"));
+                && entry.title.starts_with(tr!("Task: {}", "").as_str()));
         rows.push(PaletteItem {
             header: false,
             title: entry.title.as_str().into(),
@@ -1813,6 +1823,155 @@ fn run_palette_action(app: &AppWindow, state: &Rc<RefCell<State>>, action: palet
     }
 }
 
+/// Gewählte Sprache: HORA_LANGUAGE, sonst die Einstellung, sonst die Wahl im
+/// Installer, sonst Englisch. "system" steht für die Windows-Anzeigesprache.
+fn language_choice(store: &Store) -> String {
+    std::env::var("HORA_LANGUAGE")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| store.setting("language").ok().flatten())
+        .or_else(hora_platform::locale::installer_language)
+        .unwrap_or_else(|| "en".into())
+}
+
+fn resolve_language(choice: &str) -> Lang {
+    if choice.eq_ignore_ascii_case("system") {
+        return hora_platform::locale::ui_language()
+            .as_deref()
+            .and_then(Lang::from_code)
+            .unwrap_or(Lang::En);
+    }
+    Lang::from_code(choice).unwrap_or(Lang::En)
+}
+
+/// Feste Datums- und Zeitformate (Einstellung "formats"); "windows" folgt der
+/// Region in den Windows-Einstellungen
+const FORMATS: [(&str, &str, &str); 4] = [
+    ("dmy-dot", "dd.MM.yyyy", "HH:mm"),
+    ("dmy-slash", "dd/MM/yyyy", "HH:mm"),
+    ("mdy", "MM/dd/yyyy", "h:mm tt"),
+    ("ymd", "yyyy-MM-dd", "HH:mm"),
+];
+
+fn format_choice(store: &Store) -> String {
+    store
+        .setting("formats")
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| "windows".into())
+}
+
+fn region_for(choice: &str) -> dates::Region {
+    if let Some((_, date, time)) = FORMATS.iter().find(|(code, ..)| *code == choice) {
+        return dates::Region::from_patterns(date, time);
+    }
+    hora_platform::locale::region_formats()
+        .map(|(date, time)| dates::Region::from_patterns(&date, &time))
+        .unwrap_or(dates::Region::DEFAULT)
+}
+
+fn format_index(choice: &str) -> i32 {
+    FORMATS
+        .iter()
+        .position(|(code, ..)| *code == choice)
+        .map_or(0, |i| i as i32 + 1)
+}
+
+/// Auswahl mit Beispielen: "Windows (11/7/2026, 2:30 PM)", "07.11.2026, 14:30" …
+fn format_options() -> ModelRc<SelectOption> {
+    let sample = NaiveDate::from_ymd_opt(2026, 11, 7).unwrap_or_default();
+    let example = |r: dates::Region| {
+        format!(
+            "{}, {}",
+            dates::numeric_in(sample, r),
+            dates::clock_in(14, 30, r)
+        )
+    };
+    let mut options = vec![SelectOption {
+        id: 0,
+        name: tr!("Windows ({})", example(region_for("windows"))).into(),
+        color: Color::default(),
+    }];
+    options.extend(
+        FORMATS
+            .iter()
+            .enumerate()
+            .map(|(i, (code, ..))| SelectOption {
+                id: i as i32 + 1,
+                name: example(region_for(code)).into(),
+                color: Color::default(),
+            }),
+    );
+    ModelRc::new(VecModel::from(options))
+}
+
+/// Eintrag in der Sprachauswahl der Einstellungen (0 = Windows-Sprache)
+fn language_index(choice: &str) -> i32 {
+    if choice.eq_ignore_ascii_case("system") {
+        return 0;
+    }
+    let lang = Lang::from_code(choice).unwrap_or(Lang::En);
+    Lang::ALL
+        .iter()
+        .position(|l| *l == lang)
+        .map_or(1, |i| i as i32 + 1)
+}
+
+fn language_options() -> ModelRc<SelectOption> {
+    let mut options = vec![SelectOption {
+        id: 0,
+        name: tr!("Windows language").into(),
+        color: Color::default(),
+    }];
+    options.extend(Lang::ALL.iter().enumerate().map(|(i, l)| SelectOption {
+        id: i as i32 + 1,
+        name: l.native_name().into(),
+        color: Color::default(),
+    }));
+    ModelRc::new(VecModel::from(options))
+}
+
+/// Sprache anwenden: Rust-Texte, Slint-Übersetzungen, Namen und Formate
+fn apply_language(app: &AppWindow, lang: Lang) {
+    hora_i18n::set_language(lang);
+    let _ = slint::select_bundled_translation(lang.code());
+    let names = |name: &dyn Fn(usize) -> String| -> ModelRc<SharedString> {
+        ModelRc::new(VecModel::from(
+            (0..7)
+                .map(|i| SharedString::from(name(i)))
+                .collect::<Vec<_>>(),
+        ))
+    };
+    let locale = app.global::<Locale>();
+    locale.set_weekday_long(names(&|i| dates::capitalize(dates::weekday(i))));
+    locale.set_weekday_header(names(&|i| dates::capitalize(dates::weekday_header(i))));
+    locale.set_weekday_caps(names(&|i| dates::weekday_header(i).to_uppercase()));
+    locale.set_weekday_letter(names(&|i| dates::weekday_letter(i).to_string()));
+    locale.set_date_placeholder(dates::numeric_placeholder().into());
+    locale.set_hour12(dates::region().hour12);
+    app.set_language_options(language_options());
+    app.set_format_options(format_options());
+    app.set_default_reminder_options(default_reminder_options());
+    app.set_reminder_presets(reminder_presets(&reminders::TIMED, false));
+    app.set_reminder_presets_all_day(reminder_presets(&reminders::ALL_DAY, true));
+}
+
+/// Nach einem Sprachwechsel: Beispieldaten in der neuen Sprache, Menü im
+/// Infobereich und alle Ansichten neu
+fn relabel(app: &AppWindow, state: &mut State) {
+    let today = state.now().date();
+    let (events, all_day, next_id) = sample::generate(monday_of(today));
+    state.events = events;
+    state.all_day = all_day;
+    state.next_id = next_id;
+    state.demo_journals = journal::sample(today, Utc::now());
+    state.parsed_journals.clear();
+    if let Some(shell) = &state.shell {
+        shell.relabel();
+    }
+    refresh(app, state, true);
+}
+
 fn main() -> std::process::ExitCode {
     let dir = data_dir();
     let _ = std::fs::create_dir_all(&dir);
@@ -1820,7 +1979,7 @@ fn main() -> std::process::ExitCode {
     match run(dir) {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            log::fatal(&format!("Hora konnte nicht starten: {e}"));
+            log::fatal(&tr!("Hora could not start: {}", e));
             std::process::ExitCode::FAILURE
         }
     }
@@ -1867,11 +2026,15 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     // Lässt sich die Datenbank nicht öffnen, lieber sichtbar abbrechen als mit
     // einer leeren im Speicher weiterzumachen, deren Einträge dann verloren gingen
     let store = Store::open(&db).map_err(|e| {
-        slint::PlatformError::from(format!(
-            "Die Datenbank {} lässt sich nicht öffnen ({e}). Damit nichts verloren geht, beendet sich Hora.",
-            db.display()
+        slint::PlatformError::from(tr!(
+            "The database {} can't be opened ({}). To avoid losing anything, Hora will quit.",
+            db.display(),
+            e
         ))
     })?;
+    // Zahlenformate (Windows-Region oder eigene Wahl), Sprache der App
+    dates::set_region(region_for(&format_choice(&store)));
+    apply_language(&app, resolve_language(&language_choice(&store)));
     let accounts = store.accounts().unwrap_or_default();
     let calendars = store.calendars().unwrap_or_default();
     let demo_visible = match store.setting("demo_visible").ok().flatten() {
@@ -1889,9 +2052,6 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     app.set_events(ModelRc::from(rows.clone()));
     let reminder_rows = Rc::new(VecModel::<ReminderChip>::default());
     app.set_event_reminders(ModelRc::from(reminder_rows.clone()));
-    app.set_reminder_presets(reminder_presets(&reminders::TIMED, false));
-    app.set_reminder_presets_all_day(reminder_presets(&reminders::ALL_DAY, true));
-    app.set_default_reminder_options(default_reminder_options());
     let settings = Settings::load(&store);
     // Theme: HORA_THEME vor der Wahl aus der Befehlspalette
     let theme = env_theme.or_else(|| {
@@ -2375,7 +2535,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         };
         s.send(Command::CreateCalendar {
             account_id: account.id,
-            name: "Journal".into(),
+            name: tr!("Journal").into(),
             components: vec!["VJOURNAL"],
         });
         s.journal_create_busy = true;
@@ -2514,7 +2674,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 description: description.to_string(),
             };
             if input.calendar < 0 {
-                app.set_task_error("Bitte einen Kalender wählen, der Aufgaben kann.".into());
+                app.set_task_error(tr!("Please choose a calendar that supports tasks.").into());
                 return;
             }
             let items = s.tasks.clone();
@@ -2523,7 +2683,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 .as_ref()
                 .and_then(|t| items.iter().position(|x| same_task(x, t)));
             if editing.is_some() && index.is_none() {
-                app.set_task_error("Die Aufgabe ist nicht mehr vorhanden.".into());
+                app.set_task_error(tr!("The task no longer exists.").into());
                 return;
             }
             match tasks::save(&mut s, &items, index, &input) {
@@ -2680,7 +2840,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             let start = forms::parse_date(&start, today).unwrap_or(today);
             match rule_fields(&rule).read(today) {
                 Ok(repeat) if repeat.ends_before(start) => {
-                    "Die Wiederholung endet vor dem Beginn.".into()
+                    tr!("The repetition ends before the start.").into()
                 }
                 Ok(repeat) => repeat.describe(start).into(),
                 Err(message) => message.into(),
@@ -2714,6 +2874,33 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
 
     // Einstellungen
     app.on_show_settings(with(&app, &state, |app, s| open_settings(app, s)));
+    app.on_language_changed(with(&app, &state, |app, s| {
+        let index = app.get_settings_language();
+        let choice = match usize::try_from(index - 1)
+            .ok()
+            .and_then(|i| Lang::ALL.get(i))
+        {
+            Some(lang) => lang.code(),
+            None => "system",
+        };
+        let _ = s.store.set_setting("language", choice);
+        apply_language(app, resolve_language(choice));
+        // Die Auswahl selbst bleibt stehen, die Liste hat neue Namen
+        app.set_settings_language(index);
+        relabel(app, s);
+    }));
+    app.on_formats_changed(with(&app, &state, |app, s| {
+        let index = app.get_settings_formats();
+        let choice = usize::try_from(index - 1)
+            .ok()
+            .and_then(|i| FORMATS.get(i))
+            .map_or("windows", |(code, ..)| *code);
+        let _ = s.store.set_setting("formats", choice);
+        dates::set_region(region_for(choice));
+        apply_language(app, hora_i18n::language());
+        app.set_settings_formats(index);
+        relabel(app, s);
+    }));
     app.on_settings_changed(with(&app, &state, |app, s| {
         let before = (s.settings.reminders, shell::autostart_enabled());
         let shown_tasks = s.settings.show_tasks;
@@ -2739,7 +2926,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         if autostart != before.1
             && let Err(e) = shell::set_autostart(autostart)
         {
-            app.set_settings_status(format!("Autostart nicht geändert: {e}").into());
+            app.set_settings_status(tr!("Autostart not changed: {}", e).into());
             app.set_settings_autostart(before.1);
         }
     }));
@@ -2750,8 +2937,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             key: "test".into(),
             at: now,
             calendar_id: -1,
-            title: "Testbenachrichtigung".into(),
-            location: "So sehen Erinnerungen von Hora aus".into(),
+            title: tr!("Test notification").into(),
+            location: tr!("This is what Hora's reminders look like").into(),
             start: now + chrono::Duration::minutes(15),
             end: now + chrono::Duration::minutes(75),
             all_day: false,
@@ -2766,7 +2953,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         };
         app.set_settings_status(
             if status.is_empty() {
-                "Gesendet. Falls nichts erscheint: Windows-Einstellungen → System → Benachrichtigungen.".to_string()
+                tr!("Sent. If nothing appears: Windows Settings → System → Notifications.")
+                    .to_string()
             } else {
                 status
             }
@@ -2851,11 +3039,11 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         move |name, url, username, password| {
             let Some(app) = weak.upgrade() else { return };
             let missing = if url.trim().is_empty() {
-                Some("Bitte die Server-Adresse eingeben.")
+                Some(tr!("Please enter the server address."))
             } else if username.trim().is_empty() {
-                Some("Bitte den Benutzernamen eingeben.")
+                Some(tr!("Please enter the username."))
             } else if password.is_empty() {
-                Some("Bitte das Passwort eingeben.")
+                Some(tr!("Please enter the password."))
             } else {
                 None
             };
@@ -2945,8 +3133,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 let _ = s.store.set_setting("tray_hint_shown", "1");
                 if let Some(shell) = &s.shell {
                     let hint = hora_platform::notify::Toast {
-                        title: "Hora läuft im Infobereich weiter".into(),
-                        lines: vec!["Erinnerungen kommen weiterhin. Beenden über das Symbol im Infobereich (Rechtsklick).".into()],
+                        title: tr!("Hora keeps running in the notification area").into(),
+                        lines: vec![tr!("Reminders keep coming. Quit via the icon in the notification area (right-click).").into()],
                         tag: "infobereich".into(),
                         ..Default::default()
                     };
@@ -2989,7 +3177,29 @@ mod tests {
     }
 
     #[test]
+    fn titles_in_english() {
+        assert_eq!(
+            month_title(date(2026, 10, 26), date(2026, 11, 1)),
+            "Oct – Nov 2026"
+        );
+        assert_eq!(
+            view_title(View::Day, date(2026, 11, 4), date(2026, 11, 4), 1),
+            "Wednesday, 4 November 2026"
+        );
+        hora_i18n::with_language(Lang::Fr, || {
+            assert_eq!(
+                view_title(View::Month, date(2026, 11, 4), date(2026, 10, 26), 42),
+                "Novembre 2026"
+            );
+        });
+    }
+
+    #[test]
     fn titles_in_german() {
+        hora_i18n::with_language(Lang::De, titles_in_german_inner);
+    }
+
+    fn titles_in_german_inner() {
         assert_eq!(
             month_title(date(2026, 11, 2), date(2026, 11, 8)),
             "November 2026"

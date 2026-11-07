@@ -8,6 +8,7 @@ license.workspace = true
 authors.workspace = true
 
 [dependencies]
+hora-i18n.workspace = true
 ureq.workspace = true
 roxmltree.workspace = true
 url.workspace = true

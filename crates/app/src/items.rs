@@ -1,6 +1,7 @@
 //! Termine eines Zeitraums aus Beispielterminen und Cache, einheitlich als
 //! [`Item`] mit ihrer Herkunft für Vorschau und Bearbeiten.
 
+use hora_i18n::tr;
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 
@@ -213,7 +214,7 @@ pub fn collect(state: &mut State, first_day: NaiveDate, days: i64) -> Vec<Item> 
                     read_only,
                 },
                 title: if occurrence.summary.trim().is_empty() {
-                    "(ohne Titel)".to_string()
+                    tr!("(untitled)").to_string()
                 } else {
                     occurrence.summary.clone()
                 },
@@ -239,7 +240,7 @@ pub fn collect(state: &mut State, first_day: NaiveDate, days: i64) -> Vec<Item> 
                 continue;
             }
             let title = if task.info.summary.trim().is_empty() {
-                "(ohne Titel)"
+                tr!("(untitled)")
             } else {
                 task.info.summary.trim()
             };

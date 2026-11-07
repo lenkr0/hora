@@ -1,89 +1,114 @@
-# Änderungen
+# Changelog
+
+## [Unreleased]
+
+### Languages
+
+- Hora now speaks English, German, French, Spanish, Italian, Dutch and Polish.
+  English is the default; the language can be changed in Settings → General,
+  including "Windows language". Changing it takes effect immediately: menus,
+  dialogs, dates, reminders, notifications, the tray menu and the sample data.
+- Dates and times follow the Windows region (day/month order, 12 or 24 hours)
+  or a fixed format chosen in Settings ("07.11.2026, 14:30",
+  "11/07/2026, 2:30 PM", "2026-11-07, 14:30" …).
+- Dates are written the way each language writes them: "Monday, 9 November",
+  "lundi 9 novembre", "lunes, 9 de noviembre", "9 listopada"; repeat rules too
+  ("Monthly on the last Sunday", "Ogni mese la prima domenica",
+  "Co miesiąc w ostatnią niedzielę").
+- Date fields accept the region's format, ISO dates and words like "today",
+  "tomorrow", "morgen" or "demain"; time fields also accept "2pm" or "9h30".
+- Server and sign-in error messages are translated as well.
+- Translations live in `translations/<language>/LC_MESSAGES/hora-app.po`
+  (gettext). Slint and the Rust code share these files; `tools/i18n.py`
+  extracts new texts and checks that every language is complete (also in CI).
+
+### Other changes
+
+- The view tabs size themselves to their labels, so longer translations fit.
+- The tray menu updates when the language changes.
+- Version info of `hora.exe` is now in English ("Hora Calendar").
 
 ## [1.0.0] – 2026-11-06
 
-Erste vollständige Fassung: alle geplanten Funktionen, Installer, CI.
+First complete version: all planned features, installer, CI.
 
-- Kalender: CalDAV-Konten (Baïkal, Radicale; Basic Auth, HTTP und HTTPS),
-  Abgleich per sync-token bzw. ctag/ETag, Offline-Warteschlange mit
-  Konfliktdialog, Kalenderfarben, ein- und ausblenden.
-- Ansichten: Tag, 3 Tage, Woche, Monat, Jahr, Agenda, Aufgaben, Journal;
-  Mini-Kalender, Befehlspalette (`Strg+K`) mit Suche, Datumssprung, Befehlen
-  und Anlegen per Satz. Hell und dunkel nach Windows, deutsch (24 h, Montag,
-  Europe/Berlin), komplett per Tastatur bedienbar.
-- Termine anlegen, bearbeiten, löschen, ziehen und in der Dauer ändern;
-  Serien mit „Nur dieser / Dieser und alle folgenden / Alle“.
-- Erinnerungen (VALARM) als Windows-Benachrichtigung, auch im Infobereich.
-- Aufgaben (VTODO) mit Fälligkeit, Priorität, Teilaufgaben und
-  wiederkehrenden Aufgaben; Journal (VJOURNAL) mit Markdown und Tags.
-- Schnelleingabe auf Deutsch und Englisch.
+- Calendars: CalDAV accounts (Baïkal, Radicale; Basic Auth, HTTP and HTTPS),
+  sync via sync-token or ctag/ETag, offline queue with a conflict dialog,
+  calendar colors, show and hide.
+- Views: day, 3 days, week, month, year, agenda, tasks, journal; mini
+  calendar, command palette (`Ctrl+K`) with search, jump to date, commands and
+  creating from a sentence. Light and dark following Windows, German (24 h,
+  Monday, Europe/Berlin), fully usable from the keyboard.
+- Create, edit, delete, drag and resize events; series with "Only this / This
+  and all following / All".
+- Reminders (VALARM) as Windows notifications, also from the tray.
+- Tasks (VTODO) with due dates, priority, subtasks and recurring tasks;
+  journal (VJOURNAL) with Markdown and tags.
+- Quick add in German and English.
 
-Neu gegenüber 0.9.0:
+New since 0.9.0:
 
-- Neuer Name: Hora (Arbeitstitel war Pult). Programm `hora.exe`, Daten in
+- New name: Hora (working title was Pult). Program `hora.exe`, data in
   `%LOCALAPPDATA%\Hora`.
-- Abstürze und Fehler, die sonst unsichtbar blieben, stehen in
-  `%LOCALAPPDATA%\Hora\hora.log`; schwere Fehler beim Start zeigt ein
-  Meldungsfenster.
-- Lässt sich die Datenbank nicht öffnen, beendet sich Hora mit einer Meldung,
-  statt mit einer leeren Datenbank im Speicher weiterzulaufen (dort
-  Eingetragenes wäre beim Beenden verloren gewesen).
-- Lizenztexte aller Rust-Bibliotheken in `THIRD_PARTY_LICENSES/Rust-Crates.txt`
-  (auch im Installer).
-- GitHub Actions: CI (Format, Clippy, Tests, Selbsttest der Oberfläche unter
-  Windows; Radicale und Baïkal unter Linux) und Release (Installer bauen,
-  testen, mit Prüfsumme veröffentlichen).
-- Messung: `tools\measure.ps1` nutzt immer einen eigenen Datenordner,
-  `--fill-test-data` legt einen großen Testkalender an, `--time-views` misst
-  Ansichten und Suche.
+- Crashes and errors that would otherwise go unnoticed are written to
+  `%LOCALAPPDATA%\Hora\hora.log`; severe errors at startup show a message box.
+- If the database can't be opened, Hora quits with a message instead of
+  carrying on with an empty in-memory database (anything entered there would
+  have been lost on exit).
+- License texts of all Rust libraries in `THIRD_PARTY_LICENSES/Rust-Crates.txt`
+  (also in the installer).
+- GitHub Actions: CI (format, Clippy, tests, UI self-test on Windows;
+  Radicale and Baïkal on Linux) and release (build, test and publish the
+  installer with a checksum).
+- Measuring: `tools\measure.ps1` always uses its own data folder,
+  `--fill-test-data` creates a large test calendar, `--time-views` times views
+  and search.
 
 ## [0.9.0] – 2026-11-06
 
-- Journal (VJOURNAL) wie bei Calino: Liste nach Tag, Editor mit Datum, Titel,
-  Tags, Kalender; Schreiben und Lesen (Markdown), `Strg+B` / `Strg+I`,
-  automatisches Speichern; Buch-Symbol im Monat; Suche in der Palette;
-  „Journal-Kalender anlegen“, wenn kein Kalender Journale annimmt.
-- Abgleich auch für reine Aufgabenlisten und Journal-Kalender; sie stehen in
-  der Seitenleiste.
-- Warteschlange: Speichern während des Hochladens verliert keinen neueren
-  Stand mehr; eine während des ersten Hochladens gelöschte oder verschobene
-  Ressource wird danach auch auf dem Server gelöscht.
-- Schmale Fenster: Ansichtswahl als Menü statt acht Reitern.
+- Journal (VJOURNAL) like Calino's: list by day, editor with date, title,
+  tags, calendar; write and read mode (Markdown), `Ctrl+B` / `Ctrl+I`,
+  autosave; book icon in the month view; search in the palette; "Create
+  journal calendar" when no calendar accepts journal entries.
+- Sync also covers pure task lists and journal calendars; they appear in the
+  sidebar.
+- Queue: saving during an upload no longer loses a newer version; a resource
+  deleted or moved during its first upload is then deleted on the server too.
+- Narrow windows: view selection as a menu instead of eight tabs.
 
 ## [0.8.0] – 2026-11-06
 
-- Agenda und Jahresansicht, Befehlspalette mit Suche über Termine und
-  Aufgaben, Theme wechseln; kompakte Kopfzeile, Sync-Meldung per Klick.
+- Agenda and year view, command palette with search across events and tasks,
+  theme switching; compact header, sync message on click.
 
 ## [0.7.0]
 
-- Schnelleingabe auf Deutsch und Englisch („Mathe jeden Montag 8 Uhr bis 9:30
-  Raum 204“), auch für Aufgaben.
+- Quick add in German and English ("Math every Monday 8am to 9:30 room 204"),
+  also for tasks.
 
 ## [0.6.0]
 
-- Aufgaben (VTODO): eigene Ansicht, Teilaufgaben, Priorität, wiederkehrende
-  Aufgaben, Erinnerung zur Fälligkeit, Aufgaben im Kalender.
+- Tasks (VTODO): own view, subtasks, priority, recurring tasks, due date
+  reminders, tasks in the calendar.
 
 ## [0.5.0]
 
-- Erinnerungen als Windows-Benachrichtigung, Infobereich, Autostart,
-  Einstellungen, Installer.
+- Reminders as Windows notifications, tray icon, autostart, settings,
+  installer.
 
 ## [0.4.0]
 
-- Wiederkehrende Termine bearbeiten: nur dieser, dieser und alle folgenden,
-  alle.
+- Editing recurring events: only this, this and all following, all.
 
 ## [0.3.0]
 
-- Ziehen und Dauer ändern mit Maus und Tastatur.
+- Dragging and resizing with mouse and keyboard.
 
 ## [0.2.0]
 
-- Monat, Woche und Tag; Termine anlegen, bearbeiten und löschen; Offline-
-  Warteschlange und Konflikte.
+- Month, week and day; create, edit and delete events; offline queue and
+  conflicts.
 
 ## [0.1.0]
 
-- CalDAV-Konten und Kalender, Abgleich, Design nach Calino.
+- CalDAV accounts and calendars, sync, design based on Calino.

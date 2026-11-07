@@ -8,6 +8,7 @@
 //! der Nutzer angegeben hat: Weiterleitungen auf einen anderen Rechner
 //! werden nicht verfolgt.
 
+use hora_i18n::tr;
 use std::collections::HashMap;
 use std::time::Duration;
 
@@ -21,23 +22,23 @@ use xml::{APPLE, CALDAV, CALSERVER, DAV, Entry, Multistatus};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Anmeldung abgelehnt – Benutzername oder Passwort stimmt nicht")]
+    #[error("{}", tr!("Sign-in rejected – username or password is wrong"))]
     Unauthorized,
-    #[error("Keine Berechtigung für {0}")]
+    #[error("{}", tr!("No permission for {}", .0))]
     Forbidden(String),
-    #[error("Nicht gefunden: {0}")]
+    #[error("{}", tr!("Not found: {}", .0))]
     NotFound(String),
-    #[error("Der Termin wurde inzwischen auf dem Server geändert")]
+    #[error("{}", tr!("The item was changed on the server in the meantime"))]
     Conflict,
-    #[error("Server antwortet mit Status {status} für {url}")]
+    #[error("{}", tr!("Server responded with status {} for {}", status, url))]
     Status { status: u16, url: String },
-    #[error("Server nicht erreichbar: {0}")]
+    #[error("{}", tr!("Server not reachable: {}", .0))]
     Network(String),
-    #[error("Ungültige Server-Adresse: {0}")]
+    #[error("{}", tr!("Invalid server address: {}", .0))]
     InvalidUrl(String),
-    #[error("Unerwartete Antwort vom Server: {0}")]
+    #[error("{}", tr!("Unexpected response from the server: {}", .0))]
     Protocol(String),
-    #[error("Unter {0} wurde kein CalDAV-Server gefunden")]
+    #[error("{}", tr!("No CalDAV server found at {}", .0))]
     NoCalDav(String),
 }
 

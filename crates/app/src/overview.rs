@@ -7,8 +7,9 @@ use std::collections::HashMap;
 use chrono::{Datelike, Duration, NaiveDate, Timelike};
 use hora_core::Tz;
 
-use crate::forms::{MONTHS, WEEKDAYS, format_time, short_day};
+use crate::forms::{format_time, short_day};
 use crate::items::Item;
+use hora_i18n::{dates, tr, trn};
 
 /// Eine Zeile der Agenda
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,30 +98,24 @@ pub fn agenda_rows(
     rows
 }
 
-/// "3 Tage ohne Termine · 10.–12. Nov."
+/// "3 days without events · 10–12 Nov"
 pub fn skip_label(first: NaiveDate, last: NaiveDate) -> String {
     let days = (last - first).num_days() + 1;
-    let range = if first.month() == last.month() {
-        format!("{}.–{}. {}", first.day(), last.day(), short_month(last))
-    } else {
-        format!("{} – {}", short_day(first), short_day(last))
-    };
-    format!("{days} Tage ohne Termine · {range}")
+    trn!(
+        "{n} day without events · {}",
+        "{n} days without events · {}",
+        days,
+        dates::short_day_range(first, last)
+    )
 }
 
-fn short_month(d: NaiveDate) -> &'static str {
-    const SHORT: [&str; 12] = [
-        "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.",
-        "Dez.",
-    ];
-    SHORT[d.month0() as usize]
-}
-
-/// Wochentag und Datum für den Tageskopf: ("Montag", "9. November")
+/// Wochentag und Datum für den Tageskopf: ("Monday", "9 November")
 pub fn day_label(date: NaiveDate) -> (String, String) {
     (
-        WEEKDAYS[date.weekday().num_days_from_monday() as usize].to_string(),
-        format!("{}. {}", date.day(), MONTHS[date.month0() as usize]),
+        dates::capitalize(dates::weekday(
+            date.weekday().num_days_from_monday() as usize
+        )),
+        dates::day_month(date),
     )
 }
 
@@ -130,34 +125,34 @@ pub fn item_texts(item: &Item, date: NaiveDate, home: Tz) -> (String, String) {
     let (start, end) = (local(item.span.start), local(item.span.end));
     let mut sub: Vec<String> = Vec::new();
     let time = if item.is_task() {
-        "Fällig".to_string()
+        tr!("Due").to_string()
     } else if item.span.is_all_day_like() {
         let (from, to) = item.span.days(home);
         if from != to {
             sub.push(format!("{} – {}", short_day(from), short_day(to)));
         }
-        "ganztägig".to_string()
+        tr!("all day").to_string()
     } else if start.date() == date {
         if end.date() == date
             || (end.time().num_seconds_from_midnight() == 0
                 && end.date() == date + Duration::days(1))
         {
-            sub.push(format!("bis {}", format_time(end.time())));
+            sub.push(tr!("until {}", format_time(end.time())));
         } else {
-            sub.push(format!(
-                "bis {}, {}",
+            sub.push(tr!(
+                "until {}, {}",
                 short_day(end.date()),
                 format_time(end.time())
             ));
         }
         format_time(start.time())
     } else {
-        sub.push(format!(
-            "seit {}, {}",
+        sub.push(tr!(
+            "since {}, {}",
             short_day(start.date()),
             format_time(start.time())
         ));
-        format!("bis {}", format_time(end.time()))
+        tr!("until {}", format_time(end.time()))
     };
     if !item.location.trim().is_empty() {
         sub.push(item.location.trim().to_string());
@@ -285,18 +280,28 @@ mod tests {
         );
         assert_eq!(
             skip_label(d(11, 10), d(11, 12)),
-            "3 Tage ohne Termine · 10.–12. Nov."
+            "3 days without events · 10–12 Nov"
         );
-        assert_eq!(day_label(d(11, 9)), ("Montag".into(), "9. November".into()));
+        assert_eq!(day_label(d(11, 9)), ("Monday".into(), "9 November".into()));
         assert_eq!(
             item_texts(&items[0], d(11, 2), Berlin),
-            ("08:00".into(), "bis 09:30 · Raum 204".into())
+            ("08:00".into(), "until 09:30 · Raum 204".into())
         );
         assert_eq!(
             item_texts(&items[3], d(11, 8), Berlin).1,
-            "bis Mo. 9. Nov., 06:00 · Raum 204"
+            "until Mon, 9 Nov, 06:00 · Raum 204"
         );
-        assert_eq!(item_texts(&items[3], d(11, 9), Berlin).0, "bis 06:00");
+        assert_eq!(item_texts(&items[3], d(11, 9), Berlin).0, "until 06:00");
+        hora_i18n::with_language(hora_i18n::Lang::De, || {
+            assert_eq!(
+                skip_label(d(11, 10), d(11, 12)),
+                "3 Tage ohne Termine · 10.–12. Nov."
+            );
+            assert_eq!(day_label(d(11, 9)), ("Montag".into(), "9. November".into()));
+        });
+        hora_i18n::with_language(hora_i18n::Lang::Fr, || {
+            assert_eq!(day_label(d(11, 9)), ("Lundi".into(), "9 novembre".into()));
+        });
     }
 
     #[test]

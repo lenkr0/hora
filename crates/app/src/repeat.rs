@@ -1,5 +1,5 @@
 //! Wiederholung im Termin-Dialog (wie Calinos RecurrenceFields): Felder aus
-//! einer RRULE füllen, wieder lesen und auf Deutsch beschreiben.
+//! einer RRULE füllen, wieder lesen und in der App-Sprache beschreiben.
 
 use chrono::{Datelike, NaiveDate};
 use hora_core::Tz;
@@ -7,7 +7,8 @@ use hora_core::recur::{End, Frequency, MonthlyBy, SimpleRule, WEEKDAYS, nth_week
 use hora_core::series::RuleChange;
 use hora_core::time::DateTimeValue;
 
-use crate::forms::{MONTHS, WEEKDAYS as DAY_NAMES, format_date, parse_date};
+use crate::forms::{format_date, parse_date};
+use hora_i18n::{dates, tr, trn};
 
 /// Auswahl "Wiederholen"; die Reihenfolge entspricht der Liste im Dialog.
 pub const NEVER: i32 = 0;
@@ -23,8 +24,6 @@ const FREQUENCIES: [Frequency; 4] = [
 const DAY_OF_MONTH: i32 = 0;
 const NTH_WEEKDAY: i32 = 1;
 const LAST_WEEKDAY: i32 = 2;
-
-const ORDINALS: [&str; 4] = ["ersten", "zweiten", "dritten", "vierten"];
 
 /// Rohwerte der Dialogfelder
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,7 +146,7 @@ impl RuleFields {
             CUSTOM => return Ok(Repeat::Custom),
             n => *FREQUENCIES
                 .get((n - 1) as usize)
-                .ok_or("Unbekannte Wiederholung.")?,
+                .ok_or(tr!("Unknown repetition."))?,
         };
         let interval = self
             .interval
@@ -155,11 +154,11 @@ impl RuleFields {
             .parse::<u32>()
             .ok()
             .filter(|n| (1..=99).contains(n))
-            .ok_or("Bitte bei „alle“ eine Zahl von 1 bis 99 angeben.")?;
+            .ok_or(tr!("Please enter a number from 1 to 99 for “every”."))?;
         let end = match self.end {
             1 => End::Until(
                 parse_date(&self.until, today)
-                    .ok_or("Das Ende der Wiederholung ist kein gültiges Datum.")?,
+                    .ok_or(tr!("The end of the repetition is not a valid date."))?,
             ),
             2 => End::Count(
                 self.count
@@ -167,7 +166,7 @@ impl RuleFields {
                     .parse::<u32>()
                     .ok()
                     .filter(|n| (1..=999).contains(n))
-                    .ok_or("Bitte als Anzahl eine Zahl von 1 bis 999 angeben.")?,
+                    .ok_or(tr!("Please enter a number from 1 to 999 as the count."))?,
             ),
             _ => End::Never,
         };
@@ -229,79 +228,72 @@ impl Repeat {
         matches!(self, Repeat::Simple { end: End::Until(day), .. } if *day < start_day)
     }
 
-    /// "Wöchentlich am Montag und Mittwoch, bis 30.06.2027"
+    /// "Weekly on Monday and Wednesday, until 30.06.2027"
     pub fn describe(&self, start_day: NaiveDate) -> String {
         let Some(rule) = self.simple(start_day) else {
             return match self {
-                Repeat::Custom => "Eigene Wiederholungsregel".into(),
+                Repeat::Custom => tr!("Custom repeat rule").into(),
                 _ => String::new(),
             };
         };
         let n = rule.interval;
-        let day_name = |d: chrono::Weekday| DAY_NAMES[d.num_days_from_monday() as usize];
+        let weekday = start_day.weekday().num_days_from_monday() as usize;
         let base = match rule.frequency {
-            Frequency::Daily if n == 1 => "Täglich".to_string(),
-            Frequency::Daily => format!("Alle {n} Tage"),
+            Frequency::Daily if n == 1 => tr!("Daily").to_string(),
+            Frequency::Daily => trn!("Every {n} day", "Every {n} days", n),
             Frequency::Weekly => {
-                let names: Vec<&str> = rule.weekdays.iter().map(|d| day_name(*d)).collect();
+                let days: Vec<usize> = rule
+                    .weekdays
+                    .iter()
+                    .map(|d| d.num_days_from_monday() as usize)
+                    .collect();
+                let names = dates::weekday_list(&days);
                 let mask = rule.weekdays.iter().fold(0, |m, d| m | bit(*d));
                 if mask == 0b11111 && n == 1 {
-                    "Werktags (Montag bis Freitag)".to_string()
+                    tr!("Every weekday (Monday to Friday)").to_string()
                 } else if n == 1 {
-                    format!("Wöchentlich am {}", join(&names))
+                    tr!("Weekly on {}", names)
                 } else {
-                    format!("Alle {n} Wochen am {}", join(&names))
+                    trn!("Every {n} week on {}", "Every {n} weeks on {}", n, names)
                 }
             }
-            Frequency::Monthly => {
-                let on = match rule.monthly {
-                    MonthlyBy::DayOfMonth => format!("am {}.", start_day.day()),
-                    MonthlyBy::NthWeekday(-1) => {
-                        format!("am letzten {}", day_name(start_day.weekday()))
+            Frequency::Monthly => match rule.monthly {
+                MonthlyBy::DayOfMonth if n == 1 => tr!("Monthly on day {}", start_day.day()),
+                MonthlyBy::DayOfMonth => trn!(
+                    "Every {n} month on day {}",
+                    "Every {n} months on day {}",
+                    n,
+                    start_day.day()
+                ),
+                MonthlyBy::NthWeekday(k) => {
+                    let which = dates::nth_weekday(k, weekday);
+                    if n == 1 {
+                        tr!("Monthly on the {}", which)
+                    } else {
+                        trn!(
+                            "Every {n} month on the {}",
+                            "Every {n} months on the {}",
+                            n,
+                            which
+                        )
                     }
-                    MonthlyBy::NthWeekday(k) => format!(
-                        "am {} {}",
-                        ORDINALS
-                            .get((k - 1).max(0) as usize)
-                            .copied()
-                            .unwrap_or("letzten"),
-                        day_name(start_day.weekday())
-                    ),
-                };
-                if n == 1 {
-                    format!("Monatlich {on}")
-                } else {
-                    format!("Alle {n} Monate {on}")
                 }
-            }
+            },
             Frequency::Yearly => {
-                let on = format!(
-                    "am {}. {}",
-                    start_day.day(),
-                    MONTHS[start_day.month0() as usize]
-                );
+                let on = dates::day_month(start_day);
                 if n == 1 {
-                    format!("Jährlich {on}")
+                    tr!("Yearly on {}", on)
                 } else {
-                    format!("Alle {n} Jahre {on}")
+                    trn!("Every {n} year on {}", "Every {n} years on {}", n, on)
                 }
             }
         };
         match rule.end {
             End::Never => base,
-            End::Until(day) => format!("{base}, bis {}", format_date(day)),
-            End::Count(1) => format!("{base}, einmal"),
-            End::Count(c) => format!("{base}, {c}-mal"),
+            End::Until(day) => tr!("{}, until {}", base, format_date(day)),
+            End::Count(1) => tr!("{}, once", base),
+            End::Count(c) => trn!("{}, {n} time", "{}, {n} times", c, base),
         }
-    }
-}
-
-/// "Montag", "Montag und Mittwoch", "Montag, Mittwoch und Freitag"
-fn join(names: &[&str]) -> String {
-    match names {
-        [] => String::new(),
-        [one] => one.to_string(),
-        [rest @ .., last] => format!("{} und {last}", rest.join(", ")),
     }
 }
 
@@ -311,7 +303,7 @@ pub fn describe_rule(rule: &str, start: &DateTimeValue, home: Tz) -> String {
     RuleFields::from_rule(Some(rule), start, home)
         .read(today)
         .map(|r| r.describe(start.naive().date()))
-        .unwrap_or_else(|_| "Eigene Wiederholungsregel".into())
+        .unwrap_or_else(|_| tr!("Custom repeat rule").into())
 }
 
 /// Was beim Speichern mit der Regel geschieht. `before` sind die Felder, wie
@@ -363,7 +355,7 @@ mod tests {
         // Mittwoch, 4.11.2026
         let (fields, text) = roundtrip("FREQ=WEEKLY", "2026-11-04 08:00");
         assert_eq!((fields.repeat, fields.weekdays), (2, 0));
-        assert_eq!(text, "Wöchentlich am Mittwoch");
+        assert_eq!(text, "Weekly on Wednesday");
 
         let (fields, text) = roundtrip(
             "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;UNTIL=20270630T215959Z",
@@ -371,31 +363,34 @@ mod tests {
         );
         assert_eq!(fields.weekdays, 0b101);
         assert_eq!(fields.until, "30.06.2027");
-        assert_eq!(text, "Alle 2 Wochen am Montag und Mittwoch, bis 30.06.2027");
+        assert_eq!(
+            text,
+            "Every 2 weeks on Monday and Wednesday, until 30.06.2027"
+        );
 
         assert_eq!(
             roundtrip("FREQ=DAILY;BYDAY=MO,TU,WE,TH,FR", "2026-11-04 08:00").1,
-            "Werktags (Montag bis Freitag)"
+            "Every weekday (Monday to Friday)"
         );
         assert_eq!(
             roundtrip("FREQ=MONTHLY;BYDAY=1WE;COUNT=6", "2026-11-04 08:00").1,
-            "Monatlich am ersten Mittwoch, 6-mal"
+            "Monthly on the first Wednesday, 6 times"
         );
         assert_eq!(
             roundtrip("FREQ=MONTHLY;BYDAY=-1MO", "2026-11-30 08:00").1,
-            "Monatlich am letzten Montag"
+            "Monthly on the last Monday"
         );
         assert_eq!(
             roundtrip("FREQ=MONTHLY;INTERVAL=3", "2026-11-04 08:00").1,
-            "Alle 3 Monate am 4."
+            "Every 3 months on day 4"
         );
         assert_eq!(
             roundtrip("FREQ=YEARLY", "2026-03-15 00:00").1,
-            "Jährlich am 15. März"
+            "Yearly on 15 March"
         );
         assert_eq!(
             roundtrip("FREQ=DAILY;INTERVAL=2;COUNT=1", "2026-11-04 08:00").1,
-            "Alle 2 Tage, einmal"
+            "Every 2 days, once"
         );
 
         // Unbekannte Teile oder Muster, die nicht zum Beginn passen: eigene Regel
@@ -413,8 +408,30 @@ mod tests {
         );
         assert_eq!(
             describe_rule("FREQ=HOURLY", &start("2026-11-04 08:00"), Berlin),
-            "Eigene Wiederholungsregel"
+            "Custom repeat rule"
         );
+        hora_i18n::with_language(hora_i18n::Lang::De, || {
+            assert_eq!(
+                roundtrip("FREQ=MONTHLY;BYDAY=1WE;COUNT=6", "2026-11-04 08:00").1,
+                "Monatlich am ersten Mittwoch, 6-mal"
+            );
+            assert_eq!(
+                roundtrip("FREQ=YEARLY", "2026-03-15 00:00").1,
+                "Jährlich am 15. März"
+            );
+        });
+        hora_i18n::with_language(hora_i18n::Lang::Pl, || {
+            assert_eq!(
+                roundtrip("FREQ=MONTHLY;BYDAY=-1SU", "2026-11-29 08:00").1,
+                "Co miesiąc w ostatnią niedzielę"
+            );
+        });
+        hora_i18n::with_language(hora_i18n::Lang::It, || {
+            assert_eq!(
+                roundtrip("FREQ=MONTHLY;BYDAY=1SU", "2026-11-01 08:00").1,
+                "Ogni mese la prima domenica"
+            );
+        });
     }
 
     #[test]

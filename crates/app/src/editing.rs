@@ -5,6 +5,7 @@
 //! Vorkommen einer Serie ändert [`apply_series`] mit dem im Serien-Dialog
 //! gewählten Umfang (nur dieser, dieser und alle folgenden, alle).
 
+use hora_i18n::tr;
 use std::collections::hash_map::RandomState;
 use std::hash::BuildHasher;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -120,7 +121,7 @@ pub(crate) fn new_href(state: &State, calendar_id: i64, uid: &str) -> Result<Str
         .calendars
         .iter()
         .find(|c| c.id == calendar_id)
-        .ok_or("Bitte einen Kalender wählen.")?;
+        .ok_or(tr!("Please choose a calendar."))?;
     Ok(Url::parse(&calendar.href)
         .and_then(|u| u.join(&format!("{uid}.ics")))
         .map_err(|e| e.to_string())?
@@ -145,9 +146,9 @@ fn load(state: &State, source: &Source) -> Result<Loaded, String> {
         ..
     } = source
     else {
-        return Err("Kein Server-Termin.".into());
+        return Err(tr!("Not a server event.").into());
     };
-    let gone = "Der Termin ist nicht mehr vorhanden.";
+    let gone = tr!("The event no longer exists.");
     let resource = state
         .store
         .resource(*calendar_id, href)
@@ -264,7 +265,7 @@ pub fn move_to(
     end: NaiveDateTime,
 ) -> Result<(), String> {
     if !item.movable() {
-        return Err("Dieser Termin kann hier nicht verschoben werden.".into());
+        return Err(tr!("This event can't be moved here.").into());
     }
     let home = state.home;
     match &item.source {
@@ -288,7 +289,7 @@ pub fn move_to(
 /// Termin um ganze Tage verschieben (Monatsansicht); Uhrzeiten bleiben.
 pub fn shift_days(state: &mut State, item: &Item, days: i64) -> Result<(), String> {
     if !item.movable() {
-        return Err("Dieser Termin kann hier nicht verschoben werden.".into());
+        return Err(tr!("This event can't be moved here.").into());
     }
     let delta = Duration::days(days);
     let home = state.home;
@@ -322,7 +323,7 @@ pub fn delete(state: &mut State, item: &Item) -> Result<(), String> {
         Source::DemoAllDay(id) => state.all_day.retain(|a| a.id != *id),
         Source::Server {
             read_only: true, ..
-        } => return Err("Dieser Kalender ist schreibgeschützt.".into()),
+        } => return Err(tr!("This calendar is read-only.").into()),
         Source::Server {
             calendar_id, href, ..
         } => {
@@ -333,14 +334,14 @@ pub fn delete(state: &mut State, item: &Item) -> Result<(), String> {
             state.send(Command::Push);
         }
         // Aufgaben löscht die Aufgaben-Ansicht (mit Teilaufgaben)
-        Source::Task { .. } => return Err("Aufgaben bitte in der Aufgaben-Ansicht löschen.".into()),
+        Source::Task { .. } => return Err(tr!("Please delete tasks in the Tasks view.").into()),
     }
     Ok(())
 }
 
 fn title_or_default(title: &str) -> String {
     if title.trim().is_empty() {
-        "Neuer Termin".to_string()
+        tr!("New event").to_string()
     } else {
         title.trim().to_string()
     }
@@ -402,7 +403,7 @@ fn read_repeat(
 ) -> Result<Repeat, String> {
     let repeat = input.rule.read(today)?;
     if repeat.ends_before(start.naive().date()) {
-        return Err("Die Wiederholung endet vor dem Beginn.".into());
+        return Err(tr!("The repetition ends before the start.").into());
     }
     Ok(repeat)
 }
@@ -430,7 +431,7 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
             let repeat = read_repeat(input, &start, today)?;
             if input.calendar < 0 {
                 if repeat != Repeat::Never {
-                    return Err("Beispieltermine können sich nicht wiederholen.".into());
+                    return Err(tr!("Sample events can't repeat.").into());
                 }
                 put_demo(state, None, input, &start, &end);
                 return Ok(());
@@ -453,14 +454,14 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
         Some(Source::DemoEvent(id) | Source::DemoAllDay(id)) => {
             let (start, end) = input.times.to_values(today, home, None)?;
             if read_repeat(input, &start, today)? != Repeat::Never {
-                return Err("Beispieltermine können sich nicht wiederholen.".into());
+                return Err(tr!("Sample events can't repeat.").into());
             }
             put_demo(state, Some(*id), input, &start, &end);
             Ok(())
         }
         Some(Source::Server {
             read_only: true, ..
-        }) => Err("Dieser Kalender ist schreibgeschützt.".into()),
+        }) => Err(tr!("This calendar is read-only.").into()),
         Some(source) => {
             let (calendar_id, href, uid, _) = server_ids(source).expect("Server-Termin");
             let Loaded {
@@ -495,10 +496,10 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
 pub fn apply_series(state: &mut State, action: &SeriesAction, scope: Scope) -> Result<(), String> {
     let item = action.item();
     if !item.writable() {
-        return Err("Dieser Kalender ist schreibgeschützt.".into());
+        return Err(tr!("This calendar is read-only.").into());
     }
     let Some((calendar_id, href, uid, Some(instance))) = server_ids(&item.source) else {
-        return Err("Kein Termin einer Serie.".into());
+        return Err(tr!("Not part of a series.").into());
     };
     let (href, uid) = (href.to_string(), uid.to_string());
     let home = state.home;

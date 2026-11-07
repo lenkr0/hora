@@ -1764,6 +1764,7 @@ dependencies = [
  "embed-resource",
  "hora-caldav",
  "hora-core",
+ "hora-i18n",
  "hora-platform",
  "hora-storage",
  "iana-time-zone",
@@ -1783,6 +1784,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "hora-core",
+ "hora-i18n",
  "roxmltree",
  "tempfile",
  "thiserror 2.0.21",
@@ -1796,15 +1798,24 @@ version = "1.0.0"
 dependencies = [
  "chrono",
  "chrono-tz",
+ "hora-i18n",
  "regex",
  "rrule",
  "thiserror 2.0.21",
 ]
 
 [[package]]
+name = "hora-i18n"
+version = "1.0.0"
+dependencies = [
+ "chrono",
+]
+
+[[package]]
 name = "hora-platform"
 version = "1.0.0"
 dependencies = [
+ "hora-i18n",
  "keyring-core",
  "thiserror 2.0.21",
  "windows",
@@ -1818,6 +1829,7 @@ version = "1.0.0"
 dependencies = [
  "chrono",
  "hora-core",
+ "hora-i18n",
  "rusqlite",
  "tempfile",
  "thiserror 2.0.21",

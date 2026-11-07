@@ -35,17 +35,17 @@ pub struct Component {
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ParseError {
-    #[error("Zeile {line}: {message}")]
+    #[error("{}", hora_i18n::tr!("Line {}: {}", line, message))]
     Syntax { line: usize, message: String },
-    #[error("BEGIN:{0} ohne passendes END")]
+    #[error("{}", hora_i18n::tr!("BEGIN:{} without matching END", .0))]
     Unclosed(String),
-    #[error("Zeile {line}: END:{found} passt nicht zu BEGIN:{expected}")]
+    #[error("{}", hora_i18n::tr!("Line {}: END:{} does not match BEGIN:{}", line, found, expected))]
     Mismatch {
         line: usize,
         expected: String,
         found: String,
     },
-    #[error("kein VCALENDAR gefunden")]
+    #[error("{}", hora_i18n::tr!("no VCALENDAR found"))]
     NoCalendar,
 }
 
