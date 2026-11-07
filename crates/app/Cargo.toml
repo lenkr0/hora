@@ -1,0 +1,49 @@
+[package]
+name = "hora-app"
+description = "Slint-Oberfläche"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "hora"
+path = "src/main.rs"
+
+[features]
+default = []
+# Zusätzlicher Skia-Renderer, nur für den Renderer-Vergleich.
+skia = ["slint/renderer-skia"]
+# Entwicklerwerkzeuge: Screenshot (--snapshot) und Drag-Selbsttest (--selftest).
+devtools = ["dep:png"]
+
+[dependencies]
+hora-core.workspace = true
+hora-caldav.workspace = true
+hora-storage.workspace = true
+hora-platform.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+iana-time-zone.workspace = true
+dirs.workspace = true
+url.workspace = true
+png = { workspace = true, optional = true }
+raw-window-handle.workspace = true
+slint = { workspace = true, features = [
+    "std",
+    "compat-1-2",
+    "backend-winit",
+    "renderer-femtovg",
+    "renderer-software",
+    "accessibility",
+    "raw-window-handle-06",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[build-dependencies]
+slint-build.workspace = true
+embed-resource.workspace = true

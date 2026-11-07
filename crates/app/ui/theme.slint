@@ -1,0 +1,110 @@
+// Design-Tokens nach Calino (src/themes/built-in.css, DESIGN.md).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Palette } from "std-widgets.slint";
+
+import "fonts/Newsreader-Regular.ttf";
+import "fonts/Newsreader-Medium.ttf";
+
+export global Theme {
+    // 0 = Windows-Einstellung, 1 = hell, 2 = dunkel
+    in-out property <int> scheme-override: 0;
+    out property <bool> dark: scheme-override == 2 || (scheme-override == 0 && Palette.color-scheme == ColorScheme.dark);
+
+    // Flächen
+    out property <color> canvas: dark ? #1a1816 : #faf8f3;
+    out property <color> panel: dark ? #242220 : #ffffff;
+    out property <color> side: dark ? #2a2826 : #f6f3ed;
+    out property <color> nav-track: dark ? #312e2a : #f0ebe1;
+
+    // Tinte
+    out property <color> ink: dark ? #f0ece6 : #2c2823;
+    out property <color> ink-2: dark ? #a8a29a : #655f57;
+    out property <color> ink-3: dark ? #989086 : #756d62;
+    out property <color> ink-4: dark ? #4a4744 : #c2bcae;
+
+    // Linien: immer getönte Tinte, nie flaches Grau (9 % bzw. 5 %)
+    out property <color> line: dark ? #f0ece617 : #2c282117;
+    out property <color> line-2: dark ? #f0ece60d : #2c28210d;
+    // rgba(var(--ink-raw), x): hell Schwarz, dunkel helle Tinte
+    out property <color> ink-raw: dark ? #f0ece6 : #000000;
+
+    // Akzent Terrakotta
+    out property <color> accent: dark ? #c9956a : #b07d4f;
+    out property <color> accent-strong: dark ? #c9956a : #8d643f;
+    out property <color> accent-contrast: dark ? #1a1816 : #ffffff;
+    out property <color> accent-soft: dark ? #c9956a2e : #efe7db;
+    out property <color> hover-bg: accent.with-alpha(dark ? 0.08 : 0.06);
+    out property <color> selected-bg: accent.with-alpha(dark ? 0.14 : 0.10);
+
+    out property <color> accent-hover: dark ? #d4a575 : #785536;
+    out property <color> focus-ring: accent.with-alpha(dark ? 0.20 : 0.14);
+
+    // Status
+    out property <color> success: dark ? #6aaa85 : #277d3e;
+    out property <color> warning-text: dark ? #d4a54f : #8d6902;
+    out property <color> error: dark ? #d4877f : #c8351f;
+    out property <color> error-bg: error.with-alpha(dark ? 0.10 : 0.08);
+
+    // Dialoge und schwebende Flächen
+    out property <color> modal-bg: dark ? #2d2a24 : #ffffff;
+    out property <color> modal-scrim: dark ? #00000099 : #00000080;
+    out property <color> modal-shadow: dark ? #000000a6 : #0000002e;
+    out property <color> popover-bg: dark ? #383229 : #ffffff;
+    out property <color> popover-border: dark ? #fff7eb24 : #e8e3d9;
+    out property <color> input-bg: dark ? #2a2826 : #ffffff;
+
+    // Kalenderfarben zur Auswahl (Calino CALENDAR_COLORS)
+    out property <[color]> calendar-colors: [
+        #4285F4, #EA4335, #FBBC05, #34A853, #FF6D01, #46BDC6,
+        #7B1FA2, #C2185B, #00796B, #F57C00, #455A64, #5D4037,
+    ];
+
+    out property <color> current-time: dark ? #ef6a5e : #d93025;
+    out property <color> scrollbar: dark ? #3a3836 : #d8d2c6;
+    out property <color> scrollbar-hover: dark ? #4a4846 : #b0a99c;
+
+    // Terminkarten: Kalenderfarbe mit geringer Deckkraft in den Untergrund gemischt
+    out property <float> event-bg-mix: dark ? 0.18 : 0.09;
+    out property <float> event-bg-mix-hover: dark ? 0.22 : 0.12;
+    out property <color> event-ink-2: dark ? #b0aaa0 : #655f57;
+    out property <color> event-border: ink-raw.with-alpha(0.06);
+
+    // Schatten: nur im hellen Modus ("Flat-Dark Rule")
+    out property <color> shadow-event: dark ? #0000001f : #0000000a;
+    out property <color> shadow-event-hover: dark ? #00000033 : #00000014;
+    out property <color> shadow-drag: dark ? #00000000 : #00000026;
+    out property <color> shadow-label: dark ? #00000000 : #00000026;
+
+    // Typografie. Die statischen Google-Fonts-Instanzen (optische Größe 28)
+    // tragen je Schnitt einen eigenen Familiennamen.
+    out property <string> serif: "Newsreader 28pt";
+    out property <string> serif-medium: "Newsreader 28pt Medium";
+    out property <string> sans: "Segoe UI";
+
+    // Abstände und Rundungen
+    out property <length> radius-sm: 4px;
+    out property <length> radius-md: 8px;
+    out property <length> radius-lg: 12px;
+    out property <length> radius-event: 7px;
+
+    // Raster der Wochenansicht
+    out property <length> hour-height: 60px;
+    out property <length> gutter-width: 45px;
+    out property <length> header-height: 72px;
+    out property <length> sidebar-width: 277px;
+    out property <length> scrollbar-width: 6px;
+
+    out property <duration> dur-fast: 120ms;
+    out property <duration> dur-base: 200ms;
+}
+
+export global Fmt {
+    // Minuten seit Mitternacht als "HH:MM"
+    pure public function hhmm(m: int) -> string {
+        return (m < 600 ? "0" : "") + "\{Math.floor(m / 60)}:" + (Math.mod(m, 60) < 10 ? "0" : "") + "\{Math.mod(m, 60)}";
+    }
+    pure public function range(start: int, dur: int) -> string {
+        return hhmm(start) + " – " + hhmm(start + dur);
+    }
+}

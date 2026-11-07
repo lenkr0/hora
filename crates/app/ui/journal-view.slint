@@ -1,0 +1,1150 @@
+// Journal nach Calinos JournalView (JournalView.module.css): Leiste mit
+// Anzahl, Monat/Alle und "+ Neuer Eintrag"; links die Einträge (Tag in
+// Serifen, Titel, zwei Zeilen Vorschau, Tags), rechts der Editor mit Datum,
+// Titel, Tags, Kalender, Text (Schreiben/Lesen) und Speicherstand.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button, FocusRing } from "controls.slint";
+
+export struct JournalRow {
+    // Index in der Liste der App
+    id: int,
+    day: string,
+    weekday: string,
+    month: string,
+    title: string,
+    preview: string,
+    // Für die Liste schon in Großbuchstaben
+    tags: [string],
+    selected: bool,
+    y: length,
+    height: length,
+}
+
+// 0 Absatz/Liste, 1–3 Überschrift, 4 Zitat, 5 Linie, 6 Code
+export struct JournalBlock {
+    kind: int,
+    text: styled-text,
+    plain: string,
+}
+
+export struct JournalCalendar {
+    id: int,
+    name: string,
+    color: color,
+    selected: bool,
+}
+
+// Ergebnis von Strg+B / Strg+I
+export struct JournalEdit {
+    text: string,
+    anchor: int,
+    cursor: int,
+}
+
+// Umschalter wie Calinos Segmented Control
+component Segmented inherits Rectangle {
+    in property <[string]> labels;
+    in property <int> current;
+    in property <length> tab-w: 76px;
+    in property <length> tab-h: 30px;
+    in property <length> font-px: 13px;
+    callback select(int);
+
+    width: 8px + root.labels.length * root.tab-w;
+    height: root.tab-h + 8px;
+    border-radius: 12px;
+    background: Theme.ink-raw.with-alpha(0.045);
+    accessible-role: tab-list;
+
+    Rectangle {
+        x: 4px + root.current * root.tab-w;
+        y: 4px;
+        width: root.tab-w;
+        height: root.tab-h;
+        border-radius: 9px;
+        background: Theme.panel;
+        border-width: 1px;
+        border-color: Theme.line;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-blur: 3px;
+        drop-shadow-color: Theme.dark ? transparent : #0000001f;
+        animate x { duration: 200ms; easing: ease; }
+    }
+
+    for label[i] in root.labels: Rectangle {
+        x: 4px + i * root.tab-w;
+        y: 4px;
+        width: root.tab-w;
+        height: root.tab-h;
+        accessible-role: tab;
+        accessible-label: label;
+
+        Text {
+            text: label;
+            font-size: root.font-px;
+            font-weight: 500;
+            color: i == root.current || seg-ta.has-hover ? Theme.ink : Theme.ink-2;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        seg-ta := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.select(i);
+            }
+        }
+    }
+}
+
+// Ein Eintrag der Liste
+component EntryLine inherits Rectangle {
+    in property <JournalRow> entry;
+    // Liste hat den Tastaturfokus
+    in property <bool> focused;
+    callback clicked();
+
+    border-radius: Theme.radius-md;
+    background: root.entry.selected ? Theme.accent-soft : ta.has-hover ? Theme.hover-bg : transparent;
+    accessible-role: list-item;
+    accessible-label: (root.entry.title != "" ? root.entry.title : "Eintrag ohne Titel") + ", " + root.entry.day + ". " + root.entry.month;
+    accessible-item-selected: root.entry.selected;
+
+    if root.entry.selected: Rectangle {
+        x: 0px;
+        width: 3px;
+        height: parent.height;
+        background: Theme.accent-strong;
+    }
+
+    Rectangle {
+        x: 10px;
+        y: parent.height - 1px;
+        width: parent.width - 20px;
+        height: 1px;
+        background: Theme.line-2;
+    }
+
+    // Datum: Tageszahl in Serifen, Wochentag, Monat und Jahr
+    VerticalLayout {
+        x: 10px;
+        y: 13px;
+        width: 48px;
+        height: self.preferred-height;
+        spacing: 2px;
+
+        Text {
+            text: root.entry.day;
+            font-family: Theme.serif;
+            font-size: 28px;
+            color: Theme.ink;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.entry.weekday;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            color: Theme.ink-2;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.entry.month;
+            font-size: 8px;
+            letter-spacing: 0.4px;
+            color: Theme.ink-3;
+            horizontal-alignment: center;
+        }
+    }
+
+    Text {
+        x: 70px;
+        y: 15px;
+        width: parent.width - 80px;
+        height: 20px;
+        text: root.entry.title != "" ? root.entry.title : "Eintrag ohne Titel";
+        font-size: 15px;
+        font-weight: 500;
+        color: root.entry.title != "" ? Theme.ink : Theme.ink-3;
+        overflow: elide;
+        vertical-alignment: center;
+    }
+
+    Text {
+        x: 70px;
+        y: 39px;
+        width: parent.width - 80px;
+        height: 36px;
+        text: root.entry.preview != "" ? root.entry.preview : "Noch kein Text";
+        font-size: 12px;
+        color: root.entry.preview != "" ? Theme.ink-2 : Theme.ink-3;
+        wrap: word-wrap;
+        overflow: elide;
+    }
+
+    if root.entry.tags.length > 0: HorizontalLayout {
+        x: 70px;
+        y: 81px;
+        width: parent.width - 80px;
+        height: 17px;
+        spacing: 5px;
+        alignment: start;
+
+        for tag in root.entry.tags: Rectangle {
+            width: tag-text.preferred-width + 14px;
+            border-radius: 4px;
+            background: Theme.ink-raw.with-alpha(0.07);
+
+            tag-text := Text {
+                text: tag;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                color: Theme.ink-3;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    if root.focused && root.entry.selected: Rectangle {
+        border-radius: Theme.radius-md;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
+// Ein Block der Leseansicht
+component ReadBlock inherits VerticalLayout {
+    in property <JournalBlock> block;
+    callback link(string);
+
+    if root.block.kind == 0: StyledText {
+        text: root.block.text;
+        default-font-size: 15px;
+        default-color: Theme.ink-2;
+        default-font-family: Theme.sans;
+        link-color: Theme.accent-strong;
+        link-clicked(url) => {
+            root.link(url);
+        }
+    }
+
+    if root.block.kind >= 1 && root.block.kind <= 3: VerticalLayout {
+        padding-top: root.block.kind == 1 ? 6px : 4px;
+
+        StyledText {
+            text: root.block.text;
+            default-font-size: root.block.kind == 1 ? 24px : root.block.kind == 2 ? 20px : 16px;
+            default-color: Theme.ink;
+            default-font-family: root.block.kind == 3 ? Theme.sans : Theme.serif-medium;
+            link-color: Theme.accent-strong;
+            link-clicked(url) => {
+                root.link(url);
+            }
+        }
+    }
+
+    if root.block.kind == 4: HorizontalLayout {
+        spacing: 14px;
+
+        Rectangle {
+            width: 3px;
+            border-radius: 1.5px;
+            background: Theme.accent.with-alpha(0.45);
+        }
+
+        StyledText {
+            text: root.block.text;
+            default-font-size: 15px;
+            default-color: Theme.ink-3;
+            default-font-family: Theme.serif;
+            link-color: Theme.accent-strong;
+            link-clicked(url) => {
+                root.link(url);
+            }
+        }
+    }
+
+    if root.block.kind == 5: VerticalLayout {
+        padding-top: 6px;
+        padding-bottom: 6px;
+
+        Rectangle {
+            height: 1px;
+            background: Theme.line;
+        }
+    }
+
+    if root.block.kind == 6: Rectangle {
+        border-radius: 6px;
+        background: Theme.ink-raw.with-alpha(0.045);
+        height: code-text.preferred-height + 20px;
+
+        code-text := Text {
+            x: 12px;
+            width: parent.width - 24px;
+            text: root.block.plain;
+            font-family: "Consolas";
+            font-size: 13px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// Kleine Fläche mit Symbol (Löschen, Tag entfernen, zurück)
+component GlyphButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <length> size: 16px;
+    in property <bool> danger;
+    callback clicked();
+
+    width: root.size + 14px;
+    height: root.size + 14px;
+    border-radius: 7px;
+    background: ta.has-hover ? (root.danger ? Theme.error-bg : Theme.ink-raw.with-alpha(0.06)) : transparent;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    Image {
+        source: root.icon;
+        width: root.size;
+        height: root.size;
+        colorize: ta.has-hover ? (root.danger ? Theme.error : Theme.ink) : Theme.ink-3;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component JournalView inherits Rectangle {
+    in property <[JournalRow]> rows;
+    in property <int> count;
+    // 0 = Monat, 1 = alle
+    in property <int> mode;
+    in property <string> list-title;
+    in property <length> list-height;
+    // Gibt es einen Kalender für Journaleinträge?
+    in property <bool> can-add;
+    // Kein Kalender nimmt Journaleinträge an, aber ein Konto könnte einen anlegen
+    in property <bool> can-create-calendar;
+    in property <bool> create-busy;
+    in property <string> create-error;
+
+    // Editor
+    in property <bool> open;
+    in property <bool> read-only;
+    in-out property <string> title;
+    in-out property <string> body;
+    in-out property <bool> write;
+    in property <[string]> tags;
+    in property <string> day-num;
+    in property <string> weekday-long;
+    in property <string> month-year;
+    in property <string> date-text;
+    in property <string> date-error;
+    in property <[JournalCalendar]> calendars;
+    in property <[JournalBlock]> blocks;
+    in property <int> words;
+    // 0 gespeichert, 1 nicht gespeichert, 2 wird übertragen, 3 nur lokal, 4 Fehler
+    in property <int> status;
+    in property <string> status-text;
+
+    callback set-mode(int);
+    callback new-entry();
+    callback select(int);
+    callback move-selection(int);
+    callback close();
+    callback edited();
+    callback add-tag(string);
+    callback remove-tag(int);
+    callback set-date(string);
+    callback set-calendar(int);
+    callback delete();
+    callback set-write(bool);
+    callback create-calendar();
+    callback open-link(string);
+    pure callback format(string, int, int, string) -> JournalEdit;
+
+    public function focus-title() {
+        title-input.focus();
+    }
+    public function focus-body() {
+        body-input.focus();
+    }
+    public function focus-list() {
+        list-keys.focus();
+    }
+    // Zeile y … y + h sichtbar machen
+    public function reveal(y: length, h: length) {
+        if y + list.content-y < 0 {
+            list.content-y = -y;
+        } else if y + h + list.content-y > list.height {
+            list.content-y = Math.min(0px, list.height - y - h);
+        }
+    }
+
+    // Breite Fenster: Liste links, Editor rechts; schmal: Editor über der Liste
+    property <bool> split: true;
+    changed width => {
+        root.split = root.width >= 860px;
+    }
+    init => {
+        root.split = root.width >= 860px;
+    }
+    property <bool> date-editing;
+    property <length> pad: root.split ? 40px : 28px;
+    property <length> list-w: root.open && root.split ? 372px : Math.min(860px, root.width - 24px);
+
+    background: Theme.canvas;
+
+    VerticalLayout {
+        padding-top: 4px;
+
+        // Leiste: Anzahl links, Monat/Alle und Anlegen rechts
+        HorizontalLayout {
+            padding-left: 26px;
+            padding-right: 14px;
+            padding-top: 8px;
+            padding-bottom: 12px;
+            spacing: 14px;
+
+            HorizontalLayout {
+                alignment: start;
+                spacing: 5px;
+                horizontal-stretch: 1;
+
+                Text {
+                    text: root.count;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Theme.ink;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    text: root.count == 1 ? "Eintrag" : "Einträge";
+                    font-size: 14px;
+                    color: Theme.ink-2;
+                    vertical-alignment: center;
+                }
+            }
+
+            Segmented {
+                labels: ["Monat", "Alle"];
+                current: root.mode;
+                select(i) => {
+                    root.set-mode(i);
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Button {
+                    text: "+ Neuer Eintrag";
+                    primary: true;
+                    enabled: root.can-add;
+                    clicked => {
+                        root.new-entry();
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+
+            // Liste
+            list-pane := Rectangle {
+                x: root.open && root.split ? 12px : (parent.width - self.width) / 2;
+                width: root.list-w;
+                height: parent.height;
+                visible: root.split || !root.open;
+
+                list-keys := FocusScope {
+                    key-pressed(e) => {
+                        if e.modifiers.control || e.modifiers.alt {
+                            return reject;
+                        }
+                        if e.text == Key.UpArrow || e.text == Key.LeftArrow {
+                            root.move-selection(-1);
+                            return accept;
+                        }
+                        if e.text == Key.DownArrow || e.text == Key.RightArrow {
+                            root.move-selection(1);
+                            return accept;
+                        }
+                        if (e.text == Key.Return || e.text == " ") && root.open && !root.read-only {
+                            root.set-write(true);
+                            body-input.focus();
+                            return accept;
+                        }
+                        if e.text == Key.Delete && root.open {
+                            root.delete();
+                            return accept;
+                        }
+                        if e.text == Key.Escape && root.open {
+                            root.close();
+                            return accept;
+                        }
+                        return reject;
+                    }
+                }
+
+                VerticalLayout {
+                    Text {
+                        height: 26px;
+                        x: 10px;
+                        text: root.list-title;
+                        font-size: 11.5px;
+                        font-weight: 600;
+                        letter-spacing: 0.7px;
+                        color: Theme.ink-3;
+                        vertical-alignment: top;
+                    }
+
+                    list := Flickable {
+                        vertical-stretch: 1;
+                        content-height: root.list-height + 24px;
+
+                        for row in root.rows: EntryLine {
+                            x: 0px;
+                            y: row.y;
+                            width: list.width;
+                            height: row.height;
+                            entry: row;
+                            focused: list-keys.has-focus;
+                            clicked => {
+                                list-keys.focus();
+                                root.select(row.id);
+                            }
+                        }
+                    }
+                }
+
+                // Leer: wie Calino "Noch nichts geschrieben"
+                if root.rows.length == 0: VerticalLayout {
+                    y: 40px;
+                    height: 260px;
+                    alignment: center;
+                    spacing: 8px;
+
+                    Text {
+                        text: "Noch nichts geschrieben";
+                        font-family: Theme.serif;
+                        font-size: 24px;
+                        color: Theme.ink;
+                        horizontal-alignment: center;
+                    }
+
+                    Text {
+                        text: root.can-add ? "Halte deine Tage fest – einen Eintrag nach dem anderen." : root.can-create-calendar ? "Keiner deiner Kalender nimmt Journaleinträge an." : "Füge ein CalDAV-Konto hinzu, um Journaleinträge zu speichern.";
+                        font-size: 14px;
+                        color: Theme.ink-3;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+
+                    if root.can-create-calendar && !root.can-add: HorizontalLayout {
+                        alignment: center;
+                        padding-top: 8px;
+
+                        Button {
+                            text: root.create-busy ? "Wird angelegt …" : "Journal-Kalender anlegen";
+                            primary: true;
+                            enabled: !root.create-busy;
+                            clicked => {
+                                root.create-calendar();
+                            }
+                        }
+                    }
+
+                    if root.create-error != "": Text {
+                        text: root.create-error;
+                        font-size: 13px;
+                        color: Theme.error;
+                        horizontal-alignment: center;
+                        wrap: word-wrap;
+                    }
+
+                    if root.can-add: HorizontalLayout {
+                        alignment: center;
+                        padding-top: 8px;
+
+                        Button {
+                            text: "Schreib etwas";
+                            clicked => {
+                                root.new-entry();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Editor; immer vorhanden, damit Liste und Kopfzeile ihn fokussieren können
+            Rectangle {
+                visible: root.open;
+                x: root.split ? 12px + root.list-w + 12px : 12px;
+                y: 0px;
+                width: root.split ? parent.width - root.list-w - 36px : parent.width - 24px;
+                height: parent.height - 16px;
+                border-radius: Theme.radius-lg;
+                border-width: 1px;
+                border-color: Theme.line-2;
+                background: Theme.panel;
+                drop-shadow-offset-y: 8px;
+                drop-shadow-blur: 28px;
+                drop-shadow-color: Theme.dark ? transparent : #0000000a;
+                clip: true;
+
+                VerticalLayout {
+                    // Kopf: zurück (schmal), Datum, Kalender, Löschen
+                    VerticalLayout {
+                        padding-left: root.pad;
+                        padding-right: root.pad - 12px;
+                        padding-top: root.split ? 22px : 12px;
+                        padding-bottom: 12px;
+                        spacing: 10px;
+
+                        if !root.split: HorizontalLayout {
+                            alignment: start;
+
+                            Rectangle {
+                                width: back-text.preferred-width + 16px;
+                                height: 28px;
+                                border-radius: 6px;
+                                background: back-ta.has-hover ? Theme.ink-raw.with-alpha(0.06) : transparent;
+                                accessible-role: button;
+                                accessible-label: "Alle Einträge";
+
+                                back-text := Text {
+                                    text: "← Alle Einträge";
+                                    font-size: 13px;
+                                    color: Theme.ink-2;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                }
+
+                                back-ta := TouchArea {
+                                    mouse-cursor: MouseCursor.pointer;
+                                    clicked => {
+                                        root.close();
+                                    }
+                                }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 14px;
+
+                            // Datum; Klick ändert es
+                            Rectangle {
+                                width: date-row.preferred-width;
+                                accessible-role: button;
+                                accessible-label: "Datum ändern: " + root.weekday-long + ", " + root.day-num + ". " + root.month-year;
+
+                                date-row := HorizontalLayout {
+                                    spacing: 12px;
+
+                                    Text {
+                                        text: root.day-num;
+                                        font-family: Theme.serif;
+                                        font-size: 42px;
+                                        letter-spacing: -1.2px;
+                                        color: Theme.accent-strong;
+                                        vertical-alignment: center;
+                                    }
+
+                                    VerticalLayout {
+                                        alignment: center;
+                                        spacing: 1px;
+
+                                        Text {
+                                            text: root.weekday-long;
+                                            font-size: 13px;
+                                            font-weight: 600;
+                                            color: Theme.ink-2;
+                                        }
+
+                                        Text {
+                                            text: root.month-year;
+                                            font-size: 12.5px;
+                                            color: Theme.ink-3;
+                                        }
+                                    }
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: root.read-only ? MouseCursor.default : MouseCursor.pointer;
+                                    clicked => {
+                                        if !root.read-only {
+                                            root.date-editing = true;
+                                            date-input.text = root.date-text;
+                                            date-input.focus();
+                                            date-input.select-all();
+                                        }
+                                    }
+                                }
+                            }
+
+                            VerticalLayout {
+                                alignment: center;
+                                visible: root.date-editing;
+                                width: root.date-editing ? 220px : 0px;
+                                spacing: 3px;
+
+                                Rectangle {
+                                    height: 34px;
+                                    border-radius: Theme.radius-sm;
+                                    border-width: 1px;
+                                    border-color: date-input.has-focus ? Theme.accent : Theme.line;
+                                    background: Theme.input-bg;
+
+                                    date-input := TextInput {
+                                        x: 10px;
+                                        width: parent.width - 20px;
+                                        height: parent.height;
+                                        vertical-alignment: center;
+                                        font-size: 14px;
+                                        color: Theme.ink;
+                                        single-line: true;
+                                        accessible-label: "Datum (TT.MM.JJJJ)";
+                                        accepted => {
+                                            root.set-date(self.text);
+                                            if root.date-error == "" {
+                                                root.date-editing = false;
+                                            }
+                                        }
+                                        key-pressed(e) => {
+                                            if e.text == Key.Escape {
+                                                root.date-editing = false;
+                                                list-keys.focus();
+                                                return accept;
+                                            }
+                                            return reject;
+                                        }
+                                        changed has-focus => {
+                                            if !self.has-focus {
+                                                root.date-editing = false;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if root.date-error != "": Text {
+                                    text: root.date-error;
+                                    font-size: 11.5px;
+                                    color: Theme.error;
+                                }
+                            }
+
+                            Rectangle {
+                                horizontal-stretch: 1;
+                            }
+
+                            // Kalender (nur wenn es mehrere gibt)
+                            if root.calendars.length > 1 && !root.read-only: HorizontalLayout {
+                                spacing: 6px;
+                                alignment: end;
+
+                                for cal in root.calendars: VerticalLayout {
+                                    alignment: center;
+
+                                    Rectangle {
+                                        height: 28px;
+                                        width: cal-row.preferred-width + 20px;
+                                        border-radius: 14px;
+                                        border-width: 1px;
+                                        border-color: cal.selected ? cal.color.with-alpha(0.6) : Theme.line;
+                                        background: cal.selected ? cal.color.with-alpha(Theme.dark ? 0.18 : 0.10) : cal-ta.has-hover ? Theme.ink-raw.with-alpha(0.04) : transparent;
+                                        accessible-role: radio-button;
+                                        accessible-label: "Kalender " + cal.name;
+                                        accessible-checked: cal.selected;
+
+                                        cal-row := HorizontalLayout {
+                                            x: 10px;
+                                            width: self.preferred-width;
+                                            spacing: 6px;
+
+                                            VerticalLayout {
+                                                alignment: center;
+
+                                                Rectangle {
+                                                    width: 8px;
+                                                    height: 8px;
+                                                    border-radius: 4px;
+                                                    border-width: 1px;
+                                                    border-color: cal.color;
+                                                    background: cal.selected ? cal.color : transparent;
+                                                }
+                                            }
+
+                                            Text {
+                                                text: cal.name;
+                                                font-size: 12px;
+                                                color: cal.selected ? Theme.ink : Theme.ink-2;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+
+                                        cal-ta := TouchArea {
+                                            mouse-cursor: MouseCursor.pointer;
+                                            clicked => {
+                                                root.set-calendar(cal.id);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !root.read-only: VerticalLayout {
+                                alignment: center;
+
+                                GlyphButton {
+                                    icon: @image-url("icons/trash.svg");
+                                    label: "Eintrag löschen";
+                                    danger: true;
+                                    clicked => {
+                                        root.delete();
+                                    }
+                                }
+                            }
+                        }
+
+                        // Titel
+                        Rectangle {
+                            height: 44px;
+
+                            title-input := TextInput {
+                                visible: root.write;
+                                enabled: root.write && !root.read-only;
+                                width: parent.width - 12px;
+                                height: parent.height;
+                                text <=> root.title;
+                                font-family: Theme.serif;
+                                font-size: 28px;
+                                color: Theme.ink;
+                                single-line: true;
+                                vertical-alignment: center;
+                                selection-background-color: Theme.accent.with-alpha(0.3);
+                                selection-foreground-color: Theme.ink;
+                                accessible-label: "Titel";
+                                edited => {
+                                    root.edited();
+                                }
+                                key-pressed(e) => {
+                                    if e.text == Key.Escape {
+                                        root.set-write(false);
+                                        list-keys.focus();
+                                        return accept;
+                                    }
+                                    if e.text == Key.Return || e.text == Key.DownArrow {
+                                        body-input.focus();
+                                        return accept;
+                                    }
+                                    return reject;
+                                }
+                            }
+
+                            if root.write && root.title == "": Text {
+                                height: parent.height;
+                                text: "Titel (optional)";
+                                font-family: Theme.serif;
+                                font-size: 28px;
+                                color: Theme.ink-4;
+                                vertical-alignment: center;
+                            }
+
+                            if !root.write: Text {
+                                width: parent.width - 12px;
+                                height: parent.height;
+                                text: root.title != "" ? root.title : "Eintrag ohne Titel";
+                                font-family: Theme.serif;
+                                font-size: 28px;
+                                color: root.title != "" ? Theme.ink : Theme.ink-3;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+
+                        // Tags
+                        HorizontalLayout {
+                            spacing: 6px;
+                            alignment: start;
+                            height: 26px;
+
+                            for tag[i] in root.tags: Rectangle {
+                                width: tag-row.preferred-width + 18px;
+                                border-radius: 13px;
+                                border-width: 1px;
+                                border-color: Theme.line;
+                                background: Theme.ink-raw.with-alpha(0.025);
+
+                                tag-row := HorizontalLayout {
+                                    x: 10px;
+                                    width: self.preferred-width;
+                                    spacing: 2px;
+
+                                    Text {
+                                        text: tag;
+                                        font-size: 12px;
+                                        color: Theme.ink-2;
+                                        vertical-alignment: center;
+                                    }
+
+                                    if !root.read-only: VerticalLayout {
+                                        alignment: center;
+
+                                        Rectangle {
+                                            width: 16px;
+                                            height: 16px;
+                                            border-radius: 8px;
+                                            background: x-ta.has-hover ? Theme.ink-raw.with-alpha(0.08) : transparent;
+                                            accessible-role: button;
+                                            accessible-label: "Tag " + tag + " entfernen";
+                                            accessible-action-default => {
+                                                root.remove-tag(i);
+                                            }
+
+                                            Image {
+                                                source: @image-url("icons/x.svg");
+                                                width: 10px;
+                                                height: 10px;
+                                                colorize: Theme.ink-3;
+                                            }
+
+                                            x-ta := TouchArea {
+                                                mouse-cursor: MouseCursor.pointer;
+                                                clicked => {
+                                                    root.remove-tag(i);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if !root.read-only: Rectangle {
+                                width: 110px;
+
+                                tag-input := TextInput {
+                                    width: parent.width;
+                                    height: parent.height;
+                                    vertical-alignment: center;
+                                    font-size: 12px;
+                                    color: Theme.ink;
+                                    single-line: true;
+                                    accessible-label: "Tag hinzufügen";
+                                    accepted => {
+                                        if self.text != "" {
+                                            root.add-tag(self.text);
+                                            self.text = "";
+                                        }
+                                    }
+                                    key-pressed(e) => {
+                                        if e.text == Key.Escape {
+                                            self.text = "";
+                                            list-keys.focus();
+                                            return accept;
+                                        }
+                                        return reject;
+                                    }
+                                }
+
+                                if tag-input.text == "": Text {
+                                    height: parent.height;
+                                    text: "+ Tag";
+                                    font-size: 12px;
+                                    color: tag-input.has-focus ? Theme.ink-4 : Theme.ink-3;
+                                    vertical-alignment: center;
+                                }
+                            }
+                        }
+                    }
+
+                    // Text: Schreiben oder Lesen
+                    body-flick := Flickable {
+                        vertical-stretch: 1;
+                        content-height: Math.max(self.height, root.write ? body-input.preferred-height + 48px : read-column.preferred-height + 48px);
+
+                        body-keys := FocusScope {
+                            x: root.pad;
+                            y: 8px;
+                            width: body-flick.width - 2 * root.pad;
+                            height: Math.max(body-flick.height - 16px, body-input.preferred-height);
+                            visible: root.write;
+                            enabled: root.write;
+
+                            capture-key-pressed(e) => {
+                                if e.modifiers.control && !e.modifiers.alt && (e.text == "b" || e.text == "B" || e.text == "i" || e.text == "I") {
+                                    if !root.read-only {
+                                        // Strg+B fett, Strg+I kursiv
+                                        let r = root.format(body-input.text, body-input.anchor-position-byte-offset, body-input.cursor-position-byte-offset, e.text == "b" || e.text == "B" ? "**" : "*");
+                                        body-input.text = r.text;
+                                        body-input.set-selection-offsets(r.anchor, r.cursor);
+                                        root.edited();
+                                    }
+                                    return accept;
+                                }
+                                if e.text == Key.Escape {
+                                    root.set-write(false);
+                                    list-keys.focus();
+                                    return accept;
+                                }
+                                return reject;
+                            }
+
+                            body-input := TextInput {
+                                width: parent.width;
+                                text <=> root.body;
+                                enabled: root.write && !root.read-only;
+                                single-line: false;
+                                wrap: word-wrap;
+                                font-size: 15px;
+                                color: Theme.ink-2;
+                                selection-background-color: Theme.accent.with-alpha(0.3);
+                                selection-foreground-color: Theme.ink;
+                                accessible-label: "Text";
+                                edited => {
+                                    root.edited();
+                                }
+                                // Cursor sichtbar halten
+                                cursor-position-changed(p) => {
+                                    if p.y + 8px + body-flick.content-y < 0 {
+                                        body-flick.content-y = -(p.y + 8px) + 12px;
+                                    } else if p.y + 8px + 28px + body-flick.content-y > body-flick.height {
+                                        body-flick.content-y = body-flick.height - p.y - 8px - 40px;
+                                    }
+                                }
+                            }
+
+                            if root.body == "": Text {
+                                text: "Schreibe etwas …";
+                                font-size: 15px;
+                                color: Theme.ink-4;
+                            }
+                        }
+
+                        // Doppelklick in der Leseansicht: schreiben. Liegt unter dem
+                        // Text, damit Links klickbar bleiben.
+                        if !root.write && !root.read-only: TouchArea {
+                            width: body-flick.width;
+                            height: Math.max(body-flick.height, read-column.preferred-height + 48px);
+                            double-clicked => {
+                                root.set-write(true);
+                                body-input.focus();
+                            }
+                        }
+
+                        read-column := VerticalLayout {
+                            x: root.pad;
+                            y: 8px;
+                            width: body-flick.width - 2 * root.pad;
+                            height: self.preferred-height;
+                            alignment: start;
+                            visible: !root.write;
+                            spacing: 12px;
+
+                            for block in root.blocks: ReadBlock {
+                                block: block;
+                                link(url) => {
+                                    root.open-link(url);
+                                }
+                            }
+
+                            if root.blocks.length == 0: Text {
+                                text: "Noch kein Text";
+                                font-size: 15px;
+                                color: Theme.ink-3;
+                            }
+                        }
+
+                    }
+
+                    // Fußzeile: Schreiben/Lesen, Wörter bzw. Hinweis, Speicherstand
+                    Rectangle {
+                        height: 1px;
+                        background: Theme.line-2;
+                    }
+
+                    HorizontalLayout {
+                        padding-left: root.pad - 4px;
+                        padding-right: root.pad;
+                        padding-top: 10px;
+                        padding-bottom: 12px;
+                        spacing: 14px;
+
+                        if !root.read-only: Segmented {
+                            labels: ["Schreiben", "Lesen"];
+                            current: root.write ? 0 : 1;
+                            tab-w: 84px;
+                            tab-h: 26px;
+                            font-px: 12px;
+                            select(i) => {
+                                root.set-write(i == 0);
+                                if i == 0 {
+                                    body-input.focus();
+                                } else {
+                                    list-keys.focus();
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: root.read-only ? "Schreibgeschützter Kalender" : root.write ? (root.words == 1 ? "1 Wort" : root.words + " Wörter") + "  ·  Strg + B / I zum Formatieren" : "Markdown wird unterstützt";
+                            font-size: 11.5px;
+                            color: Theme.ink-3;
+                            vertical-alignment: center;
+                            overflow: elide;
+                            horizontal-stretch: 1;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 7px;
+                            alignment: end;
+
+                            VerticalLayout {
+                                alignment: center;
+
+                                Rectangle {
+                                    width: 6px;
+                                    height: 6px;
+                                    border-radius: 3px;
+                                    background: root.status == 1 ? Theme.accent : root.status == 2 || root.status == 3 ? Theme.warning-text : root.status == 4 ? Theme.error : Theme.ink-3;
+                                }
+                            }
+
+                            Text {
+                                text: root.status-text;
+                                font-size: 11.5px;
+                                color: root.status == 4 ? Theme.error : Theme.ink-3;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

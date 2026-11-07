@@ -1,0 +1,12 @@
+# Text im Repository mit LF, beim Auschecken nach Plattform
+* text=auto
+
+# Windows-Skripte und Installer-Quellen immer mit CRLF
+*.ps1 text eol=crlf
+*.nsi text eol=crlf
+
+# Binärdateien nie anfassen
+*.png binary
+*.ico binary
+*.exe binary
+*.db binary

@@ -1,0 +1,199 @@
+// Termin-Vorschau nach Calino (EventPreviewPopup.module.css).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button } from "controls.slint";
+
+export struct EventDetails {
+    title: string,
+    // z. B. "Mi. 4. Nov. · 09:00–10:00"
+    when: string,
+    location: string,
+    calendar: string,
+    color: color,
+    description: string,
+    // Hinweis, z. B. zu Serien oder schreibgeschützten Kalendern
+    note: string,
+    can-edit: bool,
+    can-delete: bool,
+}
+
+export component EventPreview inherits Rectangle {
+    in property <EventDetails> details;
+    callback edit();
+    callback delete();
+    callback close();
+
+    width: 300px;
+    height: layout.preferred-height;
+    background: Theme.popover-bg;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.popover-border;
+    drop-shadow-offset-y: 8px;
+    drop-shadow-blur: 32px;
+    drop-shadow-color: Theme.modal-shadow;
+    clip: true;
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Escape {
+                root.close();
+                return accept;
+            }
+            if (e.text == "e" || e.text == Key.Return) && root.details.can-edit {
+                root.edit();
+                return accept;
+            }
+            if e.text == Key.Delete && root.details.can-delete {
+                root.delete();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    init => {
+        fs.focus();
+    }
+
+    layout := VerticalLayout {
+        // Kopf mit Farbpunkt, Titel und Schließen
+        Rectangle {
+            VerticalLayout {
+                padding-left: 16px;
+                padding-right: 10px;
+                padding-top: 14px;
+                padding-bottom: 14px;
+
+                HorizontalLayout {
+                    spacing: 10px;
+
+                    VerticalLayout {
+                        alignment: start;
+                        padding-top: 5px;
+
+                        Rectangle {
+                            width: 10px;
+                            height: 10px;
+                            border-radius: 3px;
+                            background: root.details.color;
+                        }
+                    }
+
+                    Text {
+                        text: root.details.title;
+                        font-size: 15px;
+                        font-weight: 600;
+                        color: Theme.ink;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+
+                    close-btn := Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 12px;
+                        background: close-ta.has-hover ? Theme.hover-bg : transparent;
+                        accessible-role: button;
+                        accessible-label: "Schließen";
+
+                        Text {
+                            text: "×";
+                            font-size: 16px;
+                            color: Theme.ink-3;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        close-ta := TouchArea {
+                            clicked => {
+                                root.close();
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: Theme.popover-border;
+            }
+        }
+
+        VerticalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
+            padding-top: 12px;
+            padding-bottom: 14px;
+            spacing: 6px;
+
+            Text {
+                text: root.details.when;
+                font-size: 13px;
+                color: Theme.ink-2;
+                wrap: word-wrap;
+            }
+
+            if root.details.location != "": Text {
+                text: root.details.location;
+                font-size: 13px;
+                color: Theme.ink-2;
+                wrap: word-wrap;
+            }
+
+            Text {
+                text: root.details.calendar;
+                font-size: 12px;
+                color: Theme.ink-3;
+            }
+
+            if root.details.description != "": VerticalLayout {
+                padding-top: 6px;
+
+                Rectangle {
+                    height: 1px;
+                    background: Theme.line;
+                }
+
+                Text {
+                    text: root.details.description;
+                    font-size: 13px;
+                    color: Theme.ink-2;
+                    wrap: word-wrap;
+                    overflow: elide;
+                    max-height: 120px;
+                }
+            }
+
+            if root.details.note != "": Text {
+                text: root.details.note;
+                font-size: 12px;
+                color: Theme.ink-3;
+                wrap: word-wrap;
+            }
+
+            if root.details.can-edit || root.details.can-delete: HorizontalLayout {
+                padding-top: 6px;
+                spacing: 8px;
+                alignment: end;
+
+                if root.details.can-delete: Button {
+                    text: "Löschen";
+                    danger: true;
+                    clicked => {
+                        root.delete();
+                    }
+                }
+
+                if root.details.can-edit: Button {
+                    text: "Bearbeiten";
+                    clicked => {
+                        root.edit();
+                    }
+                }
+            }
+        }
+    }
+}

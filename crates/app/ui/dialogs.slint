@@ -1,0 +1,262 @@
+// Dialoge nach Calino (DESIGN.md: Modals & Panels): Abdunklung, Karte mit
+// 8 px Rundung, Einblenden mit 20 px Aufwärtsbewegung in 200 ms.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { AboutSlint } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { Button, TextField } from "controls.slint";
+
+export global DialogLogic {
+    // Unverschlüsselte Adresse? (Hinweis im Dialog)
+    pure callback is-insecure(string) -> bool;
+}
+
+export component Modal inherits Rectangle {
+    in property <string> title;
+    in property <length> card-width: 440px;
+    callback close();
+    // Nach dem Öffnen, z. B. um das erste Feld zu fokussieren
+    callback opened();
+
+    property <bool> shown: false;
+    init => {
+        shown = true;
+        fs.focus();
+        root.opened();
+    }
+
+    background: Theme.modal-scrim;
+    opacity: shown ? 1 : 0;
+    animate opacity { duration: Theme.dur-base; }
+
+    // Klicks auf die Abdunklung landen nicht in der Woche darunter
+    TouchArea { }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Escape {
+                root.close();
+                return accept;
+            }
+            return reject;
+        }
+
+        card := Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2 + (root.shown ? 0px : 20px);
+            width: Math.min(root.card-width, parent.width - 32px);
+            // In kleinen Fenstern scrollt der Inhalt
+            height: Math.min(content.preferred-height, parent.height - 32px);
+            clip: true;
+            background: Theme.modal-bg;
+            border-radius: Theme.radius-md;
+            border-width: Theme.dark ? 1px : 0px;
+            border-color: #fff7eb14;
+            drop-shadow-offset-y: 24px;
+            drop-shadow-blur: 80px;
+            drop-shadow-color: Theme.modal-shadow;
+            animate y { duration: Theme.dur-base; easing: cubic-bezier(0.22, 1, 0.36, 1); }
+
+            // Klicks in der Karte nicht an die Abdunklung durchreichen
+            TouchArea { }
+
+            Flickable {
+                interactive: false;
+                content-height: content.preferred-height;
+
+                content := VerticalLayout {
+                    width: card.width;
+                    padding: 24px;
+                    spacing: 18px;
+
+                    Text {
+                        text: root.title;
+                        font-family: Theme.serif-medium;
+                        font-size: 22px;
+                        font-weight: 500;
+                        color: Theme.ink;
+                    }
+
+                    @children
+                }
+            }
+        }
+    }
+}
+
+export component AddAccountDialog inherits Modal {
+    in property <bool> busy;
+    in property <string> error;
+    in-out property <string> name;
+    in-out property <string> url;
+    in-out property <string> username;
+    in-out property <string> password;
+    callback connect(string, string, string, string);
+    callback cancel();
+
+    title: "Konto hinzufügen";
+    close => {
+        if !root.busy {
+            root.cancel();
+        }
+    }
+    opened => {
+        url-field.focus();
+    }
+
+    function submit() {
+        if !root.busy {
+            root.connect(root.name, root.url, root.username, root.password);
+        }
+    }
+
+    VerticalLayout {
+        spacing: 14px;
+
+        url-field := TextField {
+            label: "Server-Adresse";
+            placeholder: "z. B. https://kalender.example.org/dav.php";
+            text <=> root.url;
+            enabled: !root.busy;
+            accepted => {
+                user-field.focus();
+            }
+        }
+
+        if DialogLogic.is-insecure(root.url): Text {
+            text: "Unverschlüsselte Verbindung (http): Das Passwort wird im Klartext übertragen. Im eigenen Heimnetz meist in Ordnung, sonst besser https.";
+            font-size: 12px;
+            color: Theme.warning-text;
+            wrap: word-wrap;
+        }
+
+        user-field := TextField {
+            label: "Benutzername";
+            text <=> root.username;
+            enabled: !root.busy;
+            accepted => {
+                password-field.focus();
+            }
+        }
+
+        password-field := TextField {
+            label: "Passwort";
+            password: true;
+            text <=> root.password;
+            enabled: !root.busy;
+            accepted => {
+                root.submit();
+            }
+        }
+
+        TextField {
+            label: "Name in der Seitenleiste (optional)";
+            placeholder: "z. B. Baïkal zu Hause";
+            text <=> root.name;
+            enabled: !root.busy;
+            accepted => {
+                root.submit();
+            }
+        }
+
+        Text {
+            text: "Das Passwort wird im Windows-Anmeldeinformationsspeicher abgelegt, nicht in Horas Datenbank.";
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+
+        if root.error != "": Rectangle {
+            border-radius: Theme.radius-sm;
+            background: Theme.error-bg;
+
+            VerticalLayout {
+                padding: 10px;
+
+                Text {
+                    text: root.error;
+                    font-size: 13px;
+                    color: Theme.error;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+
+            Button {
+                text: "Abbrechen";
+                enabled: !root.busy;
+                clicked => {
+                    root.cancel();
+                }
+            }
+
+            Button {
+                text: root.busy ? "Verbinde …" : "Verbinden";
+                primary: true;
+                enabled: !root.busy;
+                clicked => {
+                    root.submit();
+                }
+            }
+        }
+    }
+}
+
+export component AboutDialog inherits Modal {
+    in property <string> version;
+    callback dismiss();
+
+    title: "Hora";
+    close => {
+        root.dismiss();
+    }
+
+    VerticalLayout {
+        spacing: 12px;
+
+        Text {
+            text: "Version " + root.version + " · Desktop-Kalender für Windows, nach dem Vorbild von Calino";
+            font-size: 14px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        Text {
+            text: "Design und Verhalten nach Calino von Ivan Malinovski (MIT-Lizenz), github.com/Ivan-Malinovski/calino. Hora ist ein eigenständiges Projekt, kein offizielles Calino-Programm.";
+            font-size: 13px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        Text {
+            text: "Schrift: Newsreader, The Newsreader Project Authors (SIL Open Font License 1.1).";
+            font-size: 13px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        HorizontalLayout {
+            alignment: center;
+
+            AboutSlint {
+                preferred-height: 140px;
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+
+            Button {
+                text: "Schließen";
+                primary: true;
+                clicked => {
+                    root.dismiss();
+                }
+            }
+        }
+    }
+}

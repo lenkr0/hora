@@ -1,0 +1,183 @@
+// Jahresansicht nach Calinos YearView (YearView.module.css): zwölf
+// Monatskarten (4 × 3), Wochentagskürzel, Tage mit Punkt bei Terminen,
+// heute hervorgehoben; Klick auf den Monatsnamen öffnet den Monat.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+
+export struct YearCell {
+    // 0 = Feld vor dem Ersten bzw. nach dem Letzten
+    number: int,
+    count: int,
+    today: bool,
+}
+
+export struct YearMonth {
+    name: string,
+    // Tag im Jahr (ab 0) des Ersten
+    start: int,
+    // 42 Felder, Montag zuerst
+    days: [YearCell],
+}
+
+export component YearView inherits Rectangle {
+    in property <[YearMonth]> months;
+    // Tag im Jahr unter dem Tastaturfokus
+    in-out property <int> cursor;
+    // Tag im Jahr (ab 0)
+    callback open-day(int);
+    callback new-event-on(int);
+    callback open-month(int);
+
+    public function focus-grid() {
+        grid.focus();
+    }
+
+    property <length> gap: 12px;
+    property <length> card-w: (root.width - 3 * gap) / 4;
+    property <length> card-h: (root.height - 2 * gap) / 3;
+    property <length> head-h: Math.min(40px, card-h * 0.17);
+    property <length> names-h: Math.min(22px, card-h * 0.1);
+    property <length> cell-w: (card-w - 16px) / 7;
+    property <length> cell-h: (card-h - head-h - names-h - 8px) / 6;
+    property <length> disc: Math.min(26px, Math.min(cell-w, cell-h) - 2px);
+    property <int> length: root.months.length == 12 ? root.months[11].start + 31 : 365;
+
+    for month[m] in root.months: Rectangle {
+        x: Math.mod(m, 4) * (card-w + gap);
+        y: Math.floor(m / 4) * (card-h + gap);
+        width: card-w;
+        height: card-h;
+        background: Theme.panel;
+        border-radius: Theme.radius-lg;
+        border-width: 1px;
+        border-color: Theme.line;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: Theme.dark ? transparent : #0000000a;
+
+        // Monatsname; Klick öffnet die Monatsansicht
+        Text {
+            x: 14px;
+            y: 0px;
+            height: head-h;
+            text: month.name;
+            font-family: Theme.serif-medium;
+            font-size: 17px;
+            font-weight: 500;
+            color: month-ta.has-hover ? Theme.accent-strong : Theme.ink;
+            vertical-alignment: center;
+            accessible-role: button;
+            accessible-label: month.name + " öffnen";
+
+            month-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-month(m);
+                }
+            }
+        }
+
+        for name[i] in ["M", "D", "M", "D", "F", "S", "S"]: Text {
+            x: 8px + i * cell-w;
+            y: head-h;
+            width: cell-w;
+            height: names-h;
+            text: name;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: i >= 5 ? Theme.ink-3.with-alpha(0.6) : Theme.ink-3;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        for cell[i] in month.days: Rectangle {
+            property <int> ordinal: month.start + cell.number - 1;
+            property <bool> focused: grid.has-focus && cell.number > 0 && self.ordinal == root.cursor;
+
+            x: 8px + Math.mod(i, 7) * cell-w;
+            y: head-h + names-h + Math.floor(i / 7) * cell-h;
+            width: cell-w;
+            height: cell-h;
+            visible: cell.number > 0;
+            accessible-role: button;
+            accessible-label: "\{cell.number}. " + month.name + (cell.count == 1 ? ", 1 Termin" : cell.count > 1 ? ", \{cell.count} Termine" : "");
+
+            Rectangle {
+                width: disc;
+                height: disc;
+                border-radius: disc / 2;
+                background: cell.today ? (day-ta.has-hover ? Theme.accent-hover : Theme.accent-strong)
+                    : day-ta.has-hover ? Theme.hover-bg : transparent;
+                border-width: parent.focused ? 2px : 0px;
+                border-color: Theme.accent;
+
+                Text {
+                    text: cell.number;
+                    font-size: 12px;
+                    font-weight: cell.today || cell.count > 0 ? 600 : 400;
+                    color: cell.today ? Theme.accent-contrast
+                        : cell.count > 0 ? Theme.ink
+                        : Math.mod(i, 7) >= 5 ? Theme.ink-3 : Theme.ink-2;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Punkt bei Terminen
+            if cell.count > 0: Rectangle {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height + disc) / 2 - 5px;
+                width: 4px;
+                height: 4px;
+                border-radius: 2px;
+                background: cell.today ? Theme.accent-contrast : Theme.accent;
+            }
+
+            day-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.cursor = parent.ordinal;
+                    root.open-day(parent.ordinal);
+                }
+                double-clicked => {
+                    root.new-event-on(parent.ordinal);
+                }
+            }
+        }
+    }
+
+    grid := FocusScope {
+        width: 0px;
+        height: 0px;
+        accessible-role: table;
+        accessible-label: "Jahr, Pfeiltasten wählen den Tag, Eingabe öffnet ihn";
+        key-pressed(e) => {
+            if e.text == Key.LeftArrow {
+                root.cursor = Math.max(0, root.cursor - 1);
+                return accept;
+            }
+            if e.text == Key.RightArrow {
+                root.cursor = Math.min(root.length - 1, root.cursor + 1);
+                return accept;
+            }
+            if e.text == Key.UpArrow {
+                root.cursor = Math.max(0, root.cursor - 7);
+                return accept;
+            }
+            if e.text == Key.DownArrow {
+                root.cursor = Math.min(root.length - 1, root.cursor + 7);
+                return accept;
+            }
+            if e.text == Key.Return || e.text == " " {
+                root.open-day(root.cursor);
+                return accept;
+            }
+            if e.text == "n" || e.text == "N" {
+                root.new-event-on(root.cursor);
+                return accept;
+            }
+            return reject;
+        }
+    }
+}

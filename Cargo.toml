@@ -1,0 +1,54 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/core",
+    "crates/caldav",
+    "crates/storage",
+    "crates/platform",
+    "crates/app",
+]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.92"
+license = "MIT"
+authors = ["lenkr0"]
+
+[workspace.dependencies]
+hora-core = { path = "crates/core" }
+hora-caldav = { path = "crates/caldav" }
+hora-storage = { path = "crates/storage" }
+hora-platform = { path = "crates/platform" }
+
+chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+chrono-tz = "0.10.4"
+rrule = "0.14.0"
+thiserror = "2.0.21"
+rusqlite = { version = "0.41.1", features = ["bundled"] }
+ureq = { version = "3.5.1", features = ["platform-verifier"] }
+roxmltree = "0.21.2"
+url = "2.5.8"
+base64 = "0.23.1"
+keyring-core = "1.0.1"
+windows-native-keyring-store = "1.1.0"
+iana-time-zone = "0.1.65"
+dirs = "7.0.0"
+tempfile = "3.27.0"
+slint = { version = "1.18.1", default-features = false }
+slint-build = "1.18.1"
+windows = "0.62.2"
+regex = "1.13.1"
+raw-window-handle = "0.6.2"
+embed-resource = "3.0.6"
+windows-sys = "0.61.2"
+png = "0.18.1"
+
+# AbhÃ¤ngigkeiten auch im Debug-Build optimieren, damit die OberflÃ¤che flÃ¼ssig bleibt.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

@@ -1,0 +1,1401 @@
+// Hauptfenster. Kopfzeile nach Calino (CalendarHeader.module.css).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme, Fmt } from "theme.slint";
+import { EventItem, WeekLogic } from "event-card.slint";
+import { WeekView, DayInfo, AllDayItem } from "week-view.slint";
+import { MonthView, MonthCell, MonthChip } from "month-view.slint";
+import { Sidebar, CalendarRow, MiniDay } from "sidebar.slint";
+import { AddAccountDialog, AboutDialog, DialogLogic } from "dialogs.slint";
+import { EventDialog, EventDraft, RuleDraft, ReminderChip, ConfirmDialog, ConflictDialog, ScopeDialog } from "event-dialog.slint";
+import { SettingsDialog } from "settings.slint";
+import { TasksView, TaskRow } from "tasks-view.slint";
+import { TaskDialog, TaskDraft } from "task-dialog.slint";
+import { QuickAddDialog, QuickPreview } from "quick-add.slint";
+import { AgendaView, AgendaLine } from "agenda-view.slint";
+import { YearView, YearMonth, YearCell } from "year-view.slint";
+import { CommandPalette, PaletteItem } from "palette.slint";
+import { JournalView, JournalRow, JournalBlock, JournalCalendar, JournalEdit } from "journal-view.slint";
+import { EventPreview, EventDetails } from "preview.slint";
+import { SelectOption } from "inputs.slint";
+import { IconButton } from "controls.slint";
+
+export { Theme, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit }
+
+component NavArrow inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    callback clicked();
+
+    width: 40px;
+    height: 36px;
+    background: ta.has-hover ? Theme.ink-raw.with-alpha(0.05) : transparent;
+    accessible-role: button;
+    accessible-label: root.label;
+    animate background { duration: 140ms; }
+
+    Image {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        colorize: ta.has-hover ? Theme.ink : Theme.ink-2;
+    }
+
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component Navigator inherits Rectangle {
+    callback prev();
+    callback next();
+    callback today();
+
+    height: 38px;
+    width: layout.preferred-width + 2px;
+    background: Theme.panel;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.line;
+    drop-shadow-offset-y: 1px;
+    drop-shadow-blur: 2px;
+    drop-shadow-color: Theme.dark ? transparent : #0000000d;
+    clip: true;
+
+    layout := HorizontalLayout {
+        x: 1px;
+        y: 1px;
+        height: parent.height - 2px;
+
+        NavArrow {
+            icon: @image-url("icons/chevron-left.svg");
+            label: "Zurück";
+            clicked => {
+                root.prev();
+            }
+        }
+
+        Rectangle {
+            width: 1px;
+            background: Theme.line;
+        }
+
+        Rectangle {
+            width: today-text.preferred-width + 36px;
+            background: today-ta.has-hover ? Theme.hover-bg : transparent;
+            accessible-role: button;
+            accessible-label: "Heute";
+            animate background { duration: 140ms; }
+
+            today-text := Text {
+                text: "Heute";
+                font-size: 14px;
+                font-weight: 500;
+                color: today-ta.has-hover ? Theme.accent-strong : Theme.ink;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+
+            today-ta := TouchArea {
+                clicked => {
+                    root.today();
+                }
+            }
+        }
+
+        Rectangle {
+            width: 1px;
+            background: Theme.line;
+        }
+
+        NavArrow {
+            icon: @image-url("icons/chevron-right.svg");
+            label: "Weiter";
+            clicked => {
+                root.next();
+            }
+        }
+    }
+}
+
+// Sync-Anzeige: Punkt (grün = aktuell, Akzent = läuft, rot = Fehler) und Text
+// Öffnet die Befehlspalette (Calinos Suchknopf in der Kopfzeile); schmal nur
+// Lupe und Tastenkürzel
+component SearchButton inherits Rectangle {
+    in property <bool> compact;
+    callback clicked();
+
+    height: 34px;
+    border-radius: 10px;
+    background: ta.has-hover ? Theme.ink-raw.with-alpha(0.07) : Theme.ink-raw.with-alpha(0.045);
+    accessible-role: button;
+    accessible-label: "Suchen oder eintragen (Strg+K)";
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        spacing: 8px;
+
+        VerticalLayout {
+            alignment: center;
+
+            Image {
+                source: @image-url("icons/search.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.ink-2;
+            }
+        }
+
+        if !root.compact: Text {
+            text: "Suchen oder eintragen";
+            font-size: 13px;
+            color: Theme.ink-2;
+            vertical-alignment: center;
+        }
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: keys.preferred-width + 10px;
+                height: 18px;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Theme.line;
+
+                keys := Text {
+                    text: "Strg K";
+                    font-size: 10.5px;
+                    color: Theme.ink-3;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component SyncStatus inherits HorizontalLayout {
+    // 0 = kein Konto, 1 = aktuell, 2 = läuft, 3 = Fehler
+    in property <int> state;
+    in property <string> text;
+    in property <string> detail;
+    // Schmal: Text nur, solange synchronisiert wird oder etwas schiefging
+    in property <bool> compact;
+    callback sync-now();
+    // Klick auf Punkt oder Text: ganze Meldung zeigen (x, y unten links im Fenster)
+    callback show-detail(length, length);
+
+    spacing: 8px;
+    alignment: end;
+    visible: root.state != 0;
+
+    Rectangle {
+        preferred-width: status.preferred-width;
+        min-width: 8px;
+        max-width: root.compact ? 200px : 440px;
+        accessible-role: button;
+        accessible-label: root.text;
+        accessible-description: root.detail;
+
+        status := HorizontalLayout {
+            spacing: 8px;
+
+            VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: root.state == 3 ? Theme.error : root.state == 2 ? Theme.accent : Theme.success;
+                }
+            }
+
+            if !root.compact || root.state >= 2: Text {
+                text: root.text;
+                font-size: 13px;
+                color: root.state == 3 ? Theme.error : Theme.ink-3;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        TouchArea {
+            mouse-cursor: root.state == 3 ? MouseCursor.pointer : MouseCursor.default;
+            clicked => {
+                if root.state == 3 {
+                    root.show-detail(self.absolute-position.x, self.absolute-position.y + self.height);
+                }
+            }
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        IconButton {
+            icon: @image-url("icons/refresh.svg");
+            label: "Jetzt synchronisieren";
+            icon-size: 14px;
+            clicked => {
+                root.sync-now();
+            }
+        }
+    }
+}
+
+// Ansichtsumschalter nach Calino (.viewTabs): Tabs auf getönter Spur, aktiver
+// Tab auf hellem, gleitendem Indikator
+component ViewTabs inherits Rectangle {
+    in property <int> current;
+    callback select(int);
+
+    property <[string]> labels: ["Tag", "3 Tage", "Woche", "Monat", "Jahr", "Agenda", "Aufgaben", "Journal"];
+    // Breite je Tab (Text plus 2 × 12 px) und linke Kante
+    property <[length]> widths: [48px, 64px, 66px, 62px, 52px, 70px, 82px, 72px];
+    property <[length]> lefts: [4px, 54px, 120px, 188px, 252px, 306px, 378px, 462px];
+
+    width: 462px + 72px + 4px;
+    height: 40px;
+    border-radius: 12px;
+    background: Theme.ink-raw.with-alpha(0.045);
+    accessible-role: tab-list;
+
+    Rectangle {
+        x: root.lefts[root.current];
+        y: 4px;
+        width: root.widths[root.current];
+        height: 32px;
+        border-radius: 9px;
+        background: Theme.panel;
+        border-width: 1px;
+        border-color: Theme.line;
+        drop-shadow-offset-y: 1px;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: Theme.dark ? transparent : #00000014;
+        animate x, width { duration: 250ms; easing: cubic-bezier(0.4, 0, 0.2, 1); }
+    }
+
+    for label[i] in root.labels: Rectangle {
+        x: root.lefts[i];
+        y: 4px;
+        width: root.widths[i];
+        height: 32px;
+        accessible-role: tab;
+        accessible-label: label;
+
+        Text {
+            text: label;
+            font-size: 13px;
+            font-weight: 500;
+            color: i == root.current || tab-ta.has-hover ? Theme.ink : Theme.ink-2;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        tab-ta := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.select(i);
+            }
+        }
+    }
+}
+
+// Schmale Fenster: statt acht Reitern ein Knopf mit der Ansicht und Menü
+component ViewMenu inherits Rectangle {
+    in property <int> current;
+    callback select(int);
+
+    property <[string]> labels: ["Tag", "3 Tage", "Woche", "Monat", "Jahr", "Agenda", "Aufgaben", "Journal"];
+    property <[string]> keys: ["D", "X", "W", "M", "J", "L", "A", "B"];
+
+    width: 136px;
+    height: 40px;
+    border-radius: 12px;
+    background: Theme.ink-raw.with-alpha(0.045);
+    accessible-role: combobox;
+    accessible-label: "Ansicht: " + root.labels[root.current];
+    accessible-action-default => {
+        menu.show();
+    }
+
+    Rectangle {
+        x: 4px;
+        y: 4px;
+        width: parent.width - 8px;
+        height: 32px;
+        border-radius: 9px;
+        background: menu-ta.has-hover ? Theme.hover-bg : Theme.panel;
+        border-width: 1px;
+        border-color: Theme.line;
+
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 10px;
+            spacing: 6px;
+
+            Text {
+                text: root.labels[root.current];
+                font-size: 13px;
+                font-weight: 500;
+                color: Theme.ink;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Image {
+                    source: @image-url("icons/chevron-down.svg");
+                    width: 13px;
+                    height: 13px;
+                    colorize: Theme.ink-2;
+                }
+            }
+        }
+    }
+
+    menu-ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            menu.show();
+        }
+    }
+
+    menu := PopupWindow {
+        x: root.width - 200px;
+        y: root.height + 6px;
+        width: 200px;
+        height: 8 * 34px + 12px;
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            background: Theme.popover-bg;
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.popover-border;
+            drop-shadow-offset-y: 8px;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: Theme.modal-shadow;
+
+            VerticalLayout {
+                padding: 6px;
+
+                for label[i] in root.labels: Rectangle {
+                    height: 34px;
+                    border-radius: 6px;
+                    background: i == root.current ? Theme.selected-bg : item-ta.has-hover ? Theme.hover-bg : transparent;
+                    accessible-role: list-item;
+                    accessible-label: label;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+
+                        Text {
+                            text: label;
+                            font-size: 13px;
+                            font-weight: i == root.current ? 600 : 400;
+                            color: Theme.ink;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
+                        }
+
+                        Text {
+                            text: root.keys[i];
+                            font-size: 11.5px;
+                            color: Theme.ink-3;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    item-ta := TouchArea {
+                        mouse-cursor: MouseCursor.pointer;
+                        clicked => {
+                            root.select(i);
+                            menu.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    // 0 = Tag, 1 = 3 Tage, 2 = Woche, 3 = Monat, 4 = Jahr, 5 = Agenda,
+    // 6 = Aufgaben, 7 = Journal
+    in property <int> view: 2;
+    in property <string> month-title;
+    in property <string> week-label;
+    in property <[DayInfo]> days;
+    in property <[EventItem]> events;
+    in property <[AllDayItem]> all-day;
+    in property <int> all-day-lanes;
+    in property <int> today-index: -1;
+    in property <int> now-min;
+    in property <string> version;
+
+    in property <[MonthCell]> month-cells;
+    in property <[MonthChip]> month-chips;
+    in property <[string]> month-week-labels;
+    in property <int> month-today-cell: -1;
+
+    in property <[AgendaLine]> agenda-rows;
+
+    // Journal
+    in property <[JournalRow]> journal-rows;
+    in property <int> journal-count;
+    in property <int> journal-mode;
+    in property <string> journal-list-title;
+    in property <length> journal-list-height;
+    in property <bool> journal-can-add;
+    in property <bool> journal-can-create-calendar;
+    in property <bool> journal-create-busy;
+    in property <string> journal-create-error;
+    in property <bool> journal-open;
+    in property <bool> journal-read-only;
+    in-out property <string> journal-title;
+    in-out property <string> journal-body;
+    in-out property <bool> journal-write;
+    in property <[string]> journal-tags;
+    in property <string> journal-day-num;
+    in property <string> journal-weekday-long;
+    in property <string> journal-month-year;
+    in property <string> journal-date-text;
+    in property <string> journal-date-error;
+    in property <[JournalCalendar]> journal-calendars;
+    in property <[JournalBlock]> journal-blocks;
+    in property <int> journal-words;
+    in property <int> journal-status;
+    in property <string> journal-status-text;
+    in property <[YearMonth]> year-months;
+    in-out property <int> year-cursor;
+    in-out property <bool> palette-open;
+    in property <[PaletteItem]> palette-items;
+    in-out property <string> palette-text;
+    in-out property <int> palette-selected;
+
+    in property <string> mini-month;
+    in property <string> mini-year;
+    in property <[MiniDay]> mini-days;
+
+    in property <[CalendarRow]> calendars;
+    in property <bool> has-accounts;
+
+    in property <int> sync-state;
+    in property <string> sync-text;
+    in property <string> sync-detail;
+
+    in-out property <bool> add-account-open;
+    in property <bool> add-account-busy;
+    in property <string> add-account-error;
+    in-out property <bool> about-open;
+
+    in property <EventDetails> preview-details;
+    in-out property <bool> event-dialog-open;
+    in property <EventDraft> event-draft;
+    in property <[SelectOption]> calendar-options;
+    in property <string> event-error;
+    in-out property <bool> confirm-open;
+    in property <string> confirm-title: "Termin löschen?";
+    in property <string> confirm-message;
+    in property <[TaskRow]> task-rows;
+    in property <int> task-active-count;
+    in property <int> task-done-count;
+    in property <int> task-filter;
+    in property <bool> task-can-add;
+    in-out property <bool> task-dialog-open;
+    in property <TaskDraft> task-draft;
+    in property <[SelectOption]> task-calendar-options;
+    in property <[SelectOption]> task-parent-options;
+    in property <string> task-error;
+    in-out property <bool> quick-open;
+    in-out property <string> quick-text;
+    in property <string> quick-error;
+    in-out property <bool> conflict-open;
+    in property <string> conflict-message;
+    // Serien: nur dieser / dieser und alle folgenden / alle
+    in property <[ReminderChip]> event-reminders;
+    in property <[SelectOption]> reminder-presets;
+    in property <[SelectOption]> reminder-presets-all-day;
+    in-out property <bool> settings-open;
+    in-out property <bool> settings-reminders: true;
+    in-out property <int> settings-default-reminder;
+    in-out property <bool> settings-autostart;
+    in-out property <bool> settings-keep-running: true;
+    in-out property <bool> settings-show-tasks: true;
+    in-out property <bool> settings-task-reminders: true;
+    in property <[SelectOption]> default-reminder-options;
+    in property <string> settings-status;
+    in-out property <bool> scope-open;
+    in property <bool> scope-deleting;
+    in property <bool> scope-allow-this: true;
+
+    callback prev();
+    callback next();
+    callback go-today();
+    callback set-view(int);
+    callback change-event(int, int, int, int);
+    callback new-event();
+    callback new-event-at(int, int);
+    callback new-event-on(int);
+    callback open-event(int, length, length, length);
+    callback edit-event(int);
+    callback delete-event(int);
+    callback save-event(string, bool, string, string, string, string, string, string, int, RuleDraft);
+    pure callback weekday-of(string) -> int;
+    pure callback rule-summary(RuleDraft, string) -> string;
+    // 0 nur dieser, 1 dieser und alle folgenden, 2 alle
+    callback add-reminder(int, string);
+    callback remove-reminder(int);
+    callback show-settings();
+    callback task-set-filter(int);
+    callback task-quick-add(string);
+    callback task-new();
+    callback task-toggle(int);
+    callback task-open(int);
+    callback task-remove(int);
+    callback task-collapse(int);
+    callback task-save(string, int, string, string, string, int, int, int, string);
+    callback task-delete();
+    callback task-add-subtask();
+    callback show-quick();
+    pure callback quick-preview(string) -> QuickPreview;
+    callback quick-submit(string, bool);
+    callback settings-changed();
+    callback test-notification();
+    callback scope-chosen(int);
+    callback scope-dismissed();
+    callback dialog-delete();
+    callback confirm-accepted();
+    callback month-move(int, int);
+    callback open-day(int);
+    callback open-month(int);
+    callback month-open-journal(int);
+    callback journal-set-mode(int);
+    callback journal-new();
+    callback journal-select(int);
+    callback journal-move(int);
+    callback journal-close();
+    callback journal-edited();
+    callback journal-add-tag(string);
+    callback journal-remove-tag(int);
+    callback journal-set-date(string);
+    callback journal-set-calendar(int);
+    callback journal-delete();
+    callback journal-set-write(bool);
+    callback journal-create-calendar();
+    callback journal-open-link(string);
+    pure callback journal-format(string, int, int, string) -> JournalEdit;
+    callback show-palette();
+    callback palette-query(string);
+    callback palette-run(int);
+    callback mini-prev();
+    callback mini-next();
+    callback mini-pick(int);
+    callback conflict-keep-mine();
+    callback conflict-take-server();
+    callback conflict-later();
+    callback toggle-calendar(int);
+    callback set-calendar-color(int, color);
+    callback show-add-account();
+    callback connect(string, string, string, string);
+    callback sync-now();
+
+    // Geometrie für den Selbsttest
+    out property <length> days-abs-x: week.days-abs-x;
+    out property <length> days-abs-y: week.days-abs-y;
+    out property <length> column-width: week.column-width;
+
+    property <length> sync-popup-x;
+    property <length> sync-popup-y;
+    property <int> preview-id: -1;
+    property <length> preview-x;
+    property <length> preview-y;
+
+    // Schmale Fenster: Kopfzeile verdichten. Per Zuweisung statt Bindung,
+    // weil die Fensterbreite selbst vom Layout der Kopfzeile abhängt.
+    property <bool> narrow: true;
+    property <bool> small-title;
+    // Acht Reiter passen (mit Platz für den Titel) erst ab etwa 1400 px
+    property <bool> compact-tabs;
+    function fit-header() {
+        root.narrow = root.width < 1560px;
+        root.small-title = root.width < 1360px;
+        root.compact-tabs = root.width < 1400px;
+    }
+    changed width => {
+        root.fit-header();
+    }
+    init => {
+        root.fit-header();
+    }
+
+    public function scroll-to-minute(m: int) {
+        week.scroll-to-minute(m);
+    }
+
+    public function agenda-scroll(y: length) {
+        agenda.scroll-to(y);
+    }
+
+    public function journal-focus-title() {
+        journal.focus-title();
+    }
+    public function journal-focus-body() {
+        journal.focus-body();
+    }
+    public function journal-focus-list() {
+        journal.focus-list();
+    }
+    public function journal-reveal(y: length, h: length) {
+        journal.reveal(y, h);
+    }
+
+    // Für Screenshots: Sync-Meldung unter der Kopfzeile zeigen
+    public function show-sync-popup() {
+        root.sync-popup-x = root.width - 900px;
+        root.sync-popup-y = 62px;
+        sync-popup.show();
+    }
+
+    // Tastaturfokus zurück auf das Hauptfenster (nach Dialogen)
+    public function focus-main() {
+        shortcuts.focus();
+    }
+
+    // Vorschau neben der Karte (x, y, Breite im Fenster) öffnen
+    public function show-preview(id: int, x: length, y: length, w: length) {
+        root.preview-id = id;
+        root.preview-x = x + w + 8px + 300px <= root.width ? x + w + 8px : Math.max(8px, x - 308px);
+        root.preview-y = Math.max(8px, Math.min(y, root.height - 340px));
+        preview.show();
+    }
+
+    title: "Hora";
+    icon: @image-url("../assets/hora.png");
+    preferred-width: 1440px;
+    preferred-height: 900px;
+    min-width: 1080px;
+    min-height: 640px;
+    background: Theme.canvas;
+    default-font-family: Theme.sans;
+    default-font-size: 14px;
+    forward-focus: shortcuts;
+
+    shortcuts := FocusScope {
+        // Calino: T = heute, , oder < = zurück, . oder > = vor, C = neuer Termin.
+        // Ansichten: D/1 Tag, X/2 3 Tage, W/3 Woche, M/4 Monat, J/Y/5 Jahr,
+        // L/G/6 Agenda, A/7 Aufgaben, B/8 Journal. F5 = Sync, Strg+K oder / =
+        // Befehlspalette.
+        key-pressed(e) => {
+            if e.modifiers.control && e.text == "," {
+                root.show-settings();
+                return accept;
+            }
+            if e.modifiers.control && (e.text == "k" || e.text == "K") {
+                root.show-palette();
+                return accept;
+            }
+            if e.modifiers.control || e.modifiers.alt || e.modifiers.meta {
+                return reject;
+            }
+            if e.text == "t" || e.text == "T" {
+                root.go-today();
+                return accept;
+            }
+            if e.text == "," || e.text == "<" || e.text == Key.PageUp {
+                root.prev();
+                return accept;
+            }
+            if e.text == "." || e.text == ">" || e.text == Key.PageDown {
+                root.next();
+                return accept;
+            }
+            if e.text == "c" || e.text == "C" || e.text == "n" || e.text == "N" {
+                root.new-event();
+                return accept;
+            }
+            if e.text == "d" || e.text == "D" || e.text == "1" {
+                root.set-view(0);
+                return accept;
+            }
+            if e.text == "x" || e.text == "X" || e.text == "2" {
+                root.set-view(1);
+                return accept;
+            }
+            if e.text == "w" || e.text == "W" || e.text == "3" {
+                root.set-view(2);
+                return accept;
+            }
+            if e.text == "m" || e.text == "M" || e.text == "4" {
+                root.set-view(3);
+                return accept;
+            }
+            if e.text == "q" || e.text == "Q" {
+                root.show-quick();
+                return accept;
+            }
+            if e.text == "j" || e.text == "J" || e.text == "y" || e.text == "Y" || e.text == "5" {
+                root.set-view(4);
+                return accept;
+            }
+            if e.text == "l" || e.text == "L" || e.text == "g" || e.text == "G" || e.text == "6" {
+                root.set-view(5);
+                return accept;
+            }
+            if e.text == "a" || e.text == "A" || e.text == "7" {
+                root.set-view(6);
+                return accept;
+            }
+            if e.text == "b" || e.text == "B" || e.text == "8" {
+                root.set-view(7);
+                return accept;
+            }
+            if e.text == "/" {
+                root.show-palette();
+                return accept;
+            }
+            // Pfeiltasten führen ins Raster von Monat bzw. Jahr
+            // … und in die Liste des Journals
+            if (e.text == Key.UpArrow || e.text == Key.DownArrow) && root.view == 7 {
+                journal.focus-list();
+                root.journal-move(e.text == Key.UpArrow ? -1 : 1);
+                return accept;
+            }
+            if (e.text == Key.LeftArrow || e.text == Key.RightArrow || e.text == Key.UpArrow || e.text == Key.DownArrow) && (root.view == 3 || root.view == 4) {
+                if root.view == 3 {
+                    month.focus-grid();
+                } else {
+                    year.focus-grid();
+                }
+                return accept;
+            }
+            if e.text == Key.Escape {
+                shortcuts.focus();
+                return accept;
+            }
+            if e.text == Key.F5 {
+                root.sync-now();
+                return accept;
+            }
+            return reject;
+        }
+
+        VerticalLayout {
+            // Kopfzeile, 72 px; die Marke steht über der Seitenleiste
+            HorizontalLayout {
+                height: Theme.header-height;
+                padding-right: 16px;
+                spacing: 0px;
+
+                HorizontalLayout {
+                    width: Theme.sidebar-width;
+                    padding-left: 24px;
+                    spacing: 11px;
+                    alignment: start;
+
+                    Rectangle {
+                        width: 27px;
+
+                        Image {
+                            source: @image-url("icons/diamond.svg");
+                            width: 27px;
+                            height: 27px;
+                            colorize: Theme.focus-ring;
+                        }
+
+                        Image {
+                            source: @image-url("icons/diamond.svg");
+                            x: (27px - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 15.5px;
+                            height: 15.5px;
+                            colorize: Theme.accent;
+                        }
+                    }
+
+                    Text {
+                        text: "Hora";
+                        font-family: Theme.serif-medium;
+                        font-size: 27px;
+                        font-weight: 500;
+                        letter-spacing: -0.27px;
+                        color: Theme.ink;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Aufgaben und alle Journaleinträge haben keinen Zeitraum
+                if root.view != 6 && !(root.view == 7 && root.journal-mode == 1): VerticalLayout {
+                    alignment: center;
+
+                    Navigator {
+                        prev => {
+                            root.prev();
+                        }
+                        next => {
+                            root.next();
+                        }
+                        today => {
+                            root.go-today();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 22px;
+                }
+
+                // Der Titel geht vor: eine lange Sync-Meldung wird zuerst gekürzt
+                title-text := Text {
+                    text: root.month-title;
+                    font-family: Theme.serif;
+                    font-size: root.small-title ? 26px : 32px;
+                    font-weight: 400;
+                    letter-spacing: -0.58px;
+                    color: Theme.ink;
+                    vertical-alignment: center;
+                    overflow: elide;
+                    min-width: Math.min(self.preferred-width, 240px);
+                    horizontal-stretch: 1;
+                }
+
+                VerticalLayout {
+                    alignment: center;
+
+                    SearchButton {
+                        compact: root.narrow;
+                        clicked => {
+                            root.show-palette();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 14px;
+                }
+
+                SyncStatus {
+                    state: root.sync-state;
+                    text: root.sync-text;
+                    detail: root.sync-detail;
+                    compact: root.narrow;
+                    sync-now => {
+                        root.sync-now();
+                    }
+                    show-detail(x, y) => {
+                        root.sync-popup-x = Math.max(8px, Math.min(x, root.width - 428px));
+                        root.sync-popup-y = y + 6px;
+                        sync-popup.show();
+                    }
+                }
+
+                Rectangle {
+                    width: 16px;
+                }
+
+                VerticalLayout {
+                    alignment: center;
+
+                    if !root.compact-tabs: ViewTabs {
+                        current: root.view;
+                        select(v) => {
+                            root.set-view(v);
+                        }
+                    }
+
+                    if root.compact-tabs: ViewMenu {
+                        current: root.view;
+                        select(v) => {
+                            root.set-view(v);
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                Sidebar {
+                    calendars: root.calendars;
+                    has-accounts: root.has-accounts;
+                    mini-month: root.mini-month;
+                    mini-year: root.mini-year;
+                    mini-days: root.mini-days;
+                    toggle(id) => {
+                        root.toggle-calendar(id);
+                    }
+                    set-color(id, c) => {
+                        root.set-calendar-color(id, c);
+                    }
+                    add-account => {
+                        root.show-add-account();
+                    }
+                    about => {
+                        root.about-open = true;
+                    }
+                    settings => {
+                        root.show-settings();
+                    }
+                    mini-prev => {
+                        root.mini-prev();
+                    }
+                    mini-next => {
+                        root.mini-next();
+                    }
+                    mini-pick(i) => {
+                        root.mini-pick(i);
+                    }
+                }
+
+                HorizontalLayout {
+                    padding-right: 16px;
+                    padding-bottom: 24px;
+
+                    // Woche und Monat übereinander; sichtbar ist die gewählte Ansicht
+                    Rectangle {
+                        week := WeekView {
+                            visible: root.view < 3;
+                            days: root.days;
+                            events: root.events;
+                            all-day: root.all-day;
+                            all-day-lanes: root.all-day-lanes;
+                            week-label: root.week-label;
+                            today-index: root.today-index;
+                            now-min: root.now-min;
+                            change-event(id, day, start, dur) => {
+                                root.change-event(id, day, start, dur);
+                            }
+                            new-event-at(day, start) => {
+                                root.new-event-at(day, start);
+                            }
+                            open-event(id, x, y, w) => {
+                                root.open-event(id, x, y, w);
+                            }
+                            edit-event(id) => {
+                                root.edit-event(id);
+                            }
+                            delete-event(id) => {
+                                root.delete-event(id);
+                            }
+                        }
+
+                        TasksView {
+                            visible: root.view == 6;
+                            rows: root.task-rows;
+                            active-count: root.task-active-count;
+                            done-count: root.task-done-count;
+                            filter: root.task-filter;
+                            can-add: root.task-can-add;
+                            set-filter(i) => {
+                                root.task-set-filter(i);
+                            }
+                            quick-add(text) => {
+                                root.task-quick-add(text);
+                            }
+                            new-task => {
+                                root.task-new();
+                            }
+                            toggle(id) => {
+                                root.task-toggle(id);
+                            }
+                            open(id) => {
+                                root.task-open(id);
+                            }
+                            remove(id) => {
+                                root.task-remove(id);
+                            }
+                            collapse(id) => {
+                                root.task-collapse(id);
+                            }
+                        }
+
+                        journal := JournalView {
+                            visible: root.view == 7;
+                            rows: root.journal-rows;
+                            count: root.journal-count;
+                            mode: root.journal-mode;
+                            list-title: root.journal-list-title;
+                            list-height: root.journal-list-height;
+                            can-add: root.journal-can-add;
+                            can-create-calendar: root.journal-can-create-calendar;
+                            create-busy: root.journal-create-busy;
+                            create-error: root.journal-create-error;
+                            open: root.journal-open;
+                            read-only: root.journal-read-only;
+                            title <=> root.journal-title;
+                            body <=> root.journal-body;
+                            write <=> root.journal-write;
+                            tags: root.journal-tags;
+                            day-num: root.journal-day-num;
+                            weekday-long: root.journal-weekday-long;
+                            month-year: root.journal-month-year;
+                            date-text: root.journal-date-text;
+                            date-error: root.journal-date-error;
+                            calendars: root.journal-calendars;
+                            blocks: root.journal-blocks;
+                            words: root.journal-words;
+                            status: root.journal-status;
+                            status-text: root.journal-status-text;
+                            set-mode(i) => {
+                                root.journal-set-mode(i);
+                            }
+                            new-entry => {
+                                root.journal-new();
+                            }
+                            select(i) => {
+                                root.journal-select(i);
+                            }
+                            move-selection(d) => {
+                                root.journal-move(d);
+                            }
+                            close => {
+                                root.journal-close();
+                                shortcuts.focus();
+                            }
+                            edited => {
+                                root.journal-edited();
+                            }
+                            add-tag(t) => {
+                                root.journal-add-tag(t);
+                            }
+                            remove-tag(i) => {
+                                root.journal-remove-tag(i);
+                            }
+                            set-date(t) => {
+                                root.journal-set-date(t);
+                            }
+                            set-calendar(id) => {
+                                root.journal-set-calendar(id);
+                            }
+                            delete => {
+                                root.journal-delete();
+                            }
+                            set-write(w) => {
+                                root.journal-set-write(w);
+                            }
+                            create-calendar => {
+                                root.journal-create-calendar();
+                            }
+                            open-link(url) => {
+                                root.journal-open-link(url);
+                            }
+                            format(text, anchor, cursor, marker) => {
+                                return root.journal-format(text, anchor, cursor, marker);
+                            }
+                        }
+
+                        year := YearView {
+                            visible: root.view == 4;
+                            months: root.year-months;
+                            cursor <=> root.year-cursor;
+                            open-day(i) => {
+                                root.open-day(i);
+                            }
+                            new-event-on(i) => {
+                                root.new-event-on(i);
+                            }
+                            open-month(m) => {
+                                root.open-month(m);
+                            }
+                        }
+
+                        agenda := AgendaView {
+                            visible: root.view == 5;
+                            rows: root.agenda-rows;
+                            open-event(id, x, y, w) => {
+                                root.open-event(id, x, y, w);
+                            }
+                            edit-event(id) => {
+                                root.edit-event(id);
+                            }
+                            delete-event(id) => {
+                                root.delete-event(id);
+                            }
+                            open-day(i) => {
+                                root.open-day(i);
+                            }
+                            new-event-on(i) => {
+                                root.new-event-on(i);
+                            }
+                        }
+
+                        month := MonthView {
+                            visible: root.view == 3;
+                            cells: root.month-cells;
+                            chips: root.month-chips;
+                            week-labels: root.month-week-labels;
+                            today-cell: root.month-today-cell;
+                            open-event(id, x, y, w) => {
+                                root.open-event(id, x, y, w);
+                            }
+                            edit-event(id) => {
+                                root.edit-event(id);
+                            }
+                            open-day(i) => {
+                                root.open-day(i);
+                            }
+                            new-event-on(i) => {
+                                root.new-event-on(i);
+                            }
+                            move-event(id, delta) => {
+                                root.month-move(id, delta);
+                            }
+                            open-journal(i) => {
+                                root.month-open-journal(i);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Ganze Sync-Meldung (in der Kopfzeile gekürzt)
+    sync-popup := PopupWindow {
+        x: root.sync-popup-x;
+        y: root.sync-popup-y;
+        width: 420px;
+        height: sync-card.preferred-height;
+        close-policy: close-on-click-outside;
+
+        sync-card := Rectangle {
+            background: Theme.popover-bg;
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.popover-border;
+            drop-shadow-offset-y: 8px;
+            drop-shadow-blur: 24px;
+            drop-shadow-color: Theme.modal-shadow;
+
+            VerticalLayout {
+                padding: 14px;
+                spacing: 6px;
+
+                Text {
+                    text: "Synchronisierung";
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    letter-spacing: 0.6px;
+                    color: Theme.ink-3;
+                }
+
+                Text {
+                    text: root.sync-detail != "" ? root.sync-detail : root.sync-text;
+                    font-size: 13px;
+                    color: Theme.error;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+
+    preview := PopupWindow {
+        x: root.preview-x;
+        y: root.preview-y;
+        width: 300px;
+        height: preview-card.height;
+        close-policy: close-on-click-outside;
+
+        preview-card := EventPreview {
+            details: root.preview-details;
+            edit => {
+                preview.close();
+                // -1: der in der Vorschau gezeigte Termin
+                root.edit-event(-1);
+            }
+            delete => {
+                preview.close();
+                root.delete-event(-1);
+            }
+            close => {
+                preview.close();
+            }
+        }
+    }
+
+    if root.event-dialog-open: EventDialog {
+        draft: root.event-draft;
+        calendar-options: root.calendar-options;
+        error: root.event-error;
+        save(title, all-day, sd, st, ed, et, location, description, calendar, rule) => {
+            root.save-event(title, all-day, sd, st, ed, et, location, description, calendar, rule);
+        }
+        reminders: root.event-reminders;
+        reminder-presets: root.reminder-presets;
+        reminder-presets-all-day: root.reminder-presets-all-day;
+        add-reminder(minutes, label) => {
+            root.add-reminder(minutes, label);
+        }
+        remove-reminder(index) => {
+            root.remove-reminder(index);
+        }
+        weekday-of(date) => {
+            return root.weekday-of(date);
+        }
+        rule-summary(rule, start) => {
+            return root.rule-summary(rule, start);
+        }
+        delete => {
+            root.dialog-delete();
+        }
+        cancel => {
+            root.event-dialog-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.task-dialog-open: TaskDialog {
+        draft: root.task-draft;
+        calendar-options: root.task-calendar-options;
+        parent-options: root.task-parent-options;
+        error: root.task-error;
+        save(title, mode, date, time, start, priority, calendar, parent, description) => {
+            root.task-save(title, mode, date, time, start, priority, calendar, parent, description);
+        }
+        delete => {
+            root.task-delete();
+        }
+        add-subtask => {
+            root.task-add-subtask();
+        }
+        cancel => {
+            root.task-dialog-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.quick-open: QuickAddDialog {
+        error: root.quick-error;
+        text <=> root.quick-text;
+        preview(text) => {
+            return root.quick-preview(text);
+        }
+        submit(text, open) => {
+            root.quick-submit(text, open);
+        }
+        cancel => {
+            root.quick-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.palette-open: CommandPalette {
+        items: root.palette-items;
+        text <=> root.palette-text;
+        selected <=> root.palette-selected;
+        query(text) => {
+            root.palette-query(text);
+        }
+        run(i) => {
+            root.palette-run(i);
+        }
+        close => {
+            root.palette-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.confirm-open: ConfirmDialog {
+        title: root.confirm-title;
+        message: root.confirm-message;
+        accepted => {
+            root.confirm-open = false;
+            root.confirm-accepted();
+            shortcuts.focus();
+        }
+        dismissed => {
+            root.confirm-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.scope-open: ScopeDialog {
+        deleting: root.scope-deleting;
+        allow-this: root.scope-allow-this;
+        chosen(scope) => {
+            root.scope-open = false;
+            root.scope-chosen(scope);
+        }
+        dismissed => {
+            root.scope-open = false;
+            root.scope-dismissed();
+        }
+    }
+
+    if root.conflict-open: ConflictDialog {
+        message: root.conflict-message;
+        keep-mine => {
+            root.conflict-open = false;
+            root.conflict-keep-mine();
+            shortcuts.focus();
+        }
+        take-server => {
+            root.conflict-open = false;
+            root.conflict-take-server();
+            shortcuts.focus();
+        }
+        later => {
+            root.conflict-open = false;
+            root.conflict-later();
+            shortcuts.focus();
+        }
+    }
+
+    if root.add-account-open: AddAccountDialog {
+        busy: root.add-account-busy;
+        error: root.add-account-error;
+        connect(name, url, user, password) => {
+            root.connect(name, url, user, password);
+        }
+        cancel => {
+            root.add-account-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.settings-open: SettingsDialog {
+        reminders <=> root.settings-reminders;
+        default-reminder <=> root.settings-default-reminder;
+        autostart <=> root.settings-autostart;
+        keep-running <=> root.settings-keep-running;
+        show-tasks <=> root.settings-show-tasks;
+        task-reminders <=> root.settings-task-reminders;
+        default-reminder-options: root.default-reminder-options;
+        status: root.settings-status;
+        changed => {
+            root.settings-changed();
+        }
+        test-notification => {
+            root.test-notification();
+        }
+        dismiss => {
+            root.settings-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.about-open: AboutDialog {
+        version: root.version;
+        dismiss => {
+            root.about-open = false;
+            shortcuts.focus();
+        }
+    }
+}

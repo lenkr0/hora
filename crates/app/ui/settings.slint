@@ -1,0 +1,283 @@
+// Einstellungen: Erinnerungen und Programmverhalten. Zeilen mit Titel,
+// Beschreibung und Schalter wie Calinos Einstellungsseiten
+// (NotificationSettings.tsx, GeneralSettings.tsx).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button, FocusRing } from "controls.slint";
+import { Select, SelectOption } from "inputs.slint";
+import { Modal } from "dialogs.slint";
+
+// Schalter (Calino: toggle)
+export component Toggle inherits Rectangle {
+    in property <string> label;
+    in-out property <bool> checked;
+    callback toggled();
+
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    forward-focus: fs;
+    background: root.checked ? Theme.accent : Theme.ink-4;
+    animate background { duration: Theme.dur-fast; }
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        root.flip();
+    }
+
+    function flip() {
+        root.checked = !root.checked;
+        root.toggled();
+    }
+
+    Rectangle {
+        x: root.checked ? root.width - self.width - 3px : 3px;
+        y: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: #ffffff;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #00000033;
+        animate x { duration: Theme.dur-fast; easing: ease-out; }
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " || e.text == Key.Return {
+                root.flip();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.flip();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: 11px;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Überschrift einer Gruppe, wie "KALENDER" in der Seitenleiste
+component GroupLabel inherits Text {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.9px;
+    color: Theme.ink-3;
+}
+
+component Row inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> description;
+
+    spacing: 16px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: center;
+        spacing: 2px;
+
+        Text {
+            text: root.label;
+            font-size: 14px;
+            color: Theme.ink;
+        }
+
+        Text {
+            text: root.description;
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        @children
+    }
+}
+
+component Divider inherits Rectangle {
+    height: 1px;
+    background: Theme.line-2;
+}
+
+export component SettingsDialog inherits Modal {
+    in-out property <bool> reminders;
+    in-out property <int> default-reminder;
+    in-out property <bool> autostart;
+    in-out property <bool> keep-running;
+    in-out property <bool> show-tasks;
+    in-out property <bool> task-reminders;
+    in property <[SelectOption]> default-reminder-options;
+    // Zustand der Windows-Benachrichtigungen, z. B. "ausgeschaltet"
+    in property <string> status;
+    callback changed();
+    callback test-notification();
+    callback dismiss();
+
+    title: "Einstellungen";
+    card-width: 540px;
+    close => {
+        root.dismiss();
+    }
+    opened => {
+        first.focus();
+    }
+
+    VerticalLayout {
+        spacing: 0px;
+
+        GroupLabel {
+            text: "ERINNERUNGEN";
+        }
+
+        Row {
+            label: "Terminerinnerungen";
+            description: "Windows-Benachrichtigung vor Beginn von Terminen, auch wenn Hora im Infobereich liegt";
+
+            first := Toggle {
+                label: "Terminerinnerungen";
+                checked <=> root.reminders;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: "Standarderinnerung";
+            description: "Erinnerung, mit der neue Termine beginnen";
+
+            Select {
+                label: "";
+                dots: false;
+                width: 210px;
+                options: root.default-reminder-options;
+                selected <=> root.default-reminder;
+                changed selected => {
+                    root.changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: "Erinnerungen an Fälligkeitstermine";
+            description: "Benachrichtigen, wenn eine Aufgabe fällig ist: zur Fälligkeitszeit, bei Aufgaben nur mit Datum um 9:00 Uhr";
+
+            Toggle {
+                label: "Erinnerungen an Fälligkeitstermine";
+                checked <=> root.task-reminders;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: "Testbenachrichtigung";
+            description: root.status != "" ? root.status : "Zeigt sofort eine Benachrichtigung, um Windows-Einstellungen und Ton zu prüfen";
+
+            Button {
+                text: "Senden";
+                clicked => {
+                    root.test-notification();
+                }
+            }
+        }
+
+        Rectangle {
+            height: 22px;
+        }
+
+        GroupLabel {
+            text: "AUFGABEN";
+        }
+
+        Row {
+            label: "Aufgaben im Kalender anzeigen";
+            description: "Offene Aufgaben erscheinen in Woche und Monat am Tag ihrer Fälligkeit";
+
+            Toggle {
+                label: "Aufgaben im Kalender anzeigen";
+                checked <=> root.show-tasks;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Rectangle {
+            height: 22px;
+        }
+
+        GroupLabel {
+            text: "PROGRAMM";
+        }
+
+        Row {
+            label: "Mit Windows starten";
+            description: "Hora startet beim Anmelden unauffällig im Infobereich";
+
+            Toggle {
+                label: "Mit Windows starten";
+                checked <=> root.autostart;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: "Im Infobereich weiterlaufen";
+            description: "Schließen des Fensters beendet Hora nicht, damit Erinnerungen und Abgleich weiterlaufen";
+
+            Toggle {
+                label: "Im Infobereich weiterlaufen";
+                checked <=> root.keep-running;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Rectangle {
+            height: 18px;
+        }
+
+        HorizontalLayout {
+            alignment: end;
+
+            Button {
+                text: "Fertig";
+                primary: true;
+                clicked => {
+                    root.dismiss();
+                }
+            }
+        }
+    }
+}

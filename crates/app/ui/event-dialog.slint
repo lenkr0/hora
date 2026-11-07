@@ -1,0 +1,807 @@
+// Termin anlegen/bearbeiten, Löschen bestätigen, Konflikte auflösen.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button, FocusRing, TextField } from "controls.slint";
+import { Checkbox, Select, SelectOption, TextArea } from "inputs.slint";
+import { Modal } from "dialogs.slint";
+
+// Wiederholung im Termin-Dialog (wie Calinos RecurrenceFields)
+export struct RuleDraft {
+    // 0 nie, 1 täglich, 2 wöchentlich, 3 monatlich, 4 jährlich, 5 eigene Regel
+    repeat: int,
+    interval: string,
+    // Wochentage als Bits (Mo = 1, Di = 2, Mi = 4 …); 0 = Wochentag des Beginns
+    weekdays: int,
+    // 0 am selben Tag, 1 am n-ten Wochentag, 2 am letzten Wochentag
+    monthly: int,
+    // 0 nie, 1 am Datum, 2 nach Anzahl
+    end: int,
+    until: string,
+    count: string,
+}
+
+// Inhalt des Termin-Dialogs; Zeiten als Text in deutscher Schreibweise
+export struct EventDraft {
+    is-new: bool,
+    title: string,
+    all-day: bool,
+    start-date: string,
+    start-time: string,
+    end-date: string,
+    end-time: string,
+    location: string,
+    description: string,
+    // Index in der Kalenderliste
+    calendar: int,
+    rule: RuleDraft,
+    // Regel aus einem anderen Programm, die der Dialog nicht darstellen kann
+    custom-rule: bool,
+    // Bestehende Termine bleiben in ihrem Kalender
+    calendar-locked: bool,
+    can-delete: bool,
+    note: string,
+}
+
+// Wochentag zum An- und Abwählen (Calino: weekdayBtn)
+component DayToggle inherits Rectangle {
+    in property <string> text;
+    in property <string> label;
+    in property <bool> checked;
+    callback toggled();
+
+    width: 38px;
+    height: 32px;
+    border-radius: Theme.radius-sm;
+    border-width: 1px;
+    border-color: root.checked ? Theme.accent : Theme.line;
+    background: root.checked ? Theme.accent : ta.has-hover ? Theme.hover-bg : Theme.input-bg;
+    animate background { duration: Theme.dur-fast; }
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        root.toggled();
+    }
+
+    Text {
+        text: root.text;
+        font-size: 13px;
+        font-weight: 500;
+        color: root.checked ? Theme.accent-contrast : Theme.ink-2;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " || e.text == Key.Return {
+                root.toggled();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.toggled();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: Theme.radius-sm;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Eine Erinnerung im Dialog: `minutes` vor Beginn; `keep` >= 0 ist ein
+// Alarm aus einem anderen Programm, der unverändert bleibt
+export struct ReminderChip {
+    label: string,
+    minutes: int,
+    keep: int,
+}
+
+// Erinnerung als Chip mit Entfernen-Knopf (Calino: reminder chips)
+component ReminderPill inherits Rectangle {
+    in property <string> text;
+    callback remove();
+
+    height: 28px;
+    width: row.preferred-width;
+    border-radius: 14px;
+    background: Theme.selected-bg;
+
+    row := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 4px;
+        spacing: 2px;
+
+        Text {
+            text: root.text;
+            font-size: 13px;
+            color: Theme.ink;
+            vertical-alignment: center;
+        }
+
+        remove-button := Rectangle {
+            width: 22px;
+            height: 22px;
+            y: 3px;
+            border-radius: 11px;
+            background: remove-ta.has-hover ? Theme.ink-raw.with-alpha(0.08) : transparent;
+            accessible-role: button;
+            accessible-label: "Erinnerung entfernen: " + root.text;
+            accessible-action-default => {
+                root.remove();
+            }
+
+            Text {
+                text: "×";
+                font-size: 16px;
+                color: Theme.ink-3;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            remove-fs := FocusScope {
+                key-pressed(e) => {
+                    if e.text == " " || e.text == Key.Return || e.text == Key.Delete || e.text == Key.Backspace {
+                        root.remove();
+                        return accept;
+                    }
+                    return reject;
+                }
+            }
+
+            remove-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.remove();
+                }
+            }
+
+            if remove-fs.has-focus: FocusRing {
+                radius: 11px;
+                w: parent.width;
+                h: parent.height;
+            }
+        }
+    }
+}
+
+// "+ Erinnerung": Klick öffnet die Vorgaben; mit der Tastatur wählen
+// ↑/↓ eine Vorgabe und Eingabe fügt sie hinzu.
+component ReminderAdd inherits Rectangle {
+    in property <[SelectOption]> options;
+    callback chosen(int, string);
+
+    property <int> highlight: 3;
+    property <bool> valid: root.highlight >= 0 && root.highlight < root.options.length;
+
+    height: 28px;
+    width: label.preferred-width + 24px;
+    border-radius: 14px;
+    border-width: 1px;
+    border-color: fs.has-focus ? Theme.accent : Theme.line;
+    background: ta.has-hover ? Theme.hover-bg : transparent;
+    accessible-role: button;
+    accessible-label: "Erinnerung hinzufügen";
+    accessible-value: root.valid ? root.options[root.highlight].name : "";
+
+    label := Text {
+        text: fs.has-focus && root.valid ? "+ " + root.options[root.highlight].name : "+ Erinnerung";
+        font-size: 13px;
+        font-weight: 500;
+        color: Theme.accent;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.DownArrow {
+                root.highlight = Math.min(root.highlight + 1, root.options.length - 1);
+                return accept;
+            }
+            if e.text == Key.UpArrow {
+                root.highlight = Math.max(root.highlight - 1, 0);
+                return accept;
+            }
+            if (e.text == Key.Return || e.text == " ") && root.valid {
+                root.chosen(root.options[root.highlight].id, root.options[root.highlight].name);
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            popup.show();
+        }
+    }
+
+    popup := PopupWindow {
+        y: root.height + 4px;
+        width: 250px;
+        height: list.preferred-height;
+
+        Rectangle {
+            background: Theme.popover-bg;
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.popover-border;
+            drop-shadow-offset-y: 4px;
+            drop-shadow-blur: 12px;
+            drop-shadow-color: Theme.dark ? transparent : #0000001a;
+
+            list := VerticalLayout {
+                padding: 4px;
+
+                for option[i] in root.options: Rectangle {
+                    height: 32px;
+                    border-radius: Theme.radius-sm;
+                    background: option-ta.has-hover ? Theme.hover-bg : transparent;
+
+                    Text {
+                        x: 10px;
+                        text: option.name;
+                        font-size: 14px;
+                        color: Theme.ink;
+                        vertical-alignment: center;
+                        height: parent.height;
+                    }
+
+                    option-ta := TouchArea {
+                        clicked => {
+                            root.highlight = i;
+                            root.chosen(option.id, option.name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component EventDialog inherits Modal {
+    in property <EventDraft> draft;
+    in property <[SelectOption]> calendar-options;
+    in property <string> error;
+    in property <[ReminderChip]> reminders;
+    in property <[SelectOption]> reminder-presets;
+    in property <[SelectOption]> reminder-presets-all-day;
+    callback add-reminder(int, string);
+    callback remove-reminder(int);
+
+    // Arbeitskopie; Bearbeiten löst die Bindung an den Entwurf
+    in-out property <string> title-text: draft.title;
+    in-out property <bool> all-day: draft.all-day;
+    in-out property <string> start-date: draft.start-date;
+    in-out property <string> start-time: draft.start-time;
+    in-out property <string> end-date: draft.end-date;
+    in-out property <string> end-time: draft.end-time;
+    in-out property <string> location: draft.location;
+    in-out property <string> description: draft.description;
+    in-out property <int> calendar: draft.calendar;
+    in-out property <int> repeat: draft.rule.repeat;
+    in-out property <string> interval: draft.rule.interval;
+    in-out property <int> weekdays: draft.rule.weekdays;
+    in-out property <int> monthly: draft.rule.monthly;
+    in-out property <int> rule-end: draft.rule.end;
+    in-out property <string> until: draft.rule.until;
+    in-out property <string> count: draft.rule.count;
+
+    // Titel, ganztägig, Beginn (Datum, Zeit), Ende (Datum, Zeit), Ort, Beschreibung, Kalender, Wiederholung
+    callback save(string, bool, string, string, string, string, string, string, int, RuleDraft);
+    callback delete();
+    callback cancel();
+    // Wochentag (0 = Montag) eines eingegebenen Datums, -1 wenn ungültig
+    pure callback weekday-of(string) -> int;
+    // "Wöchentlich am Montag, bis 30.06.2027" für die Felder und den Beginn
+    pure callback rule-summary(RuleDraft, string) -> string;
+
+    property <RuleDraft> rule: {
+        repeat: root.repeat,
+        interval: root.interval,
+        weekdays: root.weekdays,
+        monthly: root.monthly,
+        end: root.rule-end,
+        until: root.until,
+        count: root.count,
+    };
+    property <bool> repeating: root.repeat >= 1 && root.repeat <= 4;
+    property <int> start-weekday: root.weekday-of(root.start-date);
+    property <bool> singular: root.interval == "1" || root.interval == "";
+    property <[string]> units: root.singular ? ["Tag", "Woche", "Monat", "Jahr"] : ["Tage", "Wochen", "Monate", "Jahre"];
+    property <[string]> day-short: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+    property <[string]> day-long: ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
+
+    function submit() {
+        root.save(root.title-text, root.all-day, root.start-date, root.start-time, root.end-date, root.end-time,
+            root.location, root.description, root.calendar, root.rule);
+    }
+
+    function has-day(mask: int, i: int) -> bool {
+        return Math.mod(Math.floor(mask / Math.pow(2, i)), 2) == 1;
+    }
+
+    function day-on(i: int) -> bool {
+        if root.weekdays == 0 {
+            return i == root.start-weekday;
+        }
+        return root.has-day(root.weekdays, i);
+    }
+
+    // Ohne eigene Auswahl gilt der Wochentag des Beginns; ein Klick geht von dort aus
+    function toggle-day(i: int) {
+        let effective = root.weekdays != 0 ? root.weekdays : root.start-weekday >= 0 ? Math.pow(2, root.start-weekday) : 0;
+        root.weekdays = root.has-day(effective, i) ? effective - Math.pow(2, i) : effective + Math.pow(2, i);
+    }
+
+    title: draft.is-new ? "Neuer Termin" : "Termin bearbeiten";
+    card-width: 600px;
+    close => {
+        root.cancel();
+    }
+    opened => {
+        title-field.focus();
+    }
+
+    VerticalLayout {
+        spacing: 14px;
+
+        title-field := TextField {
+            label: "Titel";
+            placeholder: "z. B. Zahnarzt";
+            text <=> root.title-text;
+            accepted => {
+                root.submit();
+            }
+        }
+
+        Checkbox {
+            text: "Ganztägig";
+            checked <=> root.all-day;
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            TextField {
+                label: "Beginn";
+                placeholder: "TT.MM.JJJJ";
+                text <=> root.start-date;
+                horizontal-stretch: 3;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if !root.all-day: TextField {
+                label: "Uhrzeit";
+                placeholder: "09:00";
+                text <=> root.start-time;
+                horizontal-stretch: 2;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            TextField {
+                label: "Ende";
+                placeholder: "TT.MM.JJJJ";
+                text <=> root.end-date;
+                horizontal-stretch: 3;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if !root.all-day: TextField {
+                label: "Uhrzeit";
+                placeholder: "10:00";
+                text <=> root.end-time;
+                horizontal-stretch: 2;
+                accepted => {
+                    root.submit();
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Select {
+                label: "Wiederholen";
+                dots: false;
+                options: draft.custom-rule
+                    ? [{ id: 0, name: "Nie" }, { id: 1, name: "Täglich" }, { id: 2, name: "Wöchentlich" }, { id: 3, name: "Monatlich" }, { id: 4, name: "Jährlich" }, { id: 5, name: "Eigene Regel" }]
+                    : [{ id: 0, name: "Nie" }, { id: 1, name: "Täglich" }, { id: 2, name: "Wöchentlich" }, { id: 3, name: "Monatlich" }, { id: 4, name: "Jährlich" }];
+                selected <=> root.repeat;
+                horizontal-stretch: 4;
+            }
+
+            if root.repeating: TextField {
+                label: "alle";
+                text <=> root.interval;
+                width: 56px;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if root.repeating: VerticalLayout {
+                alignment: end;
+                padding-bottom: 10px;
+
+                Text {
+                    text: root.units[root.repeat - 1];
+                    font-size: 14px;
+                    color: Theme.ink-2;
+                    min-width: 52px;
+                }
+            }
+
+            if root.repeating: Select {
+                label: "Endet";
+                dots: false;
+                options: [{ id: 0, name: "Nie" }, { id: 1, name: "Am Datum" }, { id: 2, name: "Nach Anzahl" }];
+                selected <=> root.rule-end;
+                horizontal-stretch: 4;
+            }
+
+            if root.repeating && root.rule-end == 1: TextField {
+                label: "Bis einschließlich";
+                placeholder: "TT.MM.JJJJ";
+                text <=> root.until;
+                horizontal-stretch: 4;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if root.repeating && root.rule-end == 2: TextField {
+                label: "Anzahl Termine";
+                text <=> root.count;
+                horizontal-stretch: 4;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if !root.repeating: Rectangle {
+                horizontal-stretch: 8;
+            }
+        }
+
+        if root.repeat == 2: VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "An Tagen";
+                font-size: 13px;
+                font-weight: 500;
+                color: Theme.ink-2;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+
+                for name[i] in root.day-short: DayToggle {
+                    text: name;
+                    label: root.day-long[i];
+                    checked: root.day-on(i);
+                    toggled => {
+                        root.toggle-day(i);
+                    }
+                }
+            }
+        }
+
+        if root.repeat == 3: Select {
+            label: "Im Monat";
+            dots: false;
+            options: [
+                { id: 0, name: "Am selben Tag des Monats" },
+                { id: 1, name: "Am selben Wochentag (z. B. 2. Mittwoch)" },
+                { id: 2, name: "Am letzten gleichen Wochentag" }
+            ];
+            selected <=> root.monthly;
+        }
+
+        if root.repeat != 0: Text {
+            text: root.repeat == 5
+                ? "Eigene Wiederholungsregel aus einem anderen Programm. Sie bleibt erhalten, solange hier nichts anderes gewählt wird."
+                : root.rule-summary(root.rule, root.start-date);
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+
+        VerticalLayout {
+            spacing: 6px;
+
+            Text {
+                text: "Erinnerungen";
+                font-size: 13px;
+                font-weight: 500;
+                color: Theme.ink-2;
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+
+                for chip[i] in root.reminders: ReminderPill {
+                    text: chip.label;
+                    remove => {
+                        root.remove-reminder(i);
+                    }
+                }
+
+                ReminderAdd {
+                    options: root.all-day ? root.reminder-presets-all-day : root.reminder-presets;
+                    chosen(minutes, label) => {
+                        root.add-reminder(minutes, label);
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Select {
+                label: "Kalender";
+                options: root.calendar-options;
+                selected <=> root.calendar;
+                enabled: !draft.calendar-locked;
+                horizontal-stretch: 1;
+            }
+
+            TextField {
+                label: "Ort";
+                text <=> root.location;
+                horizontal-stretch: 1;
+                accepted => {
+                    root.submit();
+                }
+            }
+        }
+
+        TextArea {
+            label: "Beschreibung";
+            text <=> root.description;
+        }
+
+        if draft.note != "": Text {
+            text: draft.note;
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+
+        if root.error != "": Rectangle {
+            border-radius: Theme.radius-sm;
+            background: Theme.error-bg;
+
+            VerticalLayout {
+                padding: 10px;
+
+                Text {
+                    text: root.error;
+                    font-size: 13px;
+                    color: Theme.error;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            if draft.can-delete: Button {
+                text: "Löschen";
+                danger: true;
+                clicked => {
+                    root.delete();
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            Button {
+                text: "Abbrechen";
+                clicked => {
+                    root.cancel();
+                }
+            }
+
+            Button {
+                text: "Speichern";
+                primary: true;
+                clicked => {
+                    root.submit();
+                }
+            }
+        }
+    }
+}
+
+// Ändern oder Löschen eines Termins einer Serie: für welche Termine?
+// Calino: RecurrenceDialog.tsx
+export component ScopeDialog inherits Modal {
+    in property <bool> deleting;
+    // Bei geänderter Regel gibt es "nur dieser Termin" nicht
+    in property <bool> allow-this: true;
+    // 0 nur dieser, 1 dieser und alle folgenden, 2 alle
+    callback chosen(int);
+    callback dismissed();
+
+    title: root.deleting ? "Termin einer Serie löschen" : "Termin einer Serie ändern";
+    card-width: 360px;
+    close => {
+        root.dismissed();
+    }
+    opened => {
+        if root.allow-this {
+            this-button.focus();
+        } else {
+            following-button.focus();
+        }
+    }
+
+    VerticalLayout {
+        spacing: 16px;
+
+        Text {
+            text: root.deleting ? "Welche Termine sollen gelöscht werden?" : "Für welche Termine gilt die Änderung?";
+            font-size: 14px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        VerticalLayout {
+            spacing: 8px;
+
+            Button {
+                text: "Alle Termine der Serie";
+                primary: !root.deleting;
+                danger: root.deleting;
+                width: parent.width;
+                clicked => {
+                    root.chosen(2);
+                }
+            }
+
+            following-button := Button {
+                text: "Dieser und alle folgenden";
+                primary: !root.deleting;
+                danger: root.deleting;
+                width: parent.width;
+                clicked => {
+                    root.chosen(1);
+                }
+            }
+
+            this-button := Button {
+                text: "Nur dieser Termin";
+                primary: !root.deleting;
+                danger: root.deleting;
+                width: parent.width;
+                visible: root.allow-this;
+                enabled: root.allow-this;
+                height: root.allow-this ? 36px : 0px;
+                clicked => {
+                    root.chosen(0);
+                }
+            }
+
+            Button {
+                text: "Abbrechen";
+                width: parent.width;
+                clicked => {
+                    root.dismissed();
+                }
+            }
+        }
+    }
+}
+
+export component ConfirmDialog inherits Modal {
+    in property <string> message;
+    in property <string> confirm-label: "Löschen";
+    callback accepted();
+    callback dismissed();
+
+    card-width: 420px;
+    close => {
+        root.dismissed();
+    }
+
+    VerticalLayout {
+        spacing: 18px;
+
+        Text {
+            text: root.message;
+            font-size: 14px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+
+            Button {
+                text: "Abbrechen";
+                clicked => {
+                    root.dismissed();
+                }
+            }
+
+            Button {
+                text: root.confirm-label;
+                danger: true;
+                clicked => {
+                    root.accepted();
+                }
+            }
+        }
+    }
+}
+
+export component ConflictDialog inherits Modal {
+    in property <string> message;
+    callback keep-mine();
+    callback take-server();
+    callback later();
+
+    title: "Konflikt beim Speichern";
+    card-width: 480px;
+    close => {
+        root.later();
+    }
+
+    VerticalLayout {
+        spacing: 18px;
+
+        Text {
+            text: root.message;
+            font-size: 14px;
+            color: Theme.ink-2;
+            wrap: word-wrap;
+        }
+
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+
+            Button {
+                text: "Server-Version übernehmen";
+                clicked => {
+                    root.take-server();
+                }
+            }
+
+            Button {
+                text: "Meine Version behalten";
+                primary: true;
+                clicked => {
+                    root.keep-mine();
+                }
+            }
+        }
+    }
+}

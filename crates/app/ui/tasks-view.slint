@@ -1,0 +1,570 @@
+// Aufgaben-Ansicht nach Calinos TodoView (TodoView.module.css): Leiste mit
+// Zählern, Filter und "+ Aufgabe erstellen", Eingabezeile, Gruppen nach
+// Fälligkeit, Zeilen mit rundem Häkchen und eingerückten Teilaufgaben.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button, FocusRing } from "controls.slint";
+
+// Eine Zeile der Liste: Gruppenüberschrift oder Aufgabe
+export struct TaskRow {
+    header: bool,
+    title: string,
+    // Gruppe: Anzahl
+    count: int,
+    // Gruppe "Überfällig" bzw. überfällige Aufgabe
+    overdue: bool,
+    // Index der Aufgabe in der Liste der App
+    id: int,
+    note: string,
+    due: string,
+    calendar: string,
+    color: color,
+    done: bool,
+    depth: int,
+    has-children: bool,
+    collapsed: bool,
+    // "1/3" erledigte Teilaufgaben
+    children: string,
+    // 0 keine, 1 hoch, 2 mittel, 3 niedrig
+    priority: int,
+    recurring: bool,
+    // Teilaufgabe, deren übergeordnete Aufgabe nicht in der Liste steht
+    context: string,
+}
+
+component GroupHeader inherits HorizontalLayout {
+    in property <TaskRow> entry;
+
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 18px;
+    padding-bottom: 6px;
+    spacing: 12px;
+
+    Text {
+        text: root.entry.title;
+        font-size: 11.5px;
+        font-weight: 600;
+        letter-spacing: 0.7px;
+        color: root.entry.overdue ? Theme.error : Theme.ink-3;
+        vertical-alignment: center;
+    }
+
+    Rectangle {
+        width: count.preferred-width + 16px;
+        height: 18px;
+        y: (parent.height - self.height) / 2;
+        border-radius: 9px;
+        background: root.entry.overdue ? Theme.error-bg : Theme.ink-raw.with-alpha(0.07);
+
+        count := Text {
+            text: root.entry.count;
+            font-size: 11px;
+            color: root.entry.overdue ? Theme.error : Theme.ink-2;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+
+        Rectangle {
+            height: 1px;
+            background: Theme.line-2;
+        }
+    }
+}
+
+component TaskLine inherits Rectangle {
+    in property <TaskRow> entry;
+    callback toggle();
+    callback open();
+    callback remove();
+    callback collapse();
+
+    property <length> pad: root.entry.depth > 0 ? 9px : 12px;
+
+    height: root.pad * 2 + 20px + (root.entry.note != "" ? 19px : 0px) + 19px + (root.entry.context != "" ? 18px : 0px);
+    border-radius: Theme.radius-md;
+    background: row-ta.has-hover || fs.has-focus ? Theme.hover-bg : transparent;
+    animate background { duration: Theme.dur-fast; }
+    forward-focus: fs;
+    accessible-role: list-item;
+    accessible-label: root.entry.title + (root.entry.done ? ", erledigt" : "") + (root.entry.due != "" ? ", fällig " + root.entry.due : "");
+
+    row-ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.open();
+        }
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " {
+                root.toggle();
+                return accept;
+            }
+            if e.text == Key.Return {
+                root.open();
+                return accept;
+            }
+            if e.text == Key.Delete {
+                root.remove();
+                return accept;
+            }
+            if root.entry.has-children && ((e.text == Key.LeftArrow && !root.entry.collapsed) || (e.text == Key.RightArrow && root.entry.collapsed)) {
+                root.collapse();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 14px + root.entry.depth * 28px;
+        padding-right: 14px;
+        padding-top: root.pad;
+        padding-bottom: root.pad;
+        spacing: 14px;
+
+        VerticalLayout {
+            alignment: start;
+
+            check := Rectangle {
+                width: 20px;
+                height: 20px;
+                border-radius: 10px;
+                border-width: 1.7px;
+                border-color: root.entry.done || check-ta.has-hover ? root.entry.color : Theme.ink-3;
+                background: root.entry.done ? root.entry.color : check-ta.has-hover ? root.entry.color.with-alpha(0.15) : transparent;
+                animate background { duration: Theme.dur-fast; }
+                accessible-role: checkbox;
+                accessible-label: root.entry.done ? "Als nicht erledigt markieren" : "Als erledigt markieren";
+                accessible-checkable: true;
+                accessible-checked: root.entry.done;
+                accessible-action-default => {
+                    root.toggle();
+                }
+
+                Image {
+                    source: @image-url("icons/check.svg");
+                    width: 11px;
+                    height: 11px;
+                    colorize: root.entry.done ? #ffffff : root.entry.color;
+                    visible: root.entry.done || check-ta.has-hover;
+                }
+
+                check-ta := TouchArea {
+                    mouse-cursor: MouseCursor.pointer;
+                    clicked => {
+                        root.toggle();
+                    }
+                }
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 0px;
+
+            if root.entry.context != "": Text {
+                text: root.entry.context;
+                height: 18px;
+                font-size: 12px;
+                color: Theme.ink-2;
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                height: 20px;
+                spacing: 6px;
+
+                if root.entry.has-children: Rectangle {
+                    width: 18px;
+                    accessible-role: button;
+                    accessible-label: root.entry.collapsed ? "Unteraufgaben ausklappen" : "Unteraufgaben einklappen";
+                    accessible-action-default => {
+                        root.collapse();
+                    }
+
+                    Image {
+                        source: root.entry.collapsed ? @image-url("icons/chevron-right.svg") : @image-url("icons/chevron-down.svg");
+                        width: 13px;
+                        height: 13px;
+                        colorize: Theme.ink-2;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: MouseCursor.pointer;
+                        clicked => {
+                            root.collapse();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+
+                    title := Text {
+                        width: parent.width;
+                        height: parent.height;
+                        text: root.entry.title;
+                        font-size: 14.5px;
+                        color: root.entry.done ? Theme.ink-3 : Theme.ink;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+
+                    // Durchgestrichen wie bei Calino (Slint kennt kein text-decoration)
+                    if root.entry.done: Rectangle {
+                        x: 0px;
+                        y: parent.height / 2;
+                        width: Math.min(title.preferred-width, parent.width);
+                        height: 1.5px;
+                        background: Theme.ink-3;
+                    }
+                }
+
+                if root.entry.children != "": Rectangle {
+                    width: children-text.preferred-width + 12px;
+                    height: 18px;
+                    y: 1px;
+                    border-radius: 9px;
+                    background: Theme.ink-raw.with-alpha(0.05);
+
+                    children-text := Text {
+                        text: root.entry.children;
+                        font-size: 11px;
+                        color: Theme.ink-2;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            if root.entry.note != "": Text {
+                height: 19px;
+                text: root.entry.note;
+                font-size: 12.5px;
+                color: root.entry.done ? Theme.ink-3 : Theme.ink-2;
+                vertical-alignment: bottom;
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                height: 19px;
+                spacing: 12px;
+                alignment: start;
+
+                if root.entry.due != "": Text {
+                    text: root.entry.due;
+                    font-size: 12px;
+                    color: root.entry.overdue ? Theme.error : Theme.ink-2;
+                    vertical-alignment: bottom;
+                }
+
+                HorizontalLayout {
+                    spacing: 5px;
+
+                    VerticalLayout {
+                        alignment: end;
+                        padding-bottom: 4px;
+
+                        Rectangle {
+                            width: 7px;
+                            height: 7px;
+                            border-radius: 3.5px;
+                            background: root.entry.color;
+                        }
+                    }
+
+                    Text {
+                        text: root.entry.calendar;
+                        font-size: 12px;
+                        color: Theme.ink-3;
+                        vertical-alignment: bottom;
+                    }
+                }
+
+                if root.entry.priority > 0: Text {
+                    text: root.entry.priority == 1 ? "Priorität hoch" : root.entry.priority == 2 ? "Priorität mittel" : "Priorität niedrig";
+                    font-size: 12px;
+                    color: root.entry.priority == 1 ? Theme.error : root.entry.priority == 2 ? Theme.warning-text : Theme.ink-3;
+                    vertical-alignment: bottom;
+                }
+
+                if root.entry.recurring: Text {
+                    text: "wiederkehrend";
+                    font-size: 12px;
+                    color: Theme.ink-3;
+                    vertical-alignment: bottom;
+                }
+            }
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: Theme.radius-md;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Alle / Aktiv / Erledigt mit Zählern (Calino: segmentedControl)
+component FilterTabs inherits Rectangle {
+    in property <int> current;
+    in property <int> active;
+    in property <int> done;
+    callback select(int);
+
+    property <[string]> labels: ["Alle", "Aktiv", "Erledigt"];
+    property <[int]> counts: [root.active + root.done, root.active, root.done];
+    property <length> tab-w: 92px;
+
+    width: 8px + 3 * root.tab-w;
+    height: 38px;
+    border-radius: 12px;
+    background: Theme.ink-raw.with-alpha(0.045);
+    accessible-role: tab-list;
+
+    Rectangle {
+        x: 4px + root.current * root.tab-w;
+        y: 4px;
+        width: root.tab-w;
+        height: 30px;
+        border-radius: 9px;
+        background: Theme.panel;
+        border-width: 1px;
+        border-color: Theme.line;
+        animate x { duration: 250ms; easing: cubic-bezier(0.4, 0, 0.2, 1); }
+    }
+
+    for label[i] in root.labels: Rectangle {
+        x: 4px + i * root.tab-w;
+        y: 4px;
+        width: root.tab-w;
+        height: 30px;
+        accessible-role: tab;
+        accessible-label: label;
+
+        HorizontalLayout {
+            alignment: center;
+            spacing: 5px;
+
+            Text {
+                text: label;
+                font-size: 13px;
+                font-weight: 500;
+                color: i == root.current || tab-ta.has-hover ? Theme.ink : Theme.ink-2;
+                vertical-alignment: center;
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: Math.max(17px, count-text.preferred-width + 8px);
+                    height: 17px;
+                    border-radius: 8.5px;
+                    background: i == root.current ? Theme.accent.with-alpha(0.16) : Theme.ink-raw.with-alpha(0.08);
+
+                    count-text := Text {
+                        text: root.counts[i];
+                        font-size: 10.5px;
+                        color: i == root.current ? Theme.accent-strong : Theme.ink-3;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        tab-ta := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.select(i);
+            }
+        }
+    }
+}
+
+export component TasksView inherits Rectangle {
+    in property <[TaskRow]> rows;
+    in property <int> active-count;
+    in property <int> done-count;
+    // 0 alle, 1 aktiv, 2 erledigt
+    in property <int> filter;
+    // Gibt es einen Kalender, der Aufgaben kann?
+    in property <bool> can-add;
+    callback set-filter(int);
+    callback quick-add(string);
+    callback new-task();
+    callback toggle(int);
+    callback open(int);
+    callback remove(int);
+    callback collapse(int);
+
+    public function focus-composer() {
+        composer.focus();
+    }
+
+    background: Theme.canvas;
+
+    // Spalte wie Calino höchstens 860 px breit, mittig
+    Rectangle {
+        x: (root.width - self.width) / 2;
+        width: Math.min(860px, root.width - 24px);
+        height: root.height;
+
+        VerticalLayout {
+            padding-top: 4px;
+            spacing: 0px;
+
+            // Leiste: Zähler links, Filter und Anlegen rechts
+            HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-top: 8px;
+                padding-bottom: 14px;
+                spacing: 14px;
+
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 5px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: root.active-count;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: Theme.ink;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "aktiv";
+                        font-size: 14px;
+                        color: Theme.ink-2;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: "·  " + root.done-count + " erledigt";
+                        font-size: 14px;
+                        color: Theme.ink-3;
+                        vertical-alignment: center;
+                    }
+                }
+
+                FilterTabs {
+                    current: root.filter;
+                    active: root.active-count;
+                    done: root.done-count;
+                    select(i) => {
+                        root.set-filter(i);
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+
+                    Button {
+                        text: "+ Aufgabe erstellen";
+                        primary: true;
+                        enabled: root.can-add;
+                        clicked => {
+                            root.new-task();
+                        }
+                    }
+                }
+            }
+
+            // Schnelleingabe
+            Rectangle {
+                height: 46px;
+                border-radius: Theme.radius-md;
+                border-width: 1px;
+                border-color: composer.has-focus ? Theme.accent : Theme.line;
+                background: Theme.panel;
+
+                composer := TextInput {
+                    x: 16px;
+                    width: parent.width - 32px;
+                    height: parent.height;
+                    vertical-alignment: center;
+                    font-size: 14.5px;
+                    color: Theme.ink;
+                    enabled: root.can-add;
+                    single-line: true;
+                    selection-background-color: Theme.accent.with-alpha(0.3);
+                    selection-foreground-color: Theme.ink;
+                    accessible-label: "Neue Aufgabe";
+                    accepted => {
+                        if self.text != "" {
+                            root.quick-add(self.text);
+                            self.text = "";
+                        }
+                    }
+                }
+
+                if composer.text == "": Text {
+                    x: 16px;
+                    height: parent.height;
+                    text: root.can-add ? "Was muss erledigt werden?" : "Kein Kalender für Aufgaben verfügbar";
+                    font-size: 14.5px;
+                    color: Theme.ink-3;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                height: 6px;
+            }
+
+            list := Flickable {
+                vertical-stretch: 1;
+                content-height: column.preferred-height;
+
+                column := VerticalLayout {
+                    width: list.width;
+                    padding-bottom: 24px;
+
+                    for row in root.rows: VerticalLayout {
+                        if row.header: GroupHeader {
+                            entry: row;
+                        }
+                        if !row.header: TaskLine {
+                            entry: row;
+                            toggle => {
+                                root.toggle(row.id);
+                            }
+                            open => {
+                                root.open(row.id);
+                            }
+                            remove => {
+                                root.remove(row.id);
+                            }
+                            collapse => {
+                                root.collapse(row.id);
+                            }
+                        }
+                    }
+
+                    if root.rows.length == 0: Text {
+                        height: 120px;
+                        text: root.filter == 2 ? "Noch nichts erledigt." : "Keine offenen Aufgaben. Oben eintippen und Eingabe drücken.";
+                        font-size: 14px;
+                        color: Theme.ink-3;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  windows:
+    name: Windows (Format, Clippy, Tests, Selbsttest)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatierung
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: |
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo clippy -p hora-app --features devtools --all-targets --locked -- -D warnings
+
+      - name: Unit-Tests
+        run: cargo test --workspace --locked
+
+      - name: Lizenzliste der Crates aktuell
+        run: python tools/third-party-licenses.py --check
+
+      # rust-version in Cargo.toml (Slint 1.18 braucht 1.92)
+      - name: Mindestversion von Rust
+        run: |
+          rustup toolchain install 1.92 --profile minimal
+          cargo +1.92 check --workspace --all-targets --locked
+
+      # Startet die Oberfläche und spielt Ziehen, Tastatur, Befehlspalette
+      # und Journal mit synthetischen Eingaben durch (eigener Datenordner)
+      - name: Selbsttest der Oberfläche
+        run: |
+          cargo build -p hora-app --features devtools --locked
+          $env:HORA_DATA_DIR = Join-Path $env:RUNNER_TEMP 'hora-selftest'
+          $env:HORA_CREDENTIALS = 'memory'
+          $env:HORA_THEME = 'light'
+          target\debug\hora.exe --size 1440x900 --selftest
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  # Gegen Radicale und Baïkal in Docker-Containern (Linux-Runner haben Docker,
+  # Windows-Runner keine Linux-Container)
+  caldav-servers:
+    name: Linux (Kern, CalDAV, Speicher; Radicale und Baïkal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust stable
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Unit-Tests der plattformunabhängigen Crates
+        run: cargo test -p hora-core -p hora-caldav -p hora-storage --locked
+
+      - name: Integrationstests gegen Radicale und Baïkal
+        run: cargo test -p hora-caldav --test servers --locked -- --ignored --test-threads=1

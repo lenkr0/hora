@@ -1,0 +1,496 @@
+// Wochenansicht nach Calino (WeekView.module.css, CurrentTimeIndicator.module.css).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme, Fmt } from "theme.slint";
+import { EventItem, EventCard, EventCardVisual } from "event-card.slint";
+
+export struct DayInfo {
+    name: string,
+    number: string,
+    today: bool,
+}
+
+export struct AllDayItem {
+    id: int,
+    title: string,
+    color: color,
+    start-day: int,
+    span: int,
+    lane: int,
+    // Aufgabe: Kreis vor dem Titel
+    task: bool,
+}
+
+export component WeekView inherits Rectangle {
+    // Ein Eintrag je Spalte: 1 (Tag), 3 oder 7 (Woche)
+    in property <[DayInfo]> days;
+    in property <[EventItem]> events;
+    in property <[AllDayItem]> all-day;
+    in property <int> all-day-lanes;
+    in property <string> week-label;
+    in property <int> today-index: -1;
+    in property <int> now-min;
+
+    // id, Tag, Beginn, Dauer
+    callback change-event(int, int, int, int);
+    // Neuer Termin: Spalte, Beginn in Minuten
+    callback new-event-at(int, int);
+    // Vorschau: id, Position und Breite der Karte im Fenster
+    callback open-event(int, length, length, length);
+    callback edit-event(int);
+    callback delete-event(int);
+
+    // Geometrie für den Selbsttest
+    out property <length> days-abs-x: days-area.absolute-position.x;
+    out property <length> days-abs-y: days-area.absolute-position.y;
+    out property <length> column-width: col-w;
+
+    public function scroll-to-minute(m: int) {
+        flick.content-y = Math.clamp(-m / 60 * Theme.hour-height, -max-scroll, 0px);
+    }
+
+    property <int> day-count: Math.max(1, root.days.length);
+    property <length> inner-w: root.width - 2px;
+    property <length> col-w: (inner-w - Theme.gutter-width - Theme.scrollbar-width) / day-count;
+    property <length> all-day-h: root.all-day-lanes > 0 ? root.all-day-lanes * 20px + 4px : 0px;
+    property <length> head-h: 48px + all-day-h;
+    property <length> max-scroll: Math.max(0px, flick.content-height - flick.height);
+
+    // Zustand während des Ziehens
+    property <int> drag-id: -1;
+    property <int> drag-day;
+    property <int> drag-start;
+    property <int> drag-dur;
+    property <string> drag-title;
+    property <color> drag-color;
+
+    // Tastatur-Cursor im Raster (eine Tab-Station, Pfeile bewegen ihn)
+    property <int> cursor-day: Math.max(0, root.today-index);
+    property <int> cursor-min: 9 * 60;
+
+    function show-cursor() {
+        // Cursor im sichtbaren Bereich halten
+        if cursor-min / 60 * Theme.hour-height < -flick.content-y {
+            flick.content-y = Math.min(0px, -(cursor-min / 60 * Theme.hour-height) + 30px);
+        }
+        if (cursor-min + 30) / 60 * Theme.hour-height > -flick.content-y + flick.height {
+            flick.content-y = Math.max(-max-scroll, -((cursor-min + 30) / 60 * Theme.hour-height - flick.height + 30px));
+        }
+    }
+
+    background: Theme.panel;
+    border-radius: Theme.radius-lg;
+    border-width: 1px;
+    border-color: Theme.line;
+    clip: true;
+
+    flick := Flickable {
+        x: 1px;
+        y: 1px + head-h;
+        width: inner-w - Theme.scrollbar-width;
+        height: root.height - 2px - head-h;
+        interactive: false;
+        content-width: self.width;
+        content-height: 24 * Theme.hour-height;
+
+        // Zeitleiste
+        for h in 24: Rectangle {
+            x: 0;
+            y: h * Theme.hour-height;
+            width: Theme.gutter-width;
+            height: Theme.hour-height;
+
+            Text {
+                text: (h < 10 ? "0" : "") + "\{h}:00";
+                font-size: 11px;
+                font-weight: 500;
+                color: Theme.ink-3;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                background: Theme.line-2;
+            }
+        }
+
+        Rectangle {
+            x: Theme.gutter-width - 1px;
+            width: 1px;
+            height: 24 * Theme.hour-height;
+            background: Theme.line;
+        }
+
+        days-area := Rectangle {
+            x: Theme.gutter-width;
+            y: 0;
+            width: day-count * col-w;
+            height: 24 * Theme.hour-height;
+
+            for d[i] in root.days: Rectangle {
+                x: i * col-w;
+                width: col-w;
+                background: d.today ? Theme.selected-bg : transparent;
+
+                if i < day-count - 1: Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    background: Theme.line-2;
+                }
+            }
+
+            for h in 24: Rectangle {
+                y: (h + 1) * Theme.hour-height - 1px;
+                height: 1px;
+                background: Theme.line-2;
+            }
+
+            cell-ta := TouchArea {
+                clicked => {
+                    root.cursor-day = Math.clamp(Math.floor(self.mouse-x / col-w), 0, day-count - 1);
+                    root.cursor-min = Math.clamp(Math.floor(self.mouse-y / Theme.hour-height * 2) * 30, 0, 1410);
+                    grid.focus();
+                }
+                double-clicked => {
+                    root.new-event-at(
+                        Math.clamp(Math.floor(self.mouse-x / col-w), 0, day-count - 1),
+                        Math.clamp(Math.floor(self.mouse-y / Theme.hour-height * 4) * 15, 0, 1425));
+                }
+            }
+
+            if cell-ta.has-hover && root.drag-id < 0: Rectangle {
+                x: Math.clamp(Math.floor(cell-ta.mouse-x / col-w), 0, day-count - 1) * col-w;
+                y: Math.clamp(Math.floor(cell-ta.mouse-y / Theme.hour-height), 0, 23) * Theme.hour-height;
+                width: col-w - 1px;
+                height: Theme.hour-height - 1px;
+                background: cell-ta.pressed ? Theme.accent-soft : Theme.hover-bg;
+            }
+
+            grid := FocusScope {
+                width: 0px;
+                height: 0px;
+                accessible-role: table;
+                accessible-label: "Kalenderraster, Pfeiltasten wählen die Zeit, Eingabe legt einen Termin an";
+                key-pressed(e) => {
+                    if e.text == Key.LeftArrow && root.cursor-day > 0 {
+                        root.cursor-day -= 1;
+                        return accept;
+                    }
+                    if e.text == Key.RightArrow && root.cursor-day < day-count - 1 {
+                        root.cursor-day += 1;
+                        return accept;
+                    }
+                    if e.text == Key.UpArrow && root.cursor-min > 0 {
+                        root.cursor-min -= 30;
+                        root.show-cursor();
+                        return accept;
+                    }
+                    if e.text == Key.DownArrow && root.cursor-min < 1410 {
+                        root.cursor-min += 30;
+                        root.show-cursor();
+                        return accept;
+                    }
+                    if e.text == Key.Return || e.text == " " {
+                        root.new-event-at(root.cursor-day, root.cursor-min);
+                        return accept;
+                    }
+                    return reject;
+                }
+                focus-changed-event => {
+                    if self.has-focus {
+                        root.show-cursor();
+                    }
+                }
+            }
+
+            if grid.has-focus: Rectangle {
+                x: Math.min(root.cursor-day, day-count - 1) * col-w + 2px;
+                y: root.cursor-min / 60 * Theme.hour-height + 1px;
+                width: col-w - 4px;
+                height: Theme.hour-height / 2 - 2px;
+                border-radius: Theme.radius-sm;
+                border-width: 2px;
+                border-color: Theme.accent;
+                background: Theme.accent.with-alpha(0.08);
+            }
+
+            for ev in root.events: EventCard {
+                item: ev;
+                col-w: col-w;
+                hour-h: Theme.hour-height;
+                day-count: day-count;
+                x: col-w * ev.day + col-w * (ev.lane / ev.lanes) + col-w * 0.02;
+                y: ev.start-min / 60 * Theme.hour-height;
+                width: col-w * (ev.span / ev.lanes) - col-w * 0.04;
+                height: Math.max(ev.dur-min / 60 * Theme.hour-height, 16px);
+                dimmed: root.drag-id == ev.id;
+
+                drag-update(day, start, dur) => {
+                    root.drag-id = ev.id;
+                    root.drag-day = day;
+                    root.drag-start = start;
+                    root.drag-dur = dur;
+                    root.drag-title = ev.title;
+                    root.drag-color = ev.color;
+                }
+                drag-end(commit) => {
+                    if commit && root.drag-id == ev.id && (root.drag-day != ev.day || root.drag-start != ev.start-min || root.drag-dur != ev.dur-min) {
+                        root.change-event(ev.id, root.drag-day, root.drag-start, root.drag-dur);
+                    }
+                    root.drag-id = -1;
+                }
+                nudge(day, start, dur) => {
+                    root.change-event(ev.id, day, start, dur);
+                }
+                open(x, y, w) => {
+                    root.open-event(ev.id, x, y, w);
+                }
+                edit => {
+                    root.edit-event(ev.id);
+                }
+                remove => {
+                    root.delete-event(ev.id);
+                }
+            }
+
+            // Vorschau, wo der Termin landet
+            if root.drag-id >= 0: EventCardVisual {
+                x: root.drag-day * col-w + col-w * 0.02;
+                y: root.drag-start / 60 * Theme.hour-height;
+                width: col-w * 0.96;
+                height: Math.max(root.drag-dur / 60 * Theme.hour-height, 16px);
+                opacity: 0.9;
+                title: root.drag-title;
+                time-text: Fmt.range(root.drag-start, root.drag-dur);
+                event-color: root.drag-color;
+                lifted: true;
+            }
+
+            // Jetzt-Linie
+            if root.today-index >= 0: Rectangle {
+                x: root.today-index * col-w;
+                y: root.now-min / 60 * Theme.hour-height - 1px;
+                width: col-w;
+                height: 2px;
+                background: Theme.current-time;
+
+                Rectangle {
+                    x: 0;
+                    y: -3px;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: Theme.current-time;
+                }
+            }
+        }
+
+        if root.today-index >= 0: Rectangle {
+            x: Theme.gutter-width - self.width - 3px;
+            y: root.now-min / 60 * Theme.hour-height - 8px;
+            width: now-text.preferred-width + 8px;
+            height: 16px;
+            border-radius: Theme.radius-sm;
+            background: Theme.panel;
+            drop-shadow-offset-y: 1px;
+            drop-shadow-blur: 3px;
+            drop-shadow-color: Theme.shadow-label;
+
+            now-text := Text {
+                text: Fmt.hhmm(root.now-min);
+                font-size: 10px;
+                font-weight: 600;
+                color: Theme.current-time;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Schmale Scrollleiste in Calinos Farben
+    track := Rectangle {
+        x: root.width - 1px - Theme.scrollbar-width;
+        y: flick.y;
+        width: Theme.scrollbar-width;
+        height: flick.height;
+
+        property <length> thumb-h: Math.max(32px, self.height * flick.height / Math.max(1px, flick.content-height));
+        property <length> start-vy;
+        // Wie in Calino nur sichtbar, solange die Maus über dem Raster ist
+        property <bool> show-thumb: cell-ta.has-hover || track-ta.has-hover || track-ta.pressed;
+
+        if max-scroll > 0px: Rectangle {
+            y: (-flick.content-y / max-scroll) * (parent.height - parent.thumb-h);
+            height: parent.thumb-h;
+            border-radius: 3px;
+            background: track-ta.has-hover || track-ta.pressed ? Theme.scrollbar-hover : Theme.scrollbar;
+            opacity: 0;
+
+            states [
+                shown when track.show-thumb: {
+                    opacity: 1;
+                    in {
+                        animate opacity { duration: 120ms; }
+                    }
+                    out {
+                        animate opacity {
+                            duration: 250ms;
+                            delay: 700ms;
+                        }
+                    }
+                }
+            ]
+        }
+
+        track-ta := TouchArea {
+            pointer-event(e) => {
+                if e.kind == PointerEventKind.down {
+                    parent.start-vy = flick.content-y;
+                }
+            }
+            moved => {
+                if self.pressed && parent.height > parent.thumb-h {
+                    flick.content-y = Math.clamp(
+                        parent.start-vy - (self.mouse-y - self.pressed-y) * max-scroll / (parent.height - parent.thumb-h),
+                        -max-scroll, 0px);
+                }
+            }
+        }
+    }
+
+    // Kopfzeile nach dem Inhalt, damit ihr Schatten über den Stunden liegt
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: inner-w;
+        height: head-h;
+        background: Theme.panel;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: flick.content-y < 0px && !Theme.dark ? #0000000d : transparent;
+
+        Rectangle {
+            x: 0;
+            width: Theme.gutter-width;
+
+            Text {
+                text: root.week-label;
+                font-size: 11.5px;
+                font-weight: 700;
+                letter-spacing: 0.92px;
+                color: Theme.ink-3;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                height: 48px;
+                y: 0;
+            }
+
+            Rectangle {
+                x: parent.width - 1px;
+                width: 1px;
+                background: Theme.line;
+            }
+        }
+
+        for d[i] in root.days: Rectangle {
+            x: Theme.gutter-width + i * col-w;
+            width: col-w;
+            background: d.today ? Theme.selected-bg : transparent;
+
+            if i < day-count - 1: Rectangle {
+                x: parent.width - 1px;
+                width: 1px;
+                background: Theme.line-2;
+            }
+
+            VerticalLayout {
+                height: 48px;
+                y: 0;
+                padding: 4px;
+                spacing: 0px;
+                alignment: center;
+
+                Text {
+                    text: d.name;
+                    font-size: 11.5px;
+                    font-weight: 700;
+                    letter-spacing: 0.92px;
+                    color: Theme.ink-3;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 14px;
+                        background: d.today ? Theme.accent-strong : transparent;
+
+                        Text {
+                            text: d.number;
+                            font-size: 14px;
+                            font-weight: d.today ? 600 : 500;
+                            color: d.today ? Theme.accent-contrast : Theme.ink-2;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+
+        for a in root.all-day: Rectangle {
+            x: Theme.gutter-width + a.start-day * col-w + 2px;
+            y: 48px + a.lane * 20px;
+            width: a.span * col-w - 4px;
+            height: 18px;
+            border-radius: Theme.radius-event;
+            border-width: 1px;
+            border-color: Theme.event-border;
+            background: a.color.mix(Theme.canvas, bar-ta.has-hover ? Theme.event-bg-mix-hover : Theme.event-bg-mix);
+            accessible-role: button;
+            accessible-label: a.task ? "Aufgabe " + a.title : a.title + ", ganztägig";
+
+            if a.task: Rectangle {
+                x: 7px;
+                y: (parent.height - self.height) / 2;
+                width: 9px;
+                height: 9px;
+                border-radius: 4.5px;
+                border-width: 1.5px;
+                border-color: a.color;
+            }
+
+            Text {
+                x: a.task ? 21px : 8px;
+                width: parent.width - self.x - 4px;
+                text: a.title;
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.ink;
+                overflow: elide;
+                vertical-alignment: center;
+            }
+
+            bar-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-event(a.id, parent.absolute-position.x, parent.absolute-position.y, parent.width);
+                }
+                double-clicked => {
+                    root.edit-event(a.id);
+                }
+            }
+        }
+
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.line;
+        }
+    }
+}

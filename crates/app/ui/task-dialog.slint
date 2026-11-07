@@ -1,0 +1,226 @@
+// Aufgabe anlegen/bearbeiten, Felder wie Calinos TaskFormFields:
+// Fälligkeit (keine, nur Datum, Datum und Uhrzeit), Beginn, Priorität,
+// Kalender, übergeordnete Aufgabe, Beschreibung.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button, TextField } from "controls.slint";
+import { Select, SelectOption, TextArea } from "inputs.slint";
+import { Modal } from "dialogs.slint";
+
+export struct TaskDraft {
+    is-new: bool,
+    title: string,
+    // 0 kein Fälligkeitsdatum, 1 nur Datum, 2 Datum und Uhrzeit
+    due-mode: int,
+    due-date: string,
+    due-time: string,
+    start-date: string,
+    // 0 keine, 1 hoch, 2 mittel, 3 niedrig
+    priority: int,
+    calendar: int,
+    // Index in der Liste übergeordneter Aufgaben (0 = keine)
+    parent: int,
+    description: string,
+    calendar-locked: bool,
+    can-delete: bool,
+    can-add-subtask: bool,
+    // Wiederkehrend: Fälligkeit gilt für die Serie und bleibt fest
+    times-locked: bool,
+    note: string,
+}
+
+export component TaskDialog inherits Modal {
+    in property <TaskDraft> draft;
+    in property <[SelectOption]> calendar-options;
+    in property <[SelectOption]> parent-options;
+    in property <string> error;
+
+    in-out property <string> title-text: draft.title;
+    in-out property <int> due-mode: draft.due-mode;
+    in-out property <string> due-date: draft.due-date;
+    in-out property <string> due-time: draft.due-time;
+    in-out property <string> start-date: draft.start-date;
+    in-out property <int> priority: draft.priority;
+    in-out property <int> calendar: draft.calendar;
+    in-out property <int> parent: draft.parent;
+    in-out property <string> description: draft.description;
+
+    // Titel, Fälligkeit (Art, Datum, Uhrzeit), Beginn, Priorität, Kalender, übergeordnete Aufgabe, Beschreibung
+    callback save(string, int, string, string, string, int, int, int, string);
+    callback delete();
+    callback add-subtask();
+    callback cancel();
+
+    function submit() {
+        root.save(root.title-text, root.due-mode, root.due-date, root.due-time, root.start-date, root.priority,
+            root.calendar, root.parent, root.description);
+    }
+
+    title: draft.is-new ? "Neue Aufgabe" : "Aufgabe bearbeiten";
+    card-width: 560px;
+    close => {
+        root.cancel();
+    }
+    opened => {
+        title-field.focus();
+    }
+
+    VerticalLayout {
+        spacing: 14px;
+
+        title-field := TextField {
+            label: "Titel";
+            placeholder: "Was muss erledigt werden?";
+            text <=> root.title-text;
+            accepted => {
+                root.submit();
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Select {
+                label: "Fällig";
+                dots: false;
+                enabled: !draft.times-locked;
+                options: [{ id: 0, name: "Kein Fälligkeitsdatum" }, { id: 1, name: "Nur Datum" }, { id: 2, name: "Datum und Uhrzeit" }];
+                selected <=> root.due-mode;
+                horizontal-stretch: 3;
+            }
+
+            if root.due-mode > 0: TextField {
+                label: "Datum";
+                placeholder: "TT.MM.JJJJ";
+                enabled: !draft.times-locked;
+                text <=> root.due-date;
+                min-width: 112px;
+                horizontal-stretch: 3;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if root.due-mode == 2: TextField {
+                label: "Uhrzeit";
+                placeholder: "18:00";
+                enabled: !draft.times-locked;
+                text <=> root.due-time;
+                min-width: 76px;
+                horizontal-stretch: 2;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if root.due-mode > 0: TextField {
+                label: "Beginn (optional)";
+                placeholder: "TT.MM.JJJJ";
+                enabled: !draft.times-locked;
+                text <=> root.start-date;
+                horizontal-stretch: 3;
+                accepted => {
+                    root.submit();
+                }
+            }
+
+            if root.due-mode == 0: Rectangle {
+                horizontal-stretch: 8;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Select {
+                label: "Priorität";
+                dots: false;
+                options: [{ id: 0, name: "Keine" }, { id: 1, name: "Hoch" }, { id: 2, name: "Mittel" }, { id: 3, name: "Niedrig" }];
+                selected <=> root.priority;
+                horizontal-stretch: 1;
+            }
+
+            Select {
+                label: "Kalender";
+                options: root.calendar-options;
+                selected <=> root.calendar;
+                enabled: !draft.calendar-locked;
+                horizontal-stretch: 2;
+            }
+        }
+
+        Select {
+            label: "Übergeordnete Aufgabe";
+            dots: false;
+            options: root.parent-options;
+            selected <=> root.parent;
+        }
+
+        TextArea {
+            label: "Beschreibung";
+            text <=> root.description;
+        }
+
+        if draft.note != "": Text {
+            text: draft.note;
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+
+        if root.error != "": Rectangle {
+            border-radius: Theme.radius-sm;
+            background: Theme.error-bg;
+
+            VerticalLayout {
+                padding: 10px;
+
+                Text {
+                    text: root.error;
+                    font-size: 13px;
+                    color: Theme.error;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            if draft.can-delete: Button {
+                text: "Löschen";
+                danger: true;
+                clicked => {
+                    root.delete();
+                }
+            }
+
+            if draft.can-add-subtask: Button {
+                text: "+ Teilaufgabe";
+                clicked => {
+                    root.add-subtask();
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            Button {
+                text: "Abbrechen";
+                clicked => {
+                    root.cancel();
+                }
+            }
+
+            Button {
+                text: "Speichern";
+                primary: true;
+                clicked => {
+                    root.submit();
+                }
+            }
+        }
+    }
+}

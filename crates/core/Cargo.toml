@@ -1,0 +1,15 @@
+[package]
+name = "hora-core"
+description = "Datenmodelle, iCalendar, Wiederholungsregeln und Zeitzonen"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+chrono.workspace = true
+chrono-tz.workspace = true
+regex.workspace = true
+rrule.workspace = true
+thiserror.workspace = true

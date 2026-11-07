@@ -1,0 +1,285 @@
+// Weitere Eingabeelemente für den Termin-Dialog im Stil der Calino-Felder.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { FocusRing } from "controls.slint";
+
+// Kontrollkästchen mit Beschriftung (Leertaste schaltet um)
+export component Checkbox inherits HorizontalLayout {
+    in property <string> text;
+    in property <bool> enabled: true;
+    in-out property <bool> checked;
+    callback toggled();
+
+    spacing: 8px;
+    alignment: start;
+
+    VerticalLayout {
+        alignment: center;
+
+        Rectangle {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border-width: 1.5px;
+            border-color: root.checked ? Theme.accent : Theme.ink-3;
+            background: root.checked ? Theme.accent : Theme.input-bg;
+            opacity: root.enabled ? 1 : 0.5;
+            accessible-role: checkbox;
+            accessible-label: root.text;
+            accessible-checkable: true;
+            accessible-checked: root.checked;
+
+            if root.checked: Image {
+                source: @image-url("icons/check.svg");
+                width: 11px;
+                height: 11px;
+                colorize: Theme.accent-contrast;
+            }
+
+            if fs.has-focus: FocusRing {
+                radius: 4px;
+                w: 16px;
+                h: 16px;
+            }
+
+            fs := FocusScope {
+                enabled: root.enabled;
+                key-pressed(e) => {
+                    if e.text == " " {
+                        root.checked = !root.checked;
+                        root.toggled();
+                        return accept;
+                    }
+                    return reject;
+                }
+            }
+
+            TouchArea {
+                enabled: root.enabled;
+                clicked => {
+                    fs.focus();
+                    root.checked = !root.checked;
+                    root.toggled();
+                }
+            }
+        }
+    }
+
+    Text {
+        text: root.text;
+        font-size: 14px;
+        color: Theme.ink;
+        vertical-alignment: center;
+        opacity: root.enabled ? 1 : 0.5;
+
+        TouchArea {
+            enabled: root.enabled;
+            clicked => {
+                root.checked = !root.checked;
+                root.toggled();
+            }
+        }
+    }
+}
+
+export struct SelectOption {
+    id: int,
+    name: string,
+    color: color,
+}
+
+// Auswahlliste im Stil der Eingabefelder, z. B. für den Kalender eines Termins
+export component Select inherits VerticalLayout {
+    in property <string> label;
+    in property <[SelectOption]> options;
+    in property <bool> enabled: true;
+    // Farbpunkt vor den Einträgen (Kalenderauswahl)
+    in property <bool> dots: true;
+    in-out property <int> selected;
+
+    property <bool> valid: root.selected >= 0 && root.selected < root.options.length;
+
+    spacing: 6px;
+
+    if root.label != "": Text {
+        text: root.label;
+        font-size: 13px;
+        font-weight: 500;
+        color: Theme.ink-2;
+    }
+
+    field := Rectangle {
+        height: 38px;
+        border-radius: Theme.radius-sm;
+        border-width: 1px;
+        border-color: fs.has-focus ? Theme.accent : Theme.line;
+        background: Theme.input-bg;
+        opacity: root.enabled ? 1 : 0.6;
+        accessible-role: combobox;
+        accessible-label: root.label;
+        accessible-value: root.valid ? root.options[root.selected].name : "";
+
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+
+            if root.dots && root.valid: VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 5px;
+                    background: root.options[root.selected].color;
+                }
+            }
+
+            Text {
+                text: root.valid ? root.options[root.selected].name : "";
+                font-size: 14px;
+                color: Theme.ink;
+                vertical-alignment: center;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Image {
+                    source: @image-url("icons/chevron-down.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.ink-3;
+                }
+            }
+        }
+
+        TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                fs.focus();
+                popup.show();
+            }
+        }
+
+        fs := FocusScope {
+            enabled: root.enabled;
+            key-pressed(e) => {
+                if e.text == Key.DownArrow && root.selected < root.options.length - 1 {
+                    root.selected += 1;
+                    return accept;
+                }
+                if e.text == Key.UpArrow && root.selected > 0 {
+                    root.selected -= 1;
+                    return accept;
+                }
+                if e.text == " " {
+                    popup.show();
+                    return accept;
+                }
+                return reject;
+            }
+        }
+
+        popup := PopupWindow {
+            y: field.height + 4px;
+            width: field.width;
+            height: list.preferred-height;
+
+            Rectangle {
+                background: Theme.popover-bg;
+                border-radius: Theme.radius-md;
+                border-width: 1px;
+                border-color: Theme.popover-border;
+                drop-shadow-offset-y: 4px;
+                drop-shadow-blur: 12px;
+                drop-shadow-color: Theme.dark ? transparent : #0000001a;
+
+                list := VerticalLayout {
+                    padding: 4px;
+
+                    for option[i] in root.options: Rectangle {
+                        height: 32px;
+                        border-radius: Theme.radius-sm;
+                        background: option-ta.has-hover ? Theme.hover-bg : i == root.selected ? Theme.selected-bg : transparent;
+
+                        HorizontalLayout {
+                            padding-left: 8px;
+                            spacing: 8px;
+
+                            if root.dots: VerticalLayout {
+                                alignment: center;
+
+                                Rectangle {
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 5px;
+                                    background: option.color;
+                                }
+                            }
+
+                            Text {
+                                text: option.name;
+                                font-size: 14px;
+                                color: Theme.ink;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+
+                        option-ta := TouchArea {
+                            clicked => {
+                                root.selected = i;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Mehrzeiliges Eingabefeld (Beschreibung)
+export component TextArea inherits VerticalLayout {
+    in property <string> label;
+    in property <bool> enabled: true;
+    in-out property <string> text;
+
+    spacing: 6px;
+
+    Text {
+        text: root.label;
+        font-size: 13px;
+        font-weight: 500;
+        color: Theme.ink-2;
+    }
+
+    Rectangle {
+        height: 84px;
+        border-radius: Theme.radius-sm;
+        border-width: 1px;
+        border-color: input.has-focus ? Theme.accent : Theme.line;
+        background: Theme.input-bg;
+        clip: true;
+
+        input := TextInput {
+            x: 12px;
+            y: 9px;
+            width: parent.width - 24px;
+            height: parent.height - 18px;
+            text <=> root.text;
+            enabled: root.enabled;
+            single-line: false;
+            wrap: word-wrap;
+            font-size: 14px;
+            color: Theme.ink;
+            selection-background-color: Theme.accent.with-alpha(0.3);
+            selection-foreground-color: Theme.ink;
+            accessible-label: root.label;
+        }
+    }
+}

@@ -1,0 +1,332 @@
+// Terminkarte mit "Accent Rail" nach Calino (EventCard.module.css).
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme, Fmt } from "theme.slint";
+
+export struct EventItem {
+    id: int,
+    title: string,
+    location: string,
+    color: color,
+    // 0 = Montag … 6 = Sonntag
+    day: int,
+    // Minuten seit Mitternacht
+    start-min: int,
+    dur-min: int,
+    // Spalte innerhalb überlappender Termine
+    lane: int,
+    lanes: int,
+    span: int,
+    // Verschieben und Dauer ändern erlaubt (Server-Termine erst ab M3)
+    editable: bool,
+}
+
+// Einrasten wird in Rust berechnet (week.rs), damit es testbar ist.
+export global WeekLogic {
+    // Beginn, Verschiebung in Minuten, Dauer -> neuer Beginn
+    callback snap-move(int, float, int) -> int;
+    // Beginn, Dauer, Verschiebung des Endes in Minuten -> neue Dauer
+    callback snap-resize(int, int, float) -> int;
+}
+
+// Reine Darstellung, auch für die Vorschau beim Ziehen.
+export component EventCardVisual inherits Rectangle {
+    in property <string> title;
+    in property <string> time-text;
+    in property <string> location;
+    in property <color> event-color;
+    in property <bool> hovered;
+    in property <bool> focused;
+    in property <bool> lifted;
+
+    property <bool> tight: root.height < 38px;
+    property <bool> raised: hovered || focused || lifted;
+
+    border-radius: Theme.radius-event;
+    border-width: 1px;
+    border-color: Theme.event-border;
+    background: event-color.mix(Theme.canvas, raised ? Theme.event-bg-mix-hover : Theme.event-bg-mix);
+    drop-shadow-offset-y: raised ? 4px : 1px;
+    drop-shadow-blur: raised ? 12px : 3px;
+    drop-shadow-color: lifted ? Theme.shadow-drag : hovered ? Theme.shadow-event-hover : Theme.shadow-event;
+    clip: true;
+
+    animate background, drop-shadow-blur, drop-shadow-offset-y, drop-shadow-color {
+        duration: 180ms;
+        easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    // Farbschiene links: 3 px, zur Hälfte in den Untergrund gemischt
+    Rectangle {
+        x: 5px;
+        y: 4px;
+        width: 3px;
+        height: Math.max(0px, parent.height - 8px);
+        border-radius: 3px;
+        background: event-color.mix(Theme.canvas, 0.5);
+    }
+
+    if !tight: VerticalLayout {
+        padding-left: 13px;
+        padding-right: 9px;
+        padding-top: 3px;
+        padding-bottom: 4px;
+        spacing: 1px;
+        alignment: start;
+
+        Text {
+            text: root.title;
+            font-size: 13px;
+            font-weight: 500;
+            color: Theme.ink;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.time-text;
+            font-size: 11.5px;
+            color: Theme.event-ink-2;
+            overflow: elide;
+        }
+
+        if root.location != "" && root.height >= 56px: Text {
+            text: root.location;
+            font-size: 11px;
+            color: Theme.event-ink-2;
+            overflow: elide;
+        }
+    }
+
+    if tight: HorizontalLayout {
+        padding-left: 13px;
+        padding-right: 9px;
+        spacing: 5px;
+        alignment: start;
+
+        Text {
+            text: root.title;
+            font-size: 13px;
+            font-weight: 500;
+            color: Theme.ink;
+            overflow: elide;
+            vertical-alignment: center;
+            horizontal-stretch: 0;
+        }
+
+        Text {
+            text: root.time-text;
+            font-size: 11.5px;
+            color: Theme.event-ink-2;
+            overflow: elide;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+// Interaktive Karte: Ziehen zum Verschieben, unterer Rand zum Ändern der Dauer,
+// Pfeiltasten für dieselben Aktionen per Tastatur.
+export component EventCard inherits Rectangle {
+    in property <EventItem> item;
+    in property <length> col-w;
+    in property <length> hour-h;
+    in property <int> day-count: 7;
+    in property <bool> dimmed;
+
+    // Tag, Beginn, Dauer der Vorschau
+    callback drag-update(int, int, int);
+    // true = übernehmen, false = abgebrochen
+    callback drag-end(bool);
+    // Tastatur: neue Werte direkt übernehmen
+    callback nudge(int, int, int);
+    // Vorschau öffnen: Position und Breite der Karte im Fenster
+    callback open(length, length, length);
+    callback edit();
+    callback remove();
+
+    property <bool> moving;
+    property <bool> resizing;
+    property <bool> cancelled;
+    property <bool> dragged;
+    // Einfachklick erst auswerten, wenn kein Doppelklick folgt
+    property <bool> click-pending;
+
+    function open-preview() {
+        root.open(root.absolute-position.x, root.absolute-position.y, root.width);
+    }
+
+    Timer {
+        interval: 250ms;
+        running: root.click-pending;
+        triggered => {
+            root.click-pending = false;
+            root.open-preview();
+        }
+    }
+
+    accessible-role: button;
+    accessible-label: root.item.title + ", " + Fmt.range(root.item.start-min, root.item.dur-min);
+
+    opacity: root.dimmed ? 0.45 : 1;
+    animate opacity { duration: Theme.dur-fast; }
+
+    EventCardVisual {
+        y: (move-ta.has-hover || resize-ta.has-hover) && !root.moving && !root.resizing ? -1px : 0px;
+        width: parent.width;
+        height: parent.height;
+        title: root.item.title;
+        time-text: Fmt.range(root.item.start-min, root.item.dur-min);
+        location: root.item.location;
+        event-color: root.item.color;
+        hovered: move-ta.has-hover || resize-ta.has-hover;
+        focused: fs.has-focus;
+        animate y { duration: 180ms; easing: cubic-bezier(0.32, 0.72, 0, 1); }
+    }
+
+    if fs.has-focus: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: Theme.radius-event + 3px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+
+    fs := FocusScope {
+        width: parent.width;
+        height: parent.height;
+
+        key-pressed(e) => {
+            if root.moving || root.resizing {
+                if e.text == Key.Escape {
+                    root.cancelled = true;
+                    root.moving = false;
+                    root.resizing = false;
+                    root.drag-end(false);
+                    return accept;
+                }
+                return reject;
+            }
+            if e.text == Key.Return || e.text == " " {
+                root.open-preview();
+                return accept;
+            }
+            if e.text == Key.Delete {
+                root.remove();
+                return accept;
+            }
+            if !root.item.editable {
+                return reject;
+            }
+            if e.text == Key.UpArrow {
+                if e.modifiers.shift {
+                    root.nudge(root.item.day, root.item.start-min, WeekLogic.snap-resize(root.item.start-min, root.item.dur-min, -15));
+                } else {
+                    root.nudge(root.item.day, WeekLogic.snap-move(root.item.start-min, -15, root.item.dur-min), root.item.dur-min);
+                }
+                return accept;
+            }
+            if e.text == Key.DownArrow {
+                if e.modifiers.shift {
+                    root.nudge(root.item.day, root.item.start-min, WeekLogic.snap-resize(root.item.start-min, root.item.dur-min, 15));
+                } else {
+                    root.nudge(root.item.day, WeekLogic.snap-move(root.item.start-min, 15, root.item.dur-min), root.item.dur-min);
+                }
+                return accept;
+            }
+            if e.text == Key.LeftArrow && root.item.day > 0 {
+                root.nudge(root.item.day - 1, root.item.start-min, root.item.dur-min);
+                return accept;
+            }
+            if e.text == Key.RightArrow && root.item.day < root.day-count - 1 {
+                root.nudge(root.item.day + 1, root.item.start-min, root.item.dur-min);
+                return accept;
+            }
+            return reject;
+        }
+
+        move-ta := TouchArea {
+            width: parent.width;
+            height: root.item.editable ? Math.max(0px, parent.height - 8px) : parent.height;
+            mouse-cursor: root.moving ? MouseCursor.grabbing : MouseCursor.pointer;
+
+            pointer-event(e) => {
+                if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                    root.cancelled = false;
+                    root.dragged = false;
+                    fs.focus();
+                } else if e.kind == PointerEventKind.up && root.moving {
+                    root.moving = false;
+                    root.drag-end(!root.cancelled);
+                } else if e.kind == PointerEventKind.cancel && root.moving {
+                    root.moving = false;
+                    root.drag-end(false);
+                }
+            }
+
+            moved => {
+                if self.pressed && !root.cancelled && root.item.editable {
+                    if !root.moving && (Math.abs(self.mouse-x - self.pressed-x) > 4px || Math.abs(self.mouse-y - self.pressed-y) > 4px) {
+                        root.moving = true;
+                        root.dragged = true;
+                    }
+                    if root.moving {
+                        root.drag-update(
+                            Math.clamp(Math.floor((root.x + self.mouse-x) / root.col-w), 0, root.day-count - 1),
+                            WeekLogic.snap-move(root.item.start-min, (self.mouse-y - self.pressed-y) / root.hour-h * 60, root.item.dur-min),
+                            root.item.dur-min);
+                    }
+                }
+            }
+
+            clicked => {
+                if !root.dragged {
+                    root.click-pending = true;
+                }
+            }
+
+            double-clicked => {
+                root.click-pending = false;
+                root.edit();
+            }
+        }
+
+        resize-ta := TouchArea {
+            y: Math.max(0px, parent.height - 8px);
+            width: parent.width;
+            height: Math.min(8px, parent.height);
+            enabled: root.item.editable;
+            mouse-cursor: MouseCursor.ns-resize;
+
+            pointer-event(e) => {
+                if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                    root.cancelled = false;
+                    fs.focus();
+                } else if e.kind == PointerEventKind.up && root.resizing {
+                    root.resizing = false;
+                    root.drag-end(!root.cancelled);
+                } else if e.kind == PointerEventKind.cancel && root.resizing {
+                    root.resizing = false;
+                    root.drag-end(false);
+                }
+            }
+
+            moved => {
+                if self.pressed && !root.cancelled {
+                    root.resizing = true;
+                    root.drag-update(
+                        root.item.day,
+                        root.item.start-min,
+                        WeekLogic.snap-resize(root.item.start-min, root.item.dur-min, (self.mouse-y - self.pressed-y) / root.hour-h * 60));
+                }
+            }
+
+            Rectangle {
+                border-bottom-left-radius: 4px;
+                border-bottom-right-radius: 4px;
+                background: parent.has-hover ? Theme.ink-raw.with-alpha(0.05) : transparent;
+            }
+        }
+    }
+}

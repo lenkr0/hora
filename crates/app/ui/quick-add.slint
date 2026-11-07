@@ -1,0 +1,241 @@
+// Schnelleingabe nach Calinos QuickAdd (QuickAdd.tsx/.module.css): ein
+// Eingabefeld, darunter die Vorschau dessen, was angelegt wird.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { Button } from "controls.slint";
+import { Modal } from "dialogs.slint";
+
+// Was die Eingabe ergibt
+export struct QuickPreview {
+    // Es gibt etwas anzulegen
+    valid: bool,
+    // "Termin" oder "Aufgabe"
+    kind: string,
+    title: string,
+    when: string,
+    location: string,
+    repeat: string,
+    calendar: string,
+    calendar-color: color,
+    reminder: string,
+    // Hinweis, z. B. unbekannter Kalender
+    problem: string,
+}
+
+component PreviewRow inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> value;
+
+    spacing: 12px;
+    visible: root.value != "";
+    height: root.value != "" ? 22px : 0px;
+
+    Text {
+        width: 96px;
+        text: root.label;
+        font-size: 12.5px;
+        color: Theme.ink-3;
+        vertical-alignment: center;
+    }
+
+    Text {
+        text: root.value;
+        font-size: 13.5px;
+        color: Theme.ink;
+        vertical-alignment: center;
+        overflow: elide;
+        horizontal-stretch: 1;
+    }
+}
+
+export component QuickAddDialog inherits Modal {
+    // Vorschau für den eingegebenen Text
+    pure callback preview(string) -> QuickPreview;
+    // Text, im Dialog öffnen statt gleich anzulegen
+    callback submit(string, bool);
+    callback cancel();
+    in property <string> error;
+    in-out property <string> text;
+
+    property <QuickPreview> result: root.preview(input.text);
+
+    title: "Schnell eintragen";
+    card-width: 600px;
+    close => {
+        root.cancel();
+    }
+    opened => {
+        input.focus();
+    }
+
+    VerticalLayout {
+        spacing: 14px;
+
+        keys := FocusScope {
+            height: 48px;
+            // Umschalt+Eingabe öffnet den Dialog, bevor das Textfeld die Eingabe nimmt
+            capture-key-pressed(e) => {
+                if e.text == Key.Return && e.modifiers.shift {
+                    root.submit(input.text, true);
+                    return accept;
+                }
+                return reject;
+            }
+
+            Rectangle {
+                width: parent.width;
+                height: parent.height;
+                border-radius: Theme.radius-md;
+                border-width: 1px;
+                border-color: input.has-focus ? Theme.accent : Theme.line;
+                background: Theme.input-bg;
+
+                input := TextInput {
+                    x: 16px;
+                    width: parent.width - 32px;
+                    height: parent.height;
+                    vertical-alignment: center;
+                    font-size: 16px;
+                    color: Theme.ink;
+                    single-line: true;
+                    text <=> root.text;
+                    selection-background-color: Theme.accent.with-alpha(0.3);
+                    selection-foreground-color: Theme.ink;
+                    accessible-label: "Schnelleingabe";
+                    accepted => {
+                        root.submit(self.text, false);
+                    }
+                }
+
+                if input.text == "": Text {
+                    x: 16px;
+                    height: parent.height;
+                    text: "z. B. Zahnarzt morgen 15 Uhr bei Dr. Weber";
+                    font-size: 16px;
+                    color: Theme.ink-3;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Vorschau (Calino: preview)
+        Rectangle {
+            border-radius: Theme.radius-md;
+            background: Theme.ink-raw.with-alpha(0.03);
+            border-width: 1px;
+            border-color: Theme.line-2;
+
+            VerticalLayout {
+                padding: 14px;
+                spacing: 6px;
+
+                if input.text == "": Text {
+                    text: "Datum, Uhrzeit, Ort und Wiederholung werden erkannt, auf Deutsch und Englisch: „Mathe jeden Montag 8 Uhr bis 9:30 Raum 204“, „todo Milch kaufen bis Freitag“, „Lunch tomorrow 1pm #Arbeit“.";
+                    font-size: 13px;
+                    color: Theme.ink-3;
+                    wrap: word-wrap;
+                }
+
+                if input.text != "": HorizontalLayout {
+                    spacing: 8px;
+
+                    VerticalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            width: 10px;
+                            height: 10px;
+                            border-radius: root.result.kind == "Aufgabe" ? 5px : 3px;
+                            border-width: root.result.kind == "Aufgabe" ? 1.5px : 0px;
+                            border-color: root.result.calendar-color;
+                            background: root.result.kind == "Aufgabe" ? transparent : root.result.calendar-color;
+                        }
+                    }
+
+                    Text {
+                        text: root.result.title;
+                        font-family: Theme.serif-medium;
+                        font-size: 18px;
+                        font-weight: 500;
+                        color: Theme.ink;
+                        overflow: elide;
+                        horizontal-stretch: 1;
+                    }
+
+                    Text {
+                        text: root.result.kind;
+                        font-size: 12px;
+                        color: Theme.ink-3;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if input.text != "": VerticalLayout {
+                    spacing: 2px;
+
+                    PreviewRow {
+                        label: root.result.kind == "Aufgabe" ? "Fällig" : "Wann";
+                        value: root.result.when;
+                    }
+
+                    PreviewRow {
+                        label: "Ort";
+                        value: root.result.location;
+                    }
+
+                    PreviewRow {
+                        label: "Wiederholung";
+                        value: root.result.repeat;
+                    }
+
+                    PreviewRow {
+                        label: "Erinnerung";
+                        value: root.result.reminder;
+                    }
+
+                    PreviewRow {
+                        label: "Kalender";
+                        value: root.result.calendar;
+                    }
+                }
+
+                if root.result.problem != "" || root.error != "": Text {
+                    text: root.error != "" ? root.error : root.result.problem;
+                    font-size: 12.5px;
+                    color: Theme.error;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            Text {
+                text: "Eingabe legt an · Umschalt+Eingabe öffnet den Dialog";
+                font-size: 12px;
+                color: Theme.ink-3;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+
+            Button {
+                text: "Im Dialog öffnen";
+                enabled: input.text != "";
+                clicked => {
+                    root.submit(input.text, true);
+                }
+            }
+
+            Button {
+                text: "Anlegen";
+                primary: true;
+                enabled: root.result.valid;
+                clicked => {
+                    root.submit(input.text, false);
+                }
+            }
+        }
+    }
+}

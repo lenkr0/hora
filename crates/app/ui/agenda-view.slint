@@ -1,0 +1,356 @@
+// Agenda nach Calinos AgendaView (AgendaView.module.css): die Tage eines
+// Monats untereinander, je Tag die Termine als Karten mit Farbleiste;
+// mehrere leere Tage hintereinander stehen als eine Zeile da.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+import { FocusRing } from "controls.slint";
+
+// Eine Zeile; die Höhen stehen auch in main.rs (AGENDA_*_H)
+export struct AgendaLine {
+    // 0 Tageskopf (46 px), 1 Termin (54 + 6 px), 2 leere Tage (40 px)
+    kind: int,
+    // Tageskopf: Wochentag; leere Tage: Beschreibung
+    label: string,
+    // Tageskopf: "9. November"
+    date-text: string,
+    today: bool,
+    // Tag ohne Termine (einzeln)
+    empty: bool,
+    // Tag ab Monatsbeginn (Öffnen, Anlegen)
+    day: int,
+    // Termin: Index in der Liste der App
+    id: int,
+    time: string,
+    title: string,
+    sub: string,
+    color: color,
+    task: bool,
+}
+
+component DayHeader inherits Rectangle {
+    in property <AgendaLine> entry;
+    callback open-day();
+    callback add();
+
+    height: 46px;
+
+    HorizontalLayout {
+        x: 6px;
+        y: 12px;
+        width: parent.width - 6px - add.width - 16px;
+        height: parent.height - 12px;
+        alignment: start;
+        spacing: 10px;
+
+        // Wochentag und Datum; Klick öffnet den Tag
+        HorizontalLayout {
+            spacing: 10px;
+            accessible-role: button;
+            accessible-label: root.entry.label + ", " + root.entry.date-text + (root.entry.today ? ", heute" : "") + " – Tag öffnen";
+
+            Text {
+                text: root.entry.label;
+                font-family: Theme.serif-medium;
+                font-size: 18px;
+                font-weight: 500;
+                color: root.entry.today || head-ta.has-hover ? Theme.accent-strong : Theme.ink;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: root.entry.date-text;
+                font-size: 13.5px;
+                color: Theme.ink-3;
+                vertical-alignment: center;
+            }
+
+            head-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-day();
+                }
+            }
+        }
+
+        if root.entry.today: VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: today-text.preferred-width + 16px;
+                height: 20px;
+                border-radius: 10px;
+                background: Theme.accent-strong;
+
+                today-text := Text {
+                    text: "Heute";
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: Theme.accent-contrast;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        if root.entry.empty: Text {
+            text: "Keine Termine";
+            font-size: 12.5px;
+            color: Theme.ink-3;
+            vertical-alignment: center;
+        }
+    }
+
+    // "+ Hinzufügen" (Calino: addButton)
+    add := Rectangle {
+        x: parent.width - self.width - 4px;
+        y: 12px + (parent.height - 12px - self.height) / 2;
+        width: add-text.preferred-width + 18px;
+        height: 26px;
+        border-radius: 6px;
+        background: add-ta.has-hover ? Theme.hover-bg : transparent;
+        accessible-role: button;
+        accessible-label: "Termin am " + root.entry.date-text + " hinzufügen";
+
+        add-text := Text {
+            text: "+ Hinzufügen";
+            font-size: 12.5px;
+            font-weight: 500;
+            color: add-ta.has-hover ? Theme.accent-strong : Theme.ink-3;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        add-ta := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                root.add();
+            }
+        }
+    }
+}
+
+component AgendaItem inherits Rectangle {
+    in property <AgendaLine> entry;
+    callback open(length, length, length);
+    callback edit();
+    callback remove();
+
+    height: 54px;
+    border-radius: Theme.radius-md;
+    background: ta.has-hover || fs.has-focus ? root.entry.color.mix(Theme.panel, Theme.event-bg-mix) : Theme.panel;
+    border-width: 1px;
+    border-color: Theme.line;
+    drop-shadow-offset-y: 1px;
+    drop-shadow-blur: 2px;
+    drop-shadow-color: Theme.shadow-event;
+    forward-focus: fs;
+    accessible-role: button;
+    accessible-label: (root.entry.task ? "Aufgabe " : "") + root.entry.time + " " + root.entry.title + (root.entry.sub != "" ? ", " + root.entry.sub : "");
+    animate background { duration: Theme.dur-fast; }
+
+    function show() {
+        root.open(root.absolute-position.x, root.absolute-position.y, root.width);
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.show();
+        }
+        double-clicked => {
+            root.edit();
+        }
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Return || e.text == " " {
+                root.show();
+                return accept;
+            }
+            if e.text == "e" || e.text == "E" {
+                root.edit();
+                return accept;
+            }
+            if e.text == Key.Delete {
+                root.remove();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // Farbleiste (3 px)
+    Rectangle {
+        x: 10px;
+        y: 10px;
+        width: 3px;
+        height: parent.height - 20px;
+        border-radius: 1.5px;
+        background: root.entry.color;
+    }
+
+    Text {
+        x: 24px;
+        width: 72px;
+        height: parent.height;
+        text: root.entry.time;
+        font-size: 13px;
+        font-weight: 500;
+        color: Theme.ink-2;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    HorizontalLayout {
+        x: 104px;
+        width: parent.width - 104px - 14px;
+        height: parent.height;
+        spacing: 8px;
+
+        if root.entry.task: VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 12px;
+                height: 12px;
+                border-radius: 6px;
+                border-width: 1.5px;
+                border-color: root.entry.color;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 1px;
+            horizontal-stretch: 1;
+
+            Text {
+                text: root.entry.title;
+                font-size: 14px;
+                font-weight: 500;
+                color: Theme.ink;
+                overflow: elide;
+            }
+
+            if root.entry.sub != "": Text {
+                text: root.entry.sub;
+                font-size: 12.5px;
+                color: Theme.ink-3;
+                overflow: elide;
+            }
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: Theme.radius-md;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+component SkipLine inherits Rectangle {
+    in property <AgendaLine> entry;
+
+    height: 40px;
+
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 6px;
+        spacing: 12px;
+
+        VerticalLayout {
+            alignment: center;
+            width: 18px;
+
+            Rectangle {
+                height: 1px;
+                background: Theme.line;
+            }
+        }
+
+        Text {
+            text: root.entry.label;
+            font-size: 12.5px;
+            color: Theme.ink-3;
+            vertical-alignment: center;
+        }
+
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+
+            Rectangle {
+                height: 1px;
+                background: Theme.line;
+            }
+        }
+    }
+}
+
+export component AgendaView inherits Rectangle {
+    in property <[AgendaLine]> rows;
+    callback open-event(int, length, length, length);
+    callback edit-event(int);
+    callback delete-event(int);
+    callback open-day(int);
+    callback new-event-on(int);
+
+    // Zu einer Stelle blättern (aus main.rs, z. B. heute)
+    public function scroll-to(y: length) {
+        list.content-y = -Math.max(0px, Math.min(y, column.preferred-height - list.height));
+    }
+
+    background: Theme.canvas;
+
+    // Spalte wie Calino höchstens 860 px breit, mittig
+    Rectangle {
+        x: (root.width - self.width) / 2;
+        width: Math.min(860px, root.width - 24px);
+        height: root.height;
+
+        list := Flickable {
+            content-height: column.preferred-height;
+
+            column := VerticalLayout {
+                width: list.width;
+                padding-left: 6px;
+                padding-right: 6px;
+                padding-bottom: 24px;
+
+                for line in root.rows: VerticalLayout {
+                    if line.kind == 0: DayHeader {
+                        entry: line;
+                        open-day => {
+                            root.open-day(line.day);
+                        }
+                        add => {
+                            root.new-event-on(line.day);
+                        }
+                    }
+                    if line.kind == 1: VerticalLayout {
+                        padding-bottom: 6px;
+
+                        AgendaItem {
+                            entry: line;
+                            open(x, y, w) => {
+                                root.open-event(line.id, x, y, w);
+                            }
+                            edit => {
+                                root.edit-event(line.id);
+                            }
+                            remove => {
+                                root.delete-event(line.id);
+                            }
+                        }
+                    }
+                    if line.kind == 2: SkipLine {
+                        entry: line;
+                    }
+                }
+            }
+        }
+    }
+}

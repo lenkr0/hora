@@ -1,0 +1,346 @@
+// Monatsansicht nach Calino (CalendarGrid.module.css): 6 Wochen à 7 Tage,
+// Termine als kompakte Chips, "+N weitere" bei Platzmangel.
+// Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
+
+import { Theme } from "theme.slint";
+
+export struct MonthCell {
+    number: string,
+    today: bool,
+    other-month: bool,
+    // Anzahl Termine an diesem Tag
+    count: int,
+    // Anzahl Journaleinträge an diesem Tag
+    journal: int,
+}
+
+export struct MonthChip {
+    id: int,
+    // Tag 0–41
+    cell: int,
+    // Zeile innerhalb des Tages
+    slot: int,
+    title: string,
+    // "09:00" bei Terminen mit Uhrzeit, sonst leer
+    time: string,
+    color: color,
+    editable: bool,
+    // Aufgabe: Kreis vor dem Titel
+    task: bool,
+}
+
+export component MonthView inherits Rectangle {
+    in property <[MonthCell]> cells;
+    in property <[MonthChip]> chips;
+    // KW-Nummer je Zeile
+    in property <[string]> week-labels;
+    in property <int> today-cell: -1;
+
+    callback open-event(int, length, length, length);
+    callback edit-event(int);
+    callback open-day(int);
+    callback new-event-on(int);
+    // Journaleinträge des Tages zeigen
+    callback open-journal(int);
+    // id, Verschiebung in Tagen
+    callback move-event(int, int);
+
+    property <length> head-h: 40px;
+    property <length> week-w: 46px;
+    property <length> cell-w: (root.width - 2px - week-w) / 7;
+    property <length> cell-h: (root.height - 2px - head-h) / 6;
+    // Chips à 18 px plus 3 px Abstand unter der Tageszahl (5 + 28 + 3 px)
+    property <int> capacity: Math.max(1, Math.floor((cell-h - 38px) / 21px));
+
+    public function focus-grid() {
+        grid.focus();
+    }
+
+    property <int> cursor: Math.max(0, root.today-cell);
+    property <int> drag-id: -1;
+    property <int> drop-cell: -1;
+
+    function cell-x(i: int) -> length {
+        return 1px + week-w + Math.mod(i, 7) * cell-w;
+    }
+    function cell-y(i: int) -> length {
+        return 1px + head-h + Math.floor(i / 7) * cell-h;
+    }
+    // Wie viele Chips ein Tag zeigt; bei Überlauf bleibt eine Zeile für "+N weitere"
+    function shown(count: int) -> int {
+        return count > capacity ? capacity - 1 : capacity;
+    }
+
+    background: Theme.panel;
+    border-radius: Theme.radius-lg;
+    border-width: 1px;
+    border-color: Theme.line;
+    clip: true;
+
+    // Wochentage
+    for name[i] in ["MO", "DI", "MI", "DO", "FR", "SA", "SO"]: Text {
+        x: 1px + week-w + i * cell-w;
+        y: 1px;
+        width: cell-w;
+        height: head-h;
+        text: name;
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.92px;
+        color: Theme.ink-3;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    Rectangle {
+        y: head-h;
+        height: 1px;
+        background: Theme.line;
+    }
+
+    // Kalenderwochen
+    for label[row] in root.week-labels: Text {
+        x: 1px;
+        y: 1px + head-h + row * cell-h + 10px;
+        width: week-w;
+        text: label;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: Theme.ink-3;
+        horizontal-alignment: center;
+    }
+
+    Rectangle {
+        x: week-w;
+        y: head-h;
+        width: 1px;
+        background: Theme.line-2;
+    }
+
+    for cell[i] in root.cells: Rectangle {
+        x: root.cell-x(i);
+        y: root.cell-y(i);
+        width: cell-w;
+        height: cell-h;
+        background: i == root.drop-cell ? Theme.accent.with-alpha(0.10)
+            : cell.today ? Theme.selected-bg
+            : cell.other-month ? Theme.ink-raw.with-alpha(0.02)
+            : day-ta.has-hover ? Theme.ink-raw.with-alpha(0.02) : transparent;
+        animate background { duration: Theme.dur-fast; }
+
+        // Rahmen rechts und unten (line-2)
+        if Math.mod(i, 7) < 6: Rectangle {
+            x: parent.width - 1px;
+            width: 1px;
+            background: Theme.line-2;
+        }
+        Rectangle {
+            y: parent.height - 1px;
+            height: 1px;
+            background: Theme.line-2;
+        }
+
+        day-ta := TouchArea {
+            clicked => {
+                root.cursor = i;
+                grid.focus();
+            }
+            double-clicked => {
+                root.new-event-on(i);
+            }
+        }
+
+        // Tageszahl im Kreis; Klick öffnet den Tag
+        Rectangle {
+            x: 5px;
+            y: 5px;
+            width: 28px;
+            height: 28px;
+            border-radius: 14px;
+            background: cell.today ? (number-ta.has-hover ? Theme.accent-hover : Theme.accent-strong)
+                : number-ta.has-hover ? Theme.hover-bg : transparent;
+            accessible-role: button;
+            accessible-label: "Tag " + cell.number + " öffnen";
+
+            Text {
+                text: cell.number;
+                font-size: 14px;
+                font-weight: cell.today ? 600 : 500;
+                color: cell.today ? Theme.accent-contrast : cell.other-month ? Theme.ink-3 : Theme.ink-2;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            number-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-day(i);
+                }
+            }
+        }
+
+        // Journal: Buch-Symbol oben rechts (Calino: "Hat Journaleinträge für …")
+        if cell.journal > 0: Rectangle {
+            x: parent.width - 30px;
+            y: 7px;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: journal-ta.has-hover ? Theme.hover-bg : transparent;
+            accessible-role: button;
+            accessible-label: "Journaleinträge für den " + cell.number + ". anzeigen";
+            accessible-action-default => {
+                root.open-journal(i);
+            }
+
+            Image {
+                source: @image-url("icons/book.svg");
+                width: 13px;
+                height: 13px;
+                colorize: journal-ta.has-hover ? Theme.accent-strong : Theme.accent.with-alpha(0.8);
+            }
+
+            journal-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-journal(i);
+                }
+            }
+        }
+
+        if cell.count > root.capacity: Text {
+            x: 5px + 8px;
+            y: 5px + 28px + 3px + (root.capacity - 1) * 21px;
+            height: 18px;
+            text: "+\{cell.count - root.capacity + 1} weitere";
+            font-size: 11.5px;
+            color: more-ta.has-hover ? Theme.ink : Theme.ink-2;
+            vertical-alignment: center;
+
+            more-ta := TouchArea {
+                mouse-cursor: MouseCursor.pointer;
+                clicked => {
+                    root.open-day(i);
+                }
+            }
+        }
+
+        if grid.has-focus && i == root.cursor: Rectangle {
+            border-width: 2px;
+            border-color: Theme.accent;
+        }
+    }
+
+    for chip in root.chips: Rectangle {
+        x: root.cell-x(chip.cell) + 5px;
+        y: root.cell-y(chip.cell) + 5px + 28px + 3px + chip.slot * 21px;
+        width: cell-w - 10px;
+        height: 18px;
+        visible: chip.slot < root.shown(root.cells[chip.cell].count);
+        border-radius: Theme.radius-event;
+        background: chip.color.mix(Theme.canvas, chip-ta.has-hover ? Theme.event-bg-mix-hover : Theme.event-bg-mix);
+        opacity: root.drag-id == chip.id ? 0.45 : 1;
+        accessible-role: button;
+        accessible-label: (chip.task ? "Aufgabe " : "") + (chip.time == "" ? chip.title : chip.time + " " + chip.title);
+
+        HorizontalLayout {
+            padding-left: chip.task ? 6px : 8px;
+            padding-right: 4px;
+            spacing: 4px;
+
+            if chip.task: VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 9px;
+                    height: 9px;
+                    border-radius: 4.5px;
+                    border-width: 1.5px;
+                    border-color: chip.color;
+                }
+            }
+
+            if chip.time != "": Text {
+                text: chip.time;
+                font-size: 11px;
+                color: Theme.event-ink-2;
+                vertical-alignment: center;
+                horizontal-stretch: 0;
+            }
+
+            Text {
+                text: chip.title;
+                font-size: 12px;
+                font-weight: 500;
+                color: Theme.ink;
+                overflow: elide;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+
+        chip-ta := TouchArea {
+            mouse-cursor: MouseCursor.pointer;
+            property <bool> dragged;
+
+            pointer-event(e) => {
+                if e.kind == PointerEventKind.down {
+                    self.dragged = false;
+                } else if e.kind == PointerEventKind.up && root.drag-id == chip.id {
+                    if root.drop-cell >= 0 && root.drop-cell != chip.cell {
+                        root.move-event(chip.id, root.drop-cell - chip.cell);
+                    }
+                    root.drag-id = -1;
+                    root.drop-cell = -1;
+                }
+            }
+            moved => {
+                if self.pressed && chip.editable && (self.dragged || Math.abs(self.mouse-x - self.pressed-x) > 4px || Math.abs(self.mouse-y - self.pressed-y) > 4px) {
+                    self.dragged = true;
+                    root.drag-id = chip.id;
+                    // Tag unter dem Zeiger
+                    root.drop-cell = Math.clamp(Math.floor((self.absolute-position.x + self.mouse-x - root.absolute-position.x - 1px - week-w) / cell-w), 0, 6)
+                        + 7 * Math.clamp(Math.floor((self.absolute-position.y + self.mouse-y - root.absolute-position.y - 1px - head-h) / cell-h), 0, 5);
+                }
+            }
+            clicked => {
+                if !self.dragged {
+                    root.open-event(chip.id, parent.absolute-position.x, parent.absolute-position.y, parent.width);
+                }
+            }
+            double-clicked => {
+                root.edit-event(chip.id);
+            }
+        }
+    }
+
+    grid := FocusScope {
+        width: 0px;
+        height: 0px;
+        accessible-role: table;
+        accessible-label: "Monatsraster, Pfeiltasten wählen den Tag, Eingabe öffnet ihn";
+        key-pressed(e) => {
+            if e.text == Key.LeftArrow && root.cursor > 0 {
+                root.cursor -= 1;
+                return accept;
+            }
+            if e.text == Key.RightArrow && root.cursor < 41 {
+                root.cursor += 1;
+                return accept;
+            }
+            if e.text == Key.UpArrow && root.cursor >= 7 {
+                root.cursor -= 7;
+                return accept;
+            }
+            if e.text == Key.DownArrow && root.cursor < 35 {
+                root.cursor += 7;
+                return accept;
+            }
+            if e.text == Key.Return || e.text == " " {
+                root.open-day(root.cursor);
+                return accept;
+            }
+            return reject;
+        }
+    }
+}
