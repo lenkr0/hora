@@ -577,7 +577,8 @@ fn preview(args: &Args, path: &Path, page: i32, mode: i32) -> Result<(), String>
     window.set_page(page);
     window.set_progress(0.62);
     window.set_status(tr!("Copying {}…", "hora.exe").into());
-    window.set_install_dir(install::default_dir().display().to_string().into());
+    // Beispielpfad statt des echten (Bilder sollen keinen Benutzernamen zeigen)
+    window.set_install_dir(r"C:\Users\you\AppData\Local\Programs\Hora".into());
     window.set_old_version("1.0.0".into());
     window.set_error(
         tr!("Hora is still running. Please quit it (tray icon → Quit) and try again.").into(),
