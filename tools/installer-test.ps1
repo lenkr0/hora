@@ -13,8 +13,17 @@ param([Parameter(Mandatory)] [string] $Setup)
 
 $ErrorActionPreference = 'Stop'
 $Setup = (Resolve-Path $Setup).Path
-$dir = Join-Path $env:TEMP "hora install test $PID"
-$data = Join-Path $env:TEMP "hora-install-data-$PID"
+# Auf GitHub-Runnern ist TEMP ein 8.3-Kurzname (C:\Users\RUNNER~1\...).
+# Verknüpfungen speichert Windows mit langen Namen; damit der Vergleich mit
+# dem Ziel passt, rechnen wir von Anfang an mit dem langen Pfad.
+Add-Type -Namespace HoraTest -Name Path -MemberDefinition @'
+[DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+public static extern uint GetLongPathName(string shortPath, System.Text.StringBuilder longPath, uint size);
+'@
+$buffer = New-Object System.Text.StringBuilder 32768
+$temp = if ([HoraTest.Path]::GetLongPathName($env:TEMP, $buffer, $buffer.Capacity) -gt 0) { $buffer.ToString() } else { $env:TEMP }
+$dir = Join-Path $temp "hora install test $PID"
+$data = Join-Path $temp "hora-install-data-$PID"
 $uninstKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Hora'
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Hora.lnk'
