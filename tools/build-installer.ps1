@@ -1,7 +1,8 @@
 ﻿<#
 .SYNOPSIS
-    Baut hora.exe (Release) und daraus den Installer Hora-Setup-<Version>.exe
-    mit NSIS 3 (makensis im PATH oder unter Programme\NSIS).
+    Baut hora.exe und das Setup-Programm (Release) und packt daraus den
+    Installer Hora-Setup-<Version>.exe. Kein NSIS mehr nötig: das Setup ist
+    crates\setup (Rust + Slint), die Programmdateien hängen zstd-komprimiert an.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
@@ -13,24 +14,30 @@ $root = Split-Path -Parent $PSScriptRoot
 $target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $root 'target' }
 if (-not $OutDir) { $OutDir = Join-Path $target 'installer' }
 
-$makensis = (Get-Command makensis -ErrorAction SilentlyContinue).Source
-if (-not $makensis) {
-    $makensis = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe") |
-        Where-Object { Test-Path $_ } | Select-Object -First 1
-}
-if (-not $makensis) { throw 'NSIS nicht gefunden (winget install NSIS.NSIS)' }
-
 $version = [regex]::Match((Get-Content (Join-Path $root 'Cargo.toml') -Raw), '(?m)^version = "([^"]+)"').Groups[1].Value
 Push-Location $root
 try {
-    cargo build --release -p hora-app
-    if ($LASTEXITCODE -ne 0) { throw 'cargo build fehlgeschlagen' }
+    cargo build --release -p hora-app --locked
+    if ($LASTEXITCODE -ne 0) { throw 'cargo build (hora-app) fehlgeschlagen' }
+    # Eigenes Profil: auf Größe optimiert (Cargo.toml, [profile.setup])
+    cargo build --profile setup -p hora-setup --locked
+    if ($LASTEXITCODE -ne 0) { throw 'cargo build (hora-setup) fehlgeschlagen' }
 }
 finally { Pop-Location }
 
+# Was installiert wird: Programm, Lizenz, Hinweise, Lizenztexte
+$stage = Join-Path $target 'setup-payload'
+Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force "$stage\THIRD_PARTY_LICENSES" | Out-Null
+Copy-Item (Join-Path $target 'release\hora.exe') $stage
+Copy-Item (Join-Path $root 'LICENSE'), (Join-Path $root 'NOTICE.md') $stage
+Copy-Item (Join-Path $root 'THIRD_PARTY_LICENSES\*.txt') "$stage\THIRD_PARTY_LICENSES"
+
 New-Item -ItemType Directory -Force $OutDir | Out-Null
-$exe = Join-Path $target 'release\hora.exe'
+$OutDir = (Resolve-Path $OutDir).Path
 $out = Join-Path $OutDir "Hora-Setup-$version.exe"
-& $makensis /V2 "/DVERSION=$version" "/DEXE=$exe" "/DOUT=$out" (Join-Path $root 'installer\hora.nsi')
-if ($LASTEXITCODE -ne 0) { throw 'makensis fehlgeschlagen' }
+$setup = Join-Path $target 'setup\hora-setup.exe'
+$summary = & $setup --pack $stage $out | Out-String
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out)) { throw "Packen fehlgeschlagen: $summary" }
+Write-Host $summary.Trim()
 Write-Host ("Installer: {0} ({1:N1} MB)" -f $out, ((Get-Item $out).Length / 1MB))

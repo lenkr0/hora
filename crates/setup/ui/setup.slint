@@ -1,0 +1,902 @@
+// Hora Setup: Installieren, Aktualisieren und Entfernen. Farben, Schrift
+// und Bedienelemente kommen aus der App (crates/app/ui), damit beides
+// zusammenpasst.
+
+import { Theme } from "../../app/ui/theme.slint";
+import { Button, FocusRing } from "../../app/ui/controls.slint";
+import { Checkbox } from "../../app/ui/inputs.slint";
+
+export { Theme }
+
+export struct Language {
+    code: string,
+    name: string,
+    // Kürzel für die Kachel, z. B. "EN"
+    tag: string,
+}
+
+export struct CalDay {
+    label: string,
+    today: bool,
+    outside: bool,
+    // Farbiger Punkt für einen Beispieltermin; transparent = keiner
+    dot: color,
+}
+
+// Schalter wie in den Einstellungen der App
+component Toggle inherits Rectangle {
+    in property <string> label;
+    in-out property <bool> checked;
+    callback toggled();
+
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    forward-focus: fs;
+    background: root.checked ? Theme.accent : Theme.ink-4;
+    animate background { duration: Theme.dur-fast; }
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => {
+        root.flip();
+    }
+
+    function flip() {
+        root.checked = !root.checked;
+        root.toggled();
+    }
+
+    Rectangle {
+        x: root.checked ? root.width - self.width - 3px : 3px;
+        y: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: #ffffff;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #00000033;
+        animate x { duration: Theme.dur-fast; easing: ease-out; }
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " || e.text == Key.Return {
+                root.flip();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.flip();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: 11px;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Zeile mit Titel, Beschreibung und Schalter (wie die Einstellungen)
+component OptionRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    in-out property <bool> checked;
+
+    spacing: 20px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 3px;
+        horizontal-stretch: 1;
+
+        Text {
+            text: root.title;
+            font-size: 14px;
+            font-weight: 500;
+            color: Theme.ink;
+        }
+
+        Text {
+            text: root.description;
+            font-size: 12px;
+            color: Theme.ink-3;
+            wrap: word-wrap;
+        }
+    }
+
+    VerticalLayout {
+        alignment: center;
+
+        Toggle {
+            label: root.title;
+            checked <=> root.checked;
+        }
+    }
+}
+
+// Kachel für eine Sprache
+component LanguageTile inherits Rectangle {
+    in property <string> name;
+    in property <string> code;
+    in property <bool> selected;
+    callback chosen();
+
+    height: 42px;
+    border-radius: Theme.radius-md;
+    border-width: root.selected ? 1.5px : 1px;
+    border-color: root.selected ? Theme.accent : ta.has-hover ? Theme.ink-4 : Theme.line;
+    background: root.selected ? Theme.accent-soft : ta.has-hover ? Theme.hover-bg : Theme.panel;
+    animate background, border-color { duration: Theme.dur-fast; }
+    accessible-role: button;
+    accessible-label: root.name;
+    accessible-checkable: true;
+    accessible-checked: root.selected;
+    accessible-action-default => {
+        root.chosen();
+    }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 8px;
+
+        Text {
+            text: root.name;
+            font-size: 14px;
+            font-weight: root.selected ? 600 : 400;
+            color: Theme.ink;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+
+        VerticalLayout {
+            alignment: center;
+
+            if root.selected: Image {
+                source: @image-url("../../app/ui/icons/check.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.accent;
+            }
+            if !root.selected: Text {
+                text: root.code;
+                font-size: 10.5px;
+                font-weight: 600;
+                letter-spacing: 0.8px;
+                color: Theme.ink-4;
+            }
+        }
+    }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " || e.text == Key.Return {
+                root.chosen();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.chosen();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: Theme.radius-md;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Mini-Kalender wie in der Seitenleiste der App; die Tage blenden
+// nacheinander ein
+component MiniCalendar inherits Rectangle {
+    in property <string> month;
+    in property <[string]> letters;
+    in property <[CalDay]> days;
+    property <int> shown;
+    property <length> cell: 30px;
+    property <length> top: 58px;
+
+    width: 7 * root.cell + 32px;
+    height: root.top + 6 * 28px + 14px;
+    border-radius: Theme.radius-lg;
+    background: Theme.panel;
+    border-width: 1px;
+    border-color: Theme.line-2;
+    drop-shadow-offset-y: 8px;
+    drop-shadow-blur: 24px;
+    drop-shadow-color: Theme.dark ? #00000066 : #5a43281f;
+
+    Timer {
+        interval: 14ms;
+        running: root.shown < root.days.length;
+        triggered => {
+            root.shown += 1;
+        }
+    }
+
+    Text {
+        x: 16px;
+        y: 14px;
+        text: root.month;
+        font-family: Theme.serif-medium;
+        font-size: 18px;
+        color: Theme.ink;
+    }
+
+    for letter[i] in root.letters: Text {
+        x: 16px + i * root.cell;
+        y: 40px;
+        width: root.cell;
+        text: letter;
+        font-size: 10px;
+        font-weight: 600;
+        color: Theme.ink-3;
+        horizontal-alignment: center;
+    }
+
+    for day[i] in root.days: Rectangle {
+        x: 16px + Math.mod(i, 7) * root.cell;
+        y: root.top + Math.floor(i / 7) * 28px;
+        width: root.cell;
+        height: 28px;
+        opacity: i < root.shown ? 1 : 0;
+        animate opacity { duration: 260ms; easing: ease-out; }
+
+        if day.today: Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: Theme.accent;
+            // Leichtes Pulsieren des heutigen Tags
+            drop-shadow-blur: 6px + 4px * (1 + Math.sin(animation-tick() / 900ms * 1rad)) ;
+            drop-shadow-color: Theme.accent.with-alpha(0.45);
+        }
+
+        Text {
+            text: day.label;
+            font-size: 12px;
+            font-weight: day.today ? 600 : 400;
+            color: day.today ? Theme.accent-contrast : day.outside ? Theme.ink-4 : Theme.ink;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        if day.dot != transparent && !day.today: Rectangle {
+            y: parent.height - 5px;
+            width: 4px;
+            height: 4px;
+            border-radius: 2px;
+            background: day.dot;
+        }
+    }
+}
+
+// Seite mit sanftem Einblenden
+component Page inherits Rectangle {
+    in property <length> gap: 10px;
+    in property <LayoutAlignment> align: stretch;
+    property <bool> shown;
+    init => {
+        root.shown = true;
+    }
+    opacity: root.shown ? 1 : 0;
+    animate opacity { duration: 240ms; easing: ease-out; }
+
+    VerticalLayout {
+        spacing: root.gap;
+        alignment: root.align;
+
+        @children
+    }
+}
+
+component Title inherits Text {
+    font-family: Theme.serif-medium;
+    font-size: 30px;
+    color: Theme.ink;
+    wrap: word-wrap;
+}
+
+component Lead inherits Text {
+    font-size: 14px;
+    color: Theme.ink-2;
+    wrap: word-wrap;
+}
+
+component GroupLabel inherits Text {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.9px;
+    color: Theme.ink-3;
+}
+
+// Fortschrittsbalken mit wanderndem Glanz
+component ProgressBar inherits Rectangle {
+    in property <float> value;
+
+    height: 8px;
+    border-radius: 4px;
+    background: Theme.nav-track;
+    clip: true;
+
+    fill := Rectangle {
+        x: 0;
+        width: root.width * Math.clamp(root.value, 0, 1);
+        height: root.height;
+        border-radius: 4px;
+        background: Theme.accent;
+        animate width { duration: 320ms; easing: ease-out; }
+
+        Rectangle {
+            width: 90px;
+            height: parent.height;
+            x: Math.mod(animation-tick() / 1ms, 1400) / 1400 * (fill.width + 180px) - 90px;
+            background: @linear-gradient(90deg, #ffffff00 0%, #ffffff59 50%, #ffffff00 100%);
+        }
+    }
+}
+
+// Großer Kreis mit Symbol, springt beim Erscheinen auf
+component Badge inherits Rectangle {
+    in property <image> icon;
+    in property <color> tint: Theme.accent;
+    in property <color> fill: Theme.accent-soft;
+    property <bool> popped;
+    init => {
+        root.popped = true;
+    }
+
+    width: 76px;
+    height: 76px;
+
+    Rectangle {
+        width: root.popped ? 76px : 20px;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: root.fill;
+        animate width { duration: 520ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        Image {
+            source: root.icon;
+            width: root.popped ? 34px : 0px;
+            height: self.width;
+            colorize: root.tint;
+            animate width { duration: 420ms; delay: 120ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+        }
+    }
+}
+
+export component SetupWindow inherits Window {
+    // 0 = installieren, 1 = aktualisieren, 2 = entfernen
+    in property <int> mode;
+    // 0 Sprache bzw. Entfernen bestätigen, 1 Optionen, 2 Fortschritt, 3 fertig, 4 Fehler
+    in-out property <int> page;
+    in property <[Language]> languages;
+    in property <string> language;
+    in property <string> version;
+    in property <string> old-version;
+    in property <string> install-dir;
+    in property <bool> can-change-dir: true;
+    in property <string> size-text;
+    in-out property <bool> autostart: true;
+    in-out property <bool> desktop;
+    in-out property <bool> launch: true;
+    in-out property <bool> delete-data;
+    in property <float> progress;
+    in property <string> status;
+    in property <string> error;
+    in property <string> month;
+    in property <[string]> letters;
+    in property <[CalDay]> days;
+    property <bool> busy: root.page == 2;
+    property <bool> removing: root.mode == 2;
+
+    callback choose-language(string);
+    callback browse();
+    callback start();
+    callback finish();
+    callback cancel();
+    callback retry();
+
+    title: root.removing ? @tr("Remove Hora") : @tr("Hora Setup");
+    icon: @image-url("../../app/assets/hora.png");
+    width: 820px;
+    height: 548px;
+    background: Theme.canvas;
+    default-font-family: Theme.sans;
+
+    function primary() {
+        if root.page == 0 && !root.removing {
+            root.page = 1;
+        } else if (root.page == 1) || (root.page == 0 && root.removing) {
+            root.start();
+        } else if root.page == 3 {
+            root.finish();
+        } else if root.page == 4 {
+            root.retry();
+        }
+    }
+
+    function secondary() {
+        if root.page == 1 {
+            root.page = 0;
+        } else if root.page == 0 || root.page == 4 {
+            root.cancel();
+        }
+    }
+
+    keys := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Escape && !root.busy && root.page != 3 {
+                root.cancel();
+                return accept;
+            }
+            if e.text == Key.Return && !e.modifiers.shift && !root.busy {
+                root.primary();
+                return accept;
+            }
+            return reject;
+        }
+
+        HorizontalLayout {
+            // Linke Seite: Marke und Mini-Kalender
+            Rectangle {
+                width: 300px;
+                background: Theme.side;
+
+                Rectangle {
+                    x: parent.width - 1px;
+                    width: 1px;
+                    background: Theme.line-2;
+                }
+
+                VerticalLayout {
+                    padding: 32px;
+                    padding-top: 30px;
+                    spacing: 0px;
+
+                    HorizontalLayout {
+                        spacing: 10px;
+                        alignment: LayoutAlignment.start;
+
+                        Image {
+                            source: @image-url("../../app/assets/hora.png");
+                            width: 30px;
+                            height: 30px;
+                        }
+
+                        Text {
+                            text: "Hora";
+                            font-family: Theme.serif-medium;
+                            font-size: 26px;
+                            color: Theme.ink;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 10px;
+                    }
+
+                    Text {
+                        text: @tr("Desktop calendar for Windows");
+                        font-size: 13px;
+                        color: Theme.ink-3;
+                        wrap: word-wrap;
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        MiniCalendar {
+                            month: root.month;
+                            letters: root.letters;
+                            days: root.days;
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+
+                    Text {
+                        text: @tr("Version {}", root.version);
+                        font-size: 12px;
+                        color: Theme.ink-3;
+                    }
+                }
+            }
+
+            // Rechte Seite: Schritte
+            VerticalLayout {
+                padding-left: 44px;
+                padding-right: 40px;
+                padding-top: 40px;
+                padding-bottom: 26px;
+                spacing: 0px;
+                horizontal-stretch: 1;
+
+                // 1. Sprache (Installieren, Aktualisieren)
+                if root.page == 0 && !root.removing: Page {
+                    vertical-stretch: 1;
+
+                    Title {
+                        text: root.mode == 1 ? @tr("Update Hora") : @tr("Welcome to Hora");
+                    }
+
+                    Lead {
+                        text: root.mode == 1
+                            ? @tr("Version {} is installed. This installs version {} and keeps your calendars, settings and data.", root.old-version, root.version)
+                            : @tr("A calm calendar for your CalDAV events, tasks and journal. Hora installs for your account only and doesn't need administrator rights.");
+                    }
+
+                    Rectangle {
+                        height: 14px;
+                    }
+
+                    GroupLabel {
+                        text: @tr("LANGUAGE");
+                    }
+
+                    // Zwei Spalten
+                    VerticalLayout {
+                        spacing: 8px;
+
+                        for row in [0, 1, 2, 3]: HorizontalLayout {
+                            spacing: 8px;
+
+                            for col in [0, 1]: Rectangle {
+                                horizontal-stretch: 1;
+                                height: 42px;
+
+                                if row * 2 + col < root.languages.length: LanguageTile {
+                                    width: parent.width;
+                                    name: root.languages[row * 2 + col].name;
+                                    code: root.languages[row * 2 + col].tag;
+                                    selected: root.languages[row * 2 + col].code == root.language;
+                                    chosen => {
+                                        root.choose-language(root.languages[row * 2 + col].code);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
+
+                // 1. Entfernen bestätigen
+                if root.page == 0 && root.removing: Page {
+                    vertical-stretch: 1;
+
+                    Title {
+                        text: @tr("Remove Hora?");
+                    }
+
+                    Lead {
+                        text: @tr("Hora {} will be removed from this computer: the program, its Start menu entry and its settings in Windows.", root.version);
+                    }
+
+                    Rectangle {
+                        height: 18px;
+                    }
+
+                    Rectangle {
+                        border-radius: Theme.radius-md;
+                        border-width: 1px;
+                        border-color: Theme.line;
+                        background: Theme.panel;
+
+                        VerticalLayout {
+                            padding: 16px;
+                            spacing: 8px;
+
+                            Checkbox {
+                                text: @tr("Also delete my local data");
+                                checked <=> root.delete-data;
+                            }
+
+                            HorizontalLayout {
+                                padding-left: 24px;
+
+                                Text {
+                                    text: @tr("Cached events, settings and the log in {}. Your events on the CalDAV server stay untouched.", "%LOCALAPPDATA%\\Hora");
+                                    font-size: 12px;
+                                    color: Theme.ink-3;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
+
+                // 2. Optionen
+                if root.page == 1: Page {
+                    vertical-stretch: 1;
+
+                    Title {
+                        text: root.mode == 1 ? @tr("Ready to update") : @tr("Ready to install");
+                    }
+
+                    Lead {
+                        text: root.size-text;
+                    }
+
+                    Rectangle {
+                        height: 12px;
+                    }
+
+                    GroupLabel {
+                        text: @tr("INSTALL LOCATION");
+                    }
+
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        Rectangle {
+                            height: 36px;
+                            horizontal-stretch: 1;
+                            border-radius: Theme.radius-sm;
+                            border-width: 1px;
+                            border-color: Theme.line;
+                            background: Theme.input-bg;
+
+                            Text {
+                                x: 12px;
+                                width: parent.width - 24px;
+                                text: root.install-dir;
+                                font-size: 13px;
+                                color: Theme.ink-2;
+                                vertical-alignment: center;
+                                overflow: elide;
+                            }
+                        }
+
+                        if root.can-change-dir: Button {
+                            text: @tr("Change…");
+                            clicked => {
+                                root.browse();
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 6px;
+                    }
+
+                    VerticalLayout {
+                        spacing: 0px;
+
+                        OptionRow {
+                            title: @tr("Start with Windows");
+                            description: @tr("Hora starts quietly in the notification area when you sign in");
+                            checked <=> root.autostart;
+                        }
+
+                        Rectangle {
+                            height: 1px;
+                            background: Theme.line-2;
+                        }
+
+                        OptionRow {
+                            title: @tr("Desktop shortcut");
+                            description: @tr("A shortcut to Hora on your desktop");
+                            checked <=> root.desktop;
+                        }
+                    }
+
+                    Text {
+                        text: @tr("Hora is also added to the Start menu and to Settings → Apps.");
+                        font-size: 12px;
+                        color: Theme.ink-3;
+                        wrap: word-wrap;
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+                }
+
+                // 3. Fortschritt
+                if root.page == 2: Page {
+                    align: center;
+                    gap: 16px;
+                    vertical-stretch: 1;
+
+                    Title {
+                        text: root.removing ? @tr("Removing Hora…") : root.mode == 1 ? @tr("Updating Hora…") : @tr("Installing Hora…");
+                    }
+
+                    Lead {
+                        text: root.status;
+                        wrap: no-wrap;
+                        overflow: elide;
+                    }
+
+                    ProgressBar {
+                        value: root.progress;
+                    }
+
+                    Text {
+                        text: "\{Math.round(root.progress * 100)} %";
+                        font-size: 12px;
+                        color: Theme.ink-3;
+                        horizontal-alignment: right;
+                    }
+                }
+
+                // 4. Fertig
+                if root.page == 3: Page {
+                    align: center;
+                    gap: 14px;
+                    vertical-stretch: 1;
+
+                    HorizontalLayout {
+                        alignment: LayoutAlignment.start;
+
+                        Badge {
+                            icon: @image-url("../../app/ui/icons/check.svg");
+                        }
+                    }
+
+                    Title {
+                        text: root.removing ? @tr("Hora was removed") : root.mode == 1 ? @tr("Hora is up to date") : @tr("Hora is ready");
+                    }
+
+                    Lead {
+                        text: root.removing
+                            ? @tr("Thanks for using Hora. Your events on the CalDAV server are untouched.")
+                            : @tr("You'll find Hora in the Start menu. Add your CalDAV account in the sidebar to see your own calendars.");
+                    }
+
+                    if !root.removing: Rectangle {
+                        height: 6px;
+                    }
+
+                    if !root.removing: Checkbox {
+                        text: @tr("Launch Hora now");
+                        checked <=> root.launch;
+                    }
+                }
+
+                // 5. Fehler
+                if root.page == 4: Page {
+                    align: center;
+                    gap: 14px;
+                    vertical-stretch: 1;
+
+                    HorizontalLayout {
+                        alignment: LayoutAlignment.start;
+
+                        Badge {
+                            icon: @image-url("../../app/ui/icons/x.svg");
+                            tint: Theme.error;
+                            fill: Theme.error-bg;
+                        }
+                    }
+
+                    Title {
+                        text: @tr("Something went wrong");
+                    }
+
+                    Lead {
+                        text: root.error;
+                    }
+                }
+
+                // Leiste unten: Schritte und Knöpfe
+                HorizontalLayout {
+                    spacing: 10px;
+                    height: 36px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+
+                        if !root.removing && root.page <= 2: HorizontalLayout {
+                        alignment: LayoutAlignment.start;
+                        spacing: 6px;
+
+                        for step in [0, 1, 2]: VerticalLayout {
+                            alignment: center;
+
+                            Rectangle {
+                                width: step == root.page ? 18px : 6px;
+                                height: 6px;
+                                border-radius: 3px;
+                                background: step <= root.page ? Theme.accent : Theme.ink-4;
+                                animate width, background { duration: Theme.dur-base; easing: ease-out; }
+                            }
+                        }
+                        }
+                    }
+
+                    if (root.page == 0 || root.page == 4): Button {
+                        text: @tr("Cancel");
+                        clicked => {
+                            root.cancel();
+                        }
+                    }
+
+                    if root.page == 1: Button {
+                        text: @tr("Back");
+                        clicked => {
+                            root.page = 0;
+                        }
+                    }
+
+                    if root.page == 0 && !root.removing: Button {
+                        text: @tr("Next");
+                        primary: true;
+                        clicked => {
+                            root.primary();
+                        }
+                    }
+
+                    if root.page == 0 && root.removing: Button {
+                        text: @tr("Remove");
+                        danger: true;
+                        clicked => {
+                            root.primary();
+                        }
+                    }
+
+                    if root.page == 1: Button {
+                        text: root.mode == 1 ? @tr("Update") : @tr("Install");
+                        primary: true;
+                        clicked => {
+                            root.primary();
+                        }
+                    }
+
+                    if root.page == 3: Button {
+                        text: root.removing ? @tr("Close") : @tr("Done");
+                        primary: true;
+                        clicked => {
+                            root.primary();
+                        }
+                    }
+
+                    if root.page == 4: Button {
+                        text: @tr("Try again");
+                        primary: true;
+                        clicked => {
+                            root.primary();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    init => {
+        keys.focus();
+    }
+}

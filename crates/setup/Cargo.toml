@@ -1,0 +1,55 @@
+[package]
+name = "hora-setup"
+description = "Installer und Deinstallation für Hora, mit eigener Oberfläche im Stil der App"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "hora-setup"
+path = "src/main.rs"
+
+[features]
+default = []
+# Seiten als Bild speichern (--snapshot), für Doku und Prüfung
+devtools = ["dep:png"]
+
+[dependencies]
+hora-i18n.workspace = true
+hora-platform.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+raw-window-handle.workspace = true
+zstd.workspace = true
+png = { workspace = true, optional = true }
+slint = { workspace = true, features = [
+    "std",
+    "compat-1-2",
+    "backend-winit",
+    "renderer-software",
+    "accessibility",
+    "raw-window-handle-06",
+] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { workspace = true, features = [
+    "Win32_System_Com",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+] }
+windows-sys = { workspace = true, features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[build-dependencies]
+slint-build.workspace = true
+embed-resource.workspace = true

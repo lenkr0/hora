@@ -1825,6 +1825,24 @@ fn run_palette_action(app: &AppWindow, state: &Rc<RefCell<State>>, action: palet
 
 /// Gewählte Sprache: HORA_LANGUAGE, sonst die Einstellung, sonst die Wahl im
 /// Installer, sonst Englisch. "system" steht für die Windows-Anzeigesprache.
+/// Eine neue Wahl im Installer gilt, auch wenn in Hora schon eine Sprache
+/// eingestellt war; danach zählt wieder die Einstellung in Hora.
+fn adopt_installer_language(store: &Store) {
+    let Some(chosen) = hora_platform::locale::installer_language() else {
+        return;
+    };
+    if store
+        .setting("installer_language")
+        .ok()
+        .flatten()
+        .as_deref()
+        != Some(chosen.as_str())
+    {
+        let _ = store.set_setting("installer_language", &chosen);
+        let _ = store.set_setting("language", &chosen);
+    }
+}
+
 fn language_choice(store: &Store) -> String {
     std::env::var("HORA_LANGUAGE")
         .ok()
@@ -2034,6 +2052,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     })?;
     // Zahlenformate (Windows-Region oder eigene Wahl), Sprache der App
     dates::set_region(region_for(&format_choice(&store)));
+    adopt_installer_language(&store);
     apply_language(&app, resolve_language(&language_choice(&store)));
     let accounts = store.accounts().unwrap_or_default();
     let calendars = store.calendars().unwrap_or_default();

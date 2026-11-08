@@ -22,6 +22,24 @@
   (gettext). Slint and the Rust code share these files; `tools/i18n.py`
   extracts new texts and checks that every language is complete (also in CI).
 
+### New installer
+
+- Hora Setup replaces the NSIS installer: its own window in Hora's look
+  (colors, Newsreader type, light and dark), with language selection on the
+  first page, install location, "Start with Windows" and desktop shortcut, an
+  animated progress bar and a finish page that can launch Hora.
+- The language chosen in the installer becomes Hora's language at the next
+  start, even if another language was set before.
+- Updating detects the existing installation, closes a running Hora, keeps
+  the location and the previous choices.
+- Removing uses the same window (Settings → Apps → Hora → Uninstall) and can
+  also delete the local data; the CalDAV server is never touched.
+- Still per user and without administrator rights; silent installs and
+  uninstalls work as before (`/S`, `/D=<folder>`, `_?=<folder>`), plus
+  `--lang=<code>`, `--no-autostart` and `--desktop-shortcut`.
+- Built with `tools\build-installer.ps1` (no NSIS needed): the setup program
+  carries the files zstd-compressed.
+
 ### Other changes
 
 - The view tabs size themselves to their labels, so longer translations fit.

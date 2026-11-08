@@ -40,11 +40,6 @@ jobs:
       - name: Tests
         run: cargo test --workspace --locked
 
-      - name: NSIS
-        run: |
-          $have = (Get-Command makensis -ErrorAction SilentlyContinue) -or (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")
-          if (-not $have) { choco install nsis -y --no-progress }
-
       - name: Installer bauen
         run: powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1 -OutDir "$env:GITHUB_WORKSPACE\dist"
 

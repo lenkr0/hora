@@ -38,6 +38,7 @@ jobs:
         run: |
           cargo clippy --workspace --all-targets --locked -- -D warnings
           cargo clippy -p hora-app --features devtools --all-targets --locked -- -D warnings
+          cargo clippy -p hora-setup --features devtools --all-targets --locked -- -D warnings
 
       - name: Unit-Tests
         run: cargo test --workspace --locked
