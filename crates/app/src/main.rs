@@ -1871,11 +1871,12 @@ const FORMATS: [(&str, &str, &str); 4] = [
     ("ymd", "yyyy-MM-dd", "HH:mm"),
 ];
 
+/// Gewähltes Format: HORA_FORMATS (Tests, Bilder), sonst die Einstellung
 fn format_choice(store: &Store) -> String {
-    store
-        .setting("formats")
+    std::env::var("HORA_FORMATS")
         .ok()
-        .flatten()
+        .filter(|v| !v.trim().is_empty())
+        .or_else(|| store.setting("formats").ok().flatten())
         .unwrap_or_else(|| "windows".into())
 }
 

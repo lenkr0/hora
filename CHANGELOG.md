@@ -45,6 +45,11 @@
 - The view tabs size themselves to their labels, so longer translations fit.
 - The tray menu updates when the language changes.
 - Version info of `hora.exe` is now in English ("Hora Calendar").
+- The hour label under the red "now" marker in the week view is hidden, so
+  the two no longer overlap.
+- `HORA_FORMATS` (like `HORA_LANGUAGE`) fixes the date and time format for
+  tests and screenshots.
+- README in English with screenshots, German version in `README.de.md`.
 
 ## [1.0.0] – 2026-11-06
 

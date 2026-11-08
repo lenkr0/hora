@@ -105,6 +105,8 @@ export component WeekView inherits Rectangle {
                 font-size: 11px;
                 font-weight: 500;
                 color: Theme.ink-3;
+                // Unter der Jetzt-Markierung nicht doppelt beschriften
+                opacity: root.today-index >= 0 && Math.abs(root.now-min - (h * 60 + 30)) < 14 ? 0 : 1;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
