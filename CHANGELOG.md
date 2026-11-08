@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.1.0] – 2026-11-08
 
 ### Languages
 
@@ -59,6 +59,9 @@
 
 ### Other changes
 
+- The database commits without waiting for the disk (`synchronous=NORMAL`,
+  recommended with WAL) and waits up to 15 s for a lock. Saving while a
+  large sync is running no longer risks "database is locked".
 - The view tabs size themselves to their labels, so longer translations fit.
 - The tray menu updates when the language changes.
 - Version info of `hora.exe` is now in English ("Hora Calendar").

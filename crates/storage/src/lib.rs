@@ -171,7 +171,14 @@ impl Store {
         // Gibt den neuen Modus zurück ("memory" bei In-Memory-Datenbanken)
         conn.pragma_update_and_check(None, "journal_mode", "WAL", |r| r.get::<_, String>(0))?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
-        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        // Mit WAL empfohlen: Commits warten nicht mehr auf die Platte, nur
+        // Checkpoints. Bei einem Absturz von Hora geht nichts verloren, nur
+        // bei Stromausfall eventuell die letzten Sekunden. Dadurch halten
+        // Oberfläche und Sync-Thread die Schreibsperre viel kürzer.
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
+        // Großzügig warten, falls der andere Thread gerade viel schreibt
+        // (z. B. erster Abgleich mit Tausenden Terminen)
+        conn.busy_timeout(std::time::Duration::from_secs(15))?;
         migrations::run(&conn)?;
         Ok(Store { conn })
     }
