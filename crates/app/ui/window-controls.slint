@@ -1,0 +1,157 @@
+// Eigene Titelleiste: Fensterknöpfe im Stil von Windows 11 und Ränder zum
+// Ziehen der Größe. Das Fenster selbst ist rahmenlos (no-frame); Verschieben
+// übernimmt Windows (drag_window), damit Andocken an den Rand funktioniert.
+
+import { Theme } from "theme.slint";
+
+// 0 = minimieren, 1 = maximieren, 2 = wiederherstellen, 3 = schließen
+component CaptionButton inherits Rectangle {
+    in property <int> kind;
+    in property <string> label;
+    callback clicked();
+
+    property <bool> danger: root.kind == 3;
+    property <color> glyph: root.danger && ta.has-hover ? #ffffff : Theme.ink-2;
+
+    width: 46px;
+    height: 32px;
+    background: ta.pressed
+        ? (root.danger ? #c42b1ccc : Theme.ink-raw.with-alpha(0.10))
+        : ta.has-hover ? (root.danger ? #c42b1c : Theme.ink-raw.with-alpha(0.06)) : transparent;
+    animate background { duration: Theme.dur-fast; }
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    if root.kind == 0: Rectangle {
+        width: 10px;
+        height: 1px;
+        background: root.glyph;
+    }
+
+    if root.kind == 1: Rectangle {
+        width: 10px;
+        height: 10px;
+        border-width: 1px;
+        border-radius: 1.5px;
+        border-color: root.glyph;
+    }
+
+    if root.kind == 2: Path {
+        width: 10px;
+        height: 10px;
+        viewbox-width: 10;
+        viewbox-height: 10;
+        commands: "M 2.5 2.5 L 2.5 0.5 L 9.5 0.5 L 9.5 7.5 L 7.5 7.5 M 0.5 2.5 L 7.5 2.5 L 7.5 9.5 L 0.5 9.5 Z";
+        stroke: root.glyph;
+        stroke-width: 1px;
+    }
+
+    if root.kind == 3: Path {
+        width: 10px;
+        height: 10px;
+        viewbox-width: 10;
+        viewbox-height: 10;
+        commands: "M 0 0 L 10 10 M 10 0 L 0 10";
+        stroke: root.glyph;
+        stroke-width: 1px;
+    }
+
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component WindowControls inherits HorizontalLayout {
+    in property <bool> maximized;
+    in property <bool> can-maximize: true;
+    callback minimize();
+    callback toggle-maximize();
+    callback close();
+
+    spacing: 0px;
+    alignment: end;
+
+    CaptionButton {
+        kind: 0;
+        label: @tr("Minimize");
+        clicked => {
+            root.minimize();
+        }
+    }
+
+    if root.can-maximize: CaptionButton {
+        kind: root.maximized ? 2 : 1;
+        label: root.maximized ? @tr("Restore") : @tr("Maximize");
+        clicked => {
+            root.toggle-maximize();
+        }
+    }
+
+    CaptionButton {
+        kind: 3;
+        label: @tr("Close");
+        clicked => {
+            root.close();
+        }
+    }
+}
+
+// Fläche zum Verschieben: Drücken zieht das Fenster, Doppelklick maximiert.
+// Den Doppelklick erkennen wir selbst, weil Windows nach dem ersten Drücken
+// die Maus übernimmt.
+export component DragArea inherits TouchArea {
+    callback drag();
+    callback double-click();
+    property <duration> last-down: -1s;
+
+    pointer-event(e) => {
+        if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+            if animation-tick() - root.last-down < 450ms {
+                root.last-down = -1s;
+                root.double-click();
+            } else {
+                root.last-down = animation-tick();
+                root.drag();
+            }
+        }
+    }
+}
+
+// Unsichtbare Ränder zum Größeziehen; Richtung wie winit ResizeDirection:
+// 0 Norden, 1 Süden, 2 Westen, 3 Osten, 4 NW, 5 NO, 6 SW, 7 SO
+export component ResizeEdges {
+    callback resize(int);
+    property <length> edge: 5px;
+    property <length> corner: 12px;
+
+    for zone[i] in [
+        { x: root.corner, y: 0px, w: root.width - 2 * root.corner, h: root.edge, dir: 0, cursor: 0 },
+        { x: root.corner, y: root.height - root.edge, w: root.width - 2 * root.corner, h: root.edge, dir: 1, cursor: 0 },
+        { x: 0px, y: root.corner, w: root.edge, h: root.height - 2 * root.corner, dir: 2, cursor: 1 },
+        { x: root.width - root.edge, y: root.corner, w: root.edge, h: root.height - 2 * root.corner, dir: 3, cursor: 1 },
+        { x: 0px, y: 0px, w: root.corner, h: root.edge, dir: 4, cursor: 2 },
+        { x: 0px, y: 0px, w: root.edge, h: root.corner, dir: 4, cursor: 2 },
+        { x: root.width - root.corner, y: 0px, w: root.corner, h: root.edge, dir: 5, cursor: 3 },
+        { x: root.width - root.edge, y: 0px, w: root.edge, h: root.corner, dir: 5, cursor: 3 },
+        { x: 0px, y: root.height - root.edge, w: root.corner, h: root.edge, dir: 6, cursor: 3 },
+        { x: 0px, y: root.height - root.corner, w: root.edge, h: root.corner, dir: 6, cursor: 3 },
+        { x: root.width - root.corner, y: root.height - root.edge, w: root.corner, h: root.edge, dir: 7, cursor: 2 },
+        { x: root.width - root.edge, y: root.height - root.corner, w: root.edge, h: root.corner, dir: 7, cursor: 2 },
+    ]: TouchArea {
+        x: zone.x;
+        y: zone.y;
+        width: zone.w;
+        height: zone.h;
+        mouse-cursor: zone.cursor == 0 ? MouseCursor.ns-resize : zone.cursor == 1 ? MouseCursor.ew-resize : zone.cursor == 2 ? MouseCursor.nwse-resize : MouseCursor.nesw-resize;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                root.resize(zone.dir);
+            }
+        }
+    }
+}

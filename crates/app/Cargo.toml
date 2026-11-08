@@ -42,6 +42,8 @@ slint = { workspace = true, features = [
     "renderer-software",
     "accessibility",
     "raw-window-handle-06",
+    # Rahmenloses Fenster: Verschieben, Größe ziehen, Schatten
+    "unstable-winit-030",
 ] }
 
 [dev-dependencies]

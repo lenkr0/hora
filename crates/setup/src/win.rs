@@ -1,5 +1,5 @@
-//! Windows-Teile des Setups: Verknüpfungen (COM), Ordnerauswahl, Farbe der
-//! Titelleiste, DWORD in der Registry, Programme ohne Konsole starten.
+//! Windows-Teile des Setups: Verknüpfungen (COM), Ordnerauswahl, DWORD in
+//! der Registry, Programme ohne Konsole starten.
 
 use std::path::{Path, PathBuf};
 
@@ -81,40 +81,6 @@ mod imp {
         }
     }
 
-    /// Titelleiste in den Farben der Oberfläche (Windows 11; älteres
-    /// Windows ignoriert das)
-    pub fn color_title_bar(hwnd: isize, background: u32, text: u32, dark: bool) {
-        use windows_sys::Win32::Graphics::Dwm::{
-            DWMWA_BORDER_COLOR, DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR,
-            DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute,
-        };
-        // COLORREF ist 0x00BBGGRR
-        let colorref = |rgb: u32| ((rgb & 0xff) << 16) | (rgb & 0xff00) | ((rgb >> 16) & 0xff);
-        let dark = i32::from(dark);
-        let values: [(i32, u32); 3] = [
-            (DWMWA_CAPTION_COLOR, colorref(background)),
-            (DWMWA_BORDER_COLOR, colorref(background)),
-            (DWMWA_TEXT_COLOR, colorref(text)),
-        ];
-        // SAFETY: Zeiger auf lokale Werte mit passender Größe
-        unsafe {
-            DwmSetWindowAttribute(
-                hwnd as _,
-                DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
-                (&dark as *const i32).cast(),
-                4,
-            );
-            for (attribute, value) in values {
-                DwmSetWindowAttribute(
-                    hwnd as _,
-                    attribute as u32,
-                    (&value as *const u32).cast(),
-                    4,
-                );
-            }
-        }
-    }
-
     pub fn set_dword(key: &str, name: &str, value: u32) -> Result<(), String> {
         use windows_sys::Win32::System::Registry::{HKEY_CURRENT_USER, REG_DWORD, RegSetKeyValueW};
         let wide = |s: &str| s.encode_utf16().chain(Some(0)).collect::<Vec<u16>>();
@@ -169,7 +135,6 @@ mod imp {
     pub fn pick_folder(_: Option<isize>, _: &Path, _: &str) -> Option<PathBuf> {
         None
     }
-    pub fn color_title_bar(_: isize, _: u32, _: u32, _: bool) {}
     pub fn set_dword(_: &str, _: &str, _: u32) -> Result<(), String> {
         Err("nur unter Windows".into())
     }

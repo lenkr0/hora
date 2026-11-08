@@ -1603,10 +1603,73 @@ fn select_renderer() -> Result<(), slint::PlatformError> {
     if std::env::var_os("SLINT_BACKEND").is_some() {
         return Ok(());
     }
-    slint::BackendSelector::new()
+    let selector = slint::BackendSelector::new()
         .backend_name("winit".into())
-        .renderer_name("software".into())
-        .select()
+        .renderer_name("software".into());
+    // Rahmenloses Fenster (eigene Titelleiste) mit dem Schatten von Windows
+    #[cfg(windows)]
+    let selector = selector.with_winit_window_attributes_hook(|attributes| {
+        use slint::winit_030::winit::platform::windows::WindowAttributesExtWindows;
+        attributes.with_undecorated_shadow(true)
+    });
+    selector.select()
+}
+
+/// Eigene Titelleiste: Verschieben, Größe ziehen, Minimieren, Maximieren,
+/// Schließen (wie das X von Windows, also ggf. in den Infobereich)
+fn install_window_controls(app: &AppWindow) {
+    use slint::winit_030::{WinitWindowAccessor, winit::window::ResizeDirection};
+    let weak = app.as_weak();
+    app.on_window_drag(move || {
+        if let Some(app) = weak.upgrade() {
+            app.window().with_winit_window(|w| w.drag_window().ok());
+        }
+    });
+    let weak = app.as_weak();
+    app.on_window_resize(move |direction| {
+        let direction = match direction {
+            0 => ResizeDirection::North,
+            1 => ResizeDirection::South,
+            2 => ResizeDirection::West,
+            3 => ResizeDirection::East,
+            4 => ResizeDirection::NorthWest,
+            5 => ResizeDirection::NorthEast,
+            6 => ResizeDirection::SouthWest,
+            _ => ResizeDirection::SouthEast,
+        };
+        if let Some(app) = weak.upgrade() {
+            app.window()
+                .with_winit_window(|w| w.drag_resize_window(direction).ok());
+        }
+    });
+    let weak = app.as_weak();
+    app.on_window_minimize(move || {
+        if let Some(app) = weak.upgrade() {
+            app.window().set_minimized(true);
+        }
+    });
+    let weak = app.as_weak();
+    app.on_window_toggle_maximize(move || {
+        if let Some(app) = weak.upgrade() {
+            let maximized = !app.window().is_maximized();
+            app.window().set_maximized(maximized);
+            app.set_window_maximized(maximized);
+        }
+    });
+    let weak = app.as_weak();
+    app.on_window_close(move || {
+        if let Some(app) = weak.upgrade() {
+            let _ = app
+                .window()
+                .dispatch_event_with_result(slint::platform::WindowEvent::CloseRequested);
+        }
+    });
+    let weak = app.as_weak();
+    app.on_window_changed(move || {
+        if let Some(app) = weak.upgrade() {
+            app.set_window_maximized(app.window().is_maximized());
+        }
+    });
 }
 
 /// Zeitzone des Systems, sonst Europe/Berlin.
@@ -2023,6 +2086,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     }
     select_renderer()?;
     let app = AppWindow::new()?;
+    install_window_controls(&app);
 
     let theme_choice = |name: &str| match name {
         "light" => Some(1),
@@ -3170,6 +3234,9 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
 
     if !std::env::args().any(|a| a == shell::TRAY_ARG) {
         app.show()?;
+        if let Some(hwnd) = shell::hwnd(&app) {
+            hora_platform::round_corners(hwnd);
+        }
     }
     slint::run_event_loop_until_quit()?;
     // Beim Beenden über den Infobereich: offene Journal-Eingaben sichern

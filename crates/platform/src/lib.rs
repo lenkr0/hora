@@ -43,6 +43,12 @@ pub fn error_box(title: &str, text: &str) {
     imp::error_box(title, text);
 }
 
+/// Rahmenloses Fenster wie ein normales aussehen lassen: runde Ecken unter
+/// Windows 11 (ältere Versionen ignorieren das)
+pub fn round_corners(hwnd: isize) {
+    imp::round_corners(hwnd);
+}
+
 /// Link aus einem Journaleintrag im Standardbrowser öffnen
 pub fn open_url(url: &str) -> Result<(), PlatformError> {
     if !allowed_link(url) {
@@ -62,6 +68,22 @@ mod imp {
 
     fn wide(s: &str) -> Vec<u16> {
         s.encode_utf16().chain(Some(0)).collect()
+    }
+
+    pub fn round_corners(hwnd: isize) {
+        use windows_sys::Win32::Graphics::Dwm::{
+            DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DwmSetWindowAttribute,
+        };
+        let preference = DWMWCP_ROUND;
+        // SAFETY: Zeiger auf einen lokalen Wert passender Größe
+        unsafe {
+            DwmSetWindowAttribute(
+                hwnd as _,
+                DWMWA_WINDOW_CORNER_PREFERENCE as u32,
+                (&preference as *const i32).cast(),
+                4,
+            );
+        }
     }
 
     pub fn error_box(title: &str, text: &str) {
@@ -151,6 +173,8 @@ mod imp {
     pub fn error_box(title: &str, text: &str) {
         eprintln!("{title}: {text}");
     }
+
+    pub fn round_corners(_hwnd: isize) {}
 }
 
 #[cfg(test)]

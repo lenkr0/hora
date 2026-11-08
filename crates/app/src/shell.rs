@@ -107,11 +107,12 @@ fn icon_file(dir: &Path) -> Option<PathBuf> {
 pub fn show_window(app: &AppWindow) {
     let _ = app.show();
     if let Some(hwnd) = hwnd(app) {
+        hora_platform::round_corners(hwnd);
         instance::focus_window(hwnd);
     }
 }
 
-fn hwnd(app: &AppWindow) -> Option<isize> {
+pub fn hwnd(app: &AppWindow) -> Option<isize> {
     use raw_window_handle::{HasWindowHandle, RawWindowHandle};
     let handle = app.window().window_handle();
     match handle.window_handle().ok()?.as_raw() {

@@ -5,6 +5,7 @@
 import { Theme } from "../../app/ui/theme.slint";
 import { Button, FocusRing } from "../../app/ui/controls.slint";
 import { Checkbox } from "../../app/ui/inputs.slint";
+import { WindowControls, DragArea } from "../../app/ui/window-controls.slint";
 
 export { Theme }
 
@@ -415,9 +416,14 @@ export component SetupWindow inherits Window {
     callback finish();
     callback cancel();
     callback retry();
+    // Eigene Titelleiste wie in der App
+    callback window-drag();
+    callback window-minimize();
+    callback window-close();
 
     title: root.removing ? @tr("Remove Hora") : @tr("Hora Setup");
     icon: @image-url("../../app/assets/hora.png");
+    no-frame: true;
     width: 820px;
     height: 548px;
     background: Theme.canvas;
@@ -440,6 +446,13 @@ export component SetupWindow inherits Window {
             root.page = 0;
         } else if root.page == 0 || root.page == 4 {
             root.cancel();
+        }
+    }
+
+    // Freie Flächen verschieben das Fenster
+    DragArea {
+        drag => {
+            root.window-drag();
         }
     }
 
@@ -893,6 +906,19 @@ export component SetupWindow inherits Window {
                     }
                 }
             }
+        }
+    }
+
+    WindowControls {
+        x: root.width - self.width;
+        y: 0px;
+        height: 32px;
+        can-maximize: false;
+        minimize => {
+            root.window-minimize();
+        }
+        close => {
+            root.window-close();
         }
     }
 

@@ -42,7 +42,7 @@ msgid "New event"
 msgstr "Neuer Termin"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2815
+#: crates/app/src/main.rs:2878
 msgid "The repetition ends before the start."
 msgstr "Die Wiederholung endet vor dem Beginn."
 
@@ -159,7 +159,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Viel geschafft: Umzug geplant, Steuer erledigt, endlich wieder regelmäßig gelaufen.\n\n---\n\nFür November: **mehr lesen**, weniger Bildschirm."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2514
+#: crates/app/src/main.rs:2577
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Journal"
@@ -234,7 +234,7 @@ msgid "W{}"
 msgstr "KW {}"
 
 #: crates/app/src/main.rs:730
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "Tasks"
 msgstr "Aufgaben"
 
@@ -287,74 +287,74 @@ msgid "Delete task?"
 msgstr "Aufgabe löschen?"
 
 #: crates/app/src/main.rs:1500
-#: crates/app/ui/app.slint:545
+#: crates/app/ui/app.slint:555
 msgid "Delete event?"
 msgstr "Termin löschen?"
 
-#: crates/app/src/main.rs:1647
+#: crates/app/src/main.rs:1709
 #: crates/app/src/palette.rs:362
 msgid "Task: {}"
 msgstr "Aufgabe: {}"
 
-#: crates/app/src/main.rs:1873
+#: crates/app/src/main.rs:1935
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:1903
+#: crates/app/src/main.rs:1965
 msgid "Windows language"
 msgstr "Windows-Sprache"
 
-#: crates/app/src/main.rs:1960
+#: crates/app/src/main.rs:2022
 msgid "Hora could not start: {}"
 msgstr "Hora konnte nicht starten: {}"
 
-#: crates/app/src/main.rs:2007
+#: crates/app/src/main.rs:2070
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "Die Datenbank {} lässt sich nicht öffnen ({}). Damit nichts verloren geht, beendet sich Hora."
 
-#: crates/app/src/main.rs:2652
+#: crates/app/src/main.rs:2715
 msgid "Please choose a calendar that supports tasks."
 msgstr "Bitte einen Kalender wählen, der Aufgaben kann."
 
-#: crates/app/src/main.rs:2661
+#: crates/app/src/main.rs:2724
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "Die Aufgabe ist nicht mehr vorhanden."
 
-#: crates/app/src/main.rs:2899
+#: crates/app/src/main.rs:2962
 msgid "Autostart not changed: {}"
 msgstr "Autostart nicht geändert: {}"
 
-#: crates/app/src/main.rs:2910
+#: crates/app/src/main.rs:2973
 #: crates/app/ui/settings.slint:203
 msgid "Test notification"
 msgstr "Testbenachrichtigung"
 
-#: crates/app/src/main.rs:2911
+#: crates/app/src/main.rs:2974
 msgid "This is what Hora's reminders look like"
 msgstr "So sehen Erinnerungen von Hora aus"
 
-#: crates/app/src/main.rs:2926
+#: crates/app/src/main.rs:2989
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Gesendet. Falls nichts erscheint: Windows-Einstellungen → System → Benachrichtigungen."
 
-#: crates/app/src/main.rs:3010
+#: crates/app/src/main.rs:3073
 msgid "Please enter the server address."
 msgstr "Bitte die Server-Adresse eingeben."
 
-#: crates/app/src/main.rs:3012
+#: crates/app/src/main.rs:3075
 msgid "Please enter the username."
 msgstr "Bitte den Benutzernamen eingeben."
 
-#: crates/app/src/main.rs:3014
+#: crates/app/src/main.rs:3077
 msgid "Please enter the password."
 msgstr "Bitte das Passwort eingeben."
 
-#: crates/app/src/main.rs:3101
+#: crates/app/src/main.rs:3164
 msgid "Hora keeps running in the notification area"
 msgstr "Hora läuft im Infobereich weiter"
 
-#: crates/app/src/main.rs:3102
+#: crates/app/src/main.rs:3165
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "Erinnerungen kommen weiterhin. Beenden über das Symbol im Infobereich (Rechtsklick)."
 
@@ -454,13 +454,13 @@ msgid "Tasks view"
 msgstr "Aufgabenansicht"
 
 #: crates/app/src/palette.rs:153
-#: crates/app/ui/app.slint:74
+#: crates/app/ui/app.slint:75
 msgid "Previous"
 msgstr "Zurück"
 
 #: crates/app/src/palette.rs:160
-#: crates/app/ui/app.slint:115
-#: crates/setup/ui/setup.slint:840
+#: crates/app/ui/app.slint:116
+#: crates/setup/ui/setup.slint:852
 msgid "Next"
 msgstr "Weiter"
 
@@ -1043,7 +1043,7 @@ msgid "Open Hora"
 msgstr "Hora öffnen"
 
 #: crates/app/src/shell.rs:31
-#: crates/app/ui/app.slint:251
+#: crates/app/ui/app.slint:252
 msgid "Sync now"
 msgstr "Jetzt synchronisieren"
 
@@ -1172,53 +1172,53 @@ msgstr "Termin am {} hinzufügen"
 msgid "+ Add"
 msgstr "+ Hinzufügen"
 
-#: crates/app/ui/app.slint:133
+#: crates/app/ui/app.slint:134
 msgid "Search or add (Ctrl+K)"
 msgstr "Suchen oder eintragen (Strg+K)"
 
-#: crates/app/ui/app.slint:155
+#: crates/app/ui/app.slint:156
 msgid "Search or add"
 msgstr "Suchen oder eintragen"
 
-#: crates/app/ui/app.slint:172
+#: crates/app/ui/app.slint:173
 msgid "Ctrl K"
 msgstr "Strg K"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "Day"
 msgstr "Tag"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "3 days"
 msgstr "3 Tage"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "Week"
 msgstr "Woche"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 #: crates/app/ui/journal-view.slint:444
 msgid "Month"
 msgstr "Monat"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "Year"
 msgstr "Jahr"
 
-#: crates/app/ui/app.slint:263
+#: crates/app/ui/app.slint:264
 msgid "Agenda"
 msgstr "Agenda"
 
-#: crates/app/ui/app.slint:354
+#: crates/app/ui/app.slint:355
 msgctxt "Shortcut"
 msgid "Y"
 msgstr "J"
 
-#: crates/app/ui/app.slint:361
+#: crates/app/ui/app.slint:362
 msgid "View: {}"
 msgstr "Ansicht: {}"
 
-#: crates/app/ui/app.slint:1229
+#: crates/app/ui/app.slint:1288
 msgid "Sync"
 msgstr "Synchronisierung"
 
@@ -1769,12 +1769,12 @@ msgstr "Reihenfolge von Tag, Monat und Jahr; 12 oder 24 Stunden"
 
 #: crates/app/ui/settings.slint:280
 #: crates/app/ui/settings.slint:284
-#: crates/setup/ui/setup.slint:687
+#: crates/setup/ui/setup.slint:699
 msgid "Start with Windows"
 msgstr "Mit Windows starten"
 
 #: crates/app/ui/settings.slint:281
-#: crates/setup/ui/setup.slint:688
+#: crates/setup/ui/setup.slint:700
 msgid "Hora starts quietly in the notification area when you sign in"
 msgstr "Hora startet beim Anmelden unauffällig im Infobereich"
 
@@ -1955,6 +1955,18 @@ msgstr "Aufgabe {}"
 msgid "{}, all day"
 msgstr "{}, ganztägig"
 
+#: crates/app/ui/window-controls.slint:80
+msgid "Minimize"
+msgstr "Minimieren"
+
+#: crates/app/ui/window-controls.slint:88
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: crates/app/ui/window-controls.slint:88
+msgid "Maximize"
+msgstr "Maximieren"
+
 #: crates/app/ui/year-view.slint:70
 msgid "Open {}"
 msgstr "{} öffnen"
@@ -2066,7 +2078,7 @@ msgid "Notifications are only available on Windows"
 msgstr "Benachrichtigungen nur unter Windows"
 
 #: crates/setup/src/install.rs:116
-#: crates/setup/src/main.rs:576
+#: crates/setup/src/main.rs:604
 msgid "Hora is still running. Please quit it (tray icon → Quit) and try again."
 msgstr "Hora läuft noch. Bitte beenden (Symbol im Infobereich → Beenden) und erneut versuchen."
 
@@ -2085,7 +2097,7 @@ msgid "Can't create the folder {}: {}"
 msgstr "Der Ordner {} lässt sich nicht anlegen: {}"
 
 #: crates/setup/src/install.rs:174
-#: crates/setup/src/main.rs:571
+#: crates/setup/src/main.rs:599
 msgid "Copying {}…"
 msgstr "Kopiere {} …"
 
@@ -2098,7 +2110,7 @@ msgid "Adding Hora to the Start menu…"
 msgstr "Hora kommt ins Startmenü …"
 
 #: crates/setup/src/install.rs:190
-#: crates/setup/ui/setup.slint:493
+#: crates/setup/ui/setup.slint:505
 msgid "Desktop calendar for Windows"
 msgstr "Desktop-Kalender für Windows"
 
@@ -2130,25 +2142,25 @@ msgstr "Verknüpfungen und Registry-Einträge werden entfernt …"
 msgid "Deleting local data…"
 msgstr "Lokale Daten werden gelöscht …"
 
-#: crates/setup/src/main.rs:150
-#: crates/setup/ui/setup.slint:412
+#: crates/setup/src/main.rs:151
+#: crates/setup/ui/setup.slint:417
 msgid "Hora Setup"
 msgstr "Hora installieren"
 
-#: crates/setup/src/main.rs:210
-#: crates/setup/src/main.rs:566
+#: crates/setup/src/main.rs:211
+#: crates/setup/src/main.rs:594
 msgid "Hora needs about {} MB of disk space."
 msgstr "Hora braucht etwa {} MB Speicherplatz."
 
-#: crates/setup/src/main.rs:233
+#: crates/setup/src/main.rs:234
 msgid "Choose a folder for Hora"
 msgstr "Ordner für Hora wählen"
 
-#: crates/setup/src/main.rs:257
+#: crates/setup/src/main.rs:258
 msgid "Preparing…"
 msgstr "Vorbereitung …"
 
-#: crates/setup/src/main.rs:306
+#: crates/setup/src/main.rs:307
 msgid "Hora is not installed."
 msgstr "Hora ist nicht installiert."
 
@@ -2157,135 +2169,135 @@ msgstr "Hora ist nicht installiert."
 msgid "The setup file is damaged. Please download it again."
 msgstr "Die Setup-Datei ist beschädigt. Bitte erneut herunterladen."
 
-#: crates/setup/ui/setup.slint:412
+#: crates/setup/ui/setup.slint:417
 msgid "Remove Hora"
 msgstr "Hora entfernen"
 
-#: crates/setup/ui/setup.slint:518
+#: crates/setup/ui/setup.slint:530
 msgid "Version {}"
 msgstr "Version {}"
 
-#: crates/setup/ui/setup.slint:537
+#: crates/setup/ui/setup.slint:549
 msgid "Update Hora"
 msgstr "Hora aktualisieren"
 
-#: crates/setup/ui/setup.slint:537
+#: crates/setup/ui/setup.slint:549
 msgid "Welcome to Hora"
 msgstr "Willkommen bei Hora"
 
-#: crates/setup/ui/setup.slint:542
+#: crates/setup/ui/setup.slint:554
 msgid "Version {} is installed. This installs version {} and keeps your calendars, settings and data."
 msgstr "Version {} ist installiert. Installiert wird Version {}; Kalender, Einstellungen und Daten bleiben erhalten."
 
-#: crates/setup/ui/setup.slint:543
+#: crates/setup/ui/setup.slint:555
 msgid "A calm calendar for your CalDAV events, tasks and journal. Hora installs for your account only and doesn't need administrator rights."
 msgstr "Ein ruhiger Kalender für deine CalDAV-Termine, Aufgaben und dein Journal. Hora wird nur für dein Benutzerkonto installiert und braucht keine Administratorrechte."
 
-#: crates/setup/ui/setup.slint:551
+#: crates/setup/ui/setup.slint:563
 msgid "LANGUAGE"
 msgstr "SPRACHE"
 
-#: crates/setup/ui/setup.slint:586
+#: crates/setup/ui/setup.slint:598
 msgid "Remove Hora?"
 msgstr "Hora entfernen?"
 
-#: crates/setup/ui/setup.slint:590
+#: crates/setup/ui/setup.slint:602
 msgid "Hora {} will be removed from this computer: the program, its Start menu entry and its settings in Windows."
 msgstr "Hora {} wird von diesem Computer entfernt: das Programm, der Eintrag im Startmenü und seine Einstellungen in Windows."
 
-#: crates/setup/ui/setup.slint:608
+#: crates/setup/ui/setup.slint:620
 msgid "Also delete my local data"
 msgstr "Auch meine lokalen Daten löschen"
 
-#: crates/setup/ui/setup.slint:616
+#: crates/setup/ui/setup.slint:628
 msgid "Cached events, settings and the log in {}. Your events on the CalDAV server stay untouched."
 msgstr "Zwischengespeicherte Termine, Einstellungen und das Protokoll in {}. Die Termine auf deinem CalDAV-Server bleiben unberührt."
 
-#: crates/setup/ui/setup.slint:634
+#: crates/setup/ui/setup.slint:646
 msgid "Ready to update"
 msgstr "Bereit zum Aktualisieren"
 
-#: crates/setup/ui/setup.slint:634
+#: crates/setup/ui/setup.slint:646
 msgid "Ready to install"
 msgstr "Bereit zur Installation"
 
-#: crates/setup/ui/setup.slint:646
+#: crates/setup/ui/setup.slint:658
 msgid "INSTALL LOCATION"
 msgstr "INSTALLATIONSORDNER"
 
-#: crates/setup/ui/setup.slint:672
+#: crates/setup/ui/setup.slint:684
 msgid "Change…"
 msgstr "Ändern …"
 
-#: crates/setup/ui/setup.slint:698
+#: crates/setup/ui/setup.slint:710
 msgid "Desktop shortcut"
 msgstr "Verknüpfung auf dem Desktop"
 
-#: crates/setup/ui/setup.slint:699
+#: crates/setup/ui/setup.slint:711
 msgid "A shortcut to Hora on your desktop"
 msgstr "Eine Verknüpfung zu Hora auf dem Desktop"
 
-#: crates/setup/ui/setup.slint:705
+#: crates/setup/ui/setup.slint:717
 msgid "Hora is also added to the Start menu and to Settings → Apps."
 msgstr "Hora erscheint außerdem im Startmenü und unter Einstellungen → Apps."
 
-#: crates/setup/ui/setup.slint:722
+#: crates/setup/ui/setup.slint:734
 msgid "Removing Hora…"
 msgstr "Hora wird entfernt …"
 
-#: crates/setup/ui/setup.slint:722
+#: crates/setup/ui/setup.slint:734
 msgid "Updating Hora…"
 msgstr "Hora wird aktualisiert …"
 
-#: crates/setup/ui/setup.slint:722
+#: crates/setup/ui/setup.slint:734
 msgid "Installing Hora…"
 msgstr "Hora wird installiert …"
 
-#: crates/setup/ui/setup.slint:757
+#: crates/setup/ui/setup.slint:769
 msgid "Hora was removed"
 msgstr "Hora wurde entfernt"
 
-#: crates/setup/ui/setup.slint:757
+#: crates/setup/ui/setup.slint:769
 msgid "Hora is up to date"
 msgstr "Hora ist aktuell"
 
-#: crates/setup/ui/setup.slint:757
+#: crates/setup/ui/setup.slint:769
 msgid "Hora is ready"
 msgstr "Hora ist bereit"
 
-#: crates/setup/ui/setup.slint:762
+#: crates/setup/ui/setup.slint:774
 msgid "Thanks for using Hora. Your events on the CalDAV server are untouched."
 msgstr "Danke, dass du Hora benutzt hast. Die Termine auf deinem CalDAV-Server sind unberührt."
 
-#: crates/setup/ui/setup.slint:763
+#: crates/setup/ui/setup.slint:775
 msgid "You'll find Hora in the Start menu. Add your CalDAV account in the sidebar to see your own calendars."
 msgstr "Du findest Hora im Startmenü. Füge in der Seitenleiste dein CalDAV-Konto hinzu, um deine eigenen Kalender zu sehen."
 
-#: crates/setup/ui/setup.slint:771
+#: crates/setup/ui/setup.slint:783
 msgid "Launch Hora now"
 msgstr "Hora jetzt starten"
 
-#: crates/setup/ui/setup.slint:792
+#: crates/setup/ui/setup.slint:804
 msgid "Something went wrong"
 msgstr "Etwas ist schiefgegangen"
 
-#: crates/setup/ui/setup.slint:833
+#: crates/setup/ui/setup.slint:845
 msgid "Back"
 msgstr "Zurück"
 
-#: crates/setup/ui/setup.slint:848
+#: crates/setup/ui/setup.slint:860
 msgid "Remove"
 msgstr "Entfernen"
 
-#: crates/setup/ui/setup.slint:856
+#: crates/setup/ui/setup.slint:868
 msgid "Update"
 msgstr "Aktualisieren"
 
-#: crates/setup/ui/setup.slint:856
+#: crates/setup/ui/setup.slint:868
 msgid "Install"
 msgstr "Installieren"
 
-#: crates/setup/ui/setup.slint:872
+#: crates/setup/ui/setup.slint:884
 msgid "Try again"
 msgstr "Erneut versuchen"
 

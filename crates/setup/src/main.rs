@@ -139,6 +139,7 @@ fn main() -> ExitCode {
     let Ok(exe) = std::env::current_exe() else {
         return ExitCode::FAILURE;
     };
+    select_backend();
     let result = match payload::read(&exe) {
         Ok(Some(payload)) if !args.uninstall => installer(&args, &exe, payload),
         Ok(_) => uninstaller(&args, &exe),
@@ -426,15 +427,32 @@ fn run(window: SetupWindow, autopilot: bool) -> Result<(), String> {
             }
         }
     });
+    {
+        use slint::winit_030::WinitWindowAccessor;
+        let weak = window.as_weak();
+        window.on_window_drag(move || {
+            if let Some(w) = weak.upgrade() {
+                w.window().with_winit_window(|w| w.drag_window().ok());
+            }
+        });
+        let weak = window.as_weak();
+        window.on_window_minimize(move || {
+            if let Some(w) = weak.upgrade() {
+                w.window().set_minimized(true);
+            }
+        });
+        let weak = window.as_weak();
+        window.on_window_close(move || {
+            if let Some(w) = weak.upgrade() {
+                let _ = w
+                    .window()
+                    .dispatch_event_with_result(slint::platform::WindowEvent::CloseRequested);
+            }
+        });
+    }
     window.show().map_err(|e| e.to_string())?;
     if let Some(h) = hwnd(&window) {
-        let theme = window.global::<Theme>();
-        win::color_title_bar(
-            h,
-            rgb(theme.get_canvas()),
-            rgb(theme.get_ink()),
-            theme.get_dark(),
-        );
+        hora_platform::round_corners(h);
     }
     if autopilot {
         start_autopilot(&window);
@@ -491,8 +509,18 @@ fn start_autopilot(window: &SetupWindow) {
 #[cfg(not(feature = "devtools"))]
 fn start_autopilot(_: &SetupWindow) {}
 
-fn rgb(c: Color) -> u32 {
-    (u32::from(c.red()) << 16) | (u32::from(c.green()) << 8) | u32::from(c.blue())
+/// Software-Renderer wie die App; rahmenloses Fenster mit dem Schatten von
+/// Windows
+fn select_backend() {
+    let selector = slint::BackendSelector::new()
+        .backend_name("winit".into())
+        .renderer_name("software".into());
+    #[cfg(windows)]
+    let selector = selector.with_winit_window_attributes_hook(|attributes| {
+        use slint::winit_030::winit::platform::windows::WindowAttributesExtWindows;
+        attributes.with_undecorated_shadow(true)
+    });
+    let _ = selector.select();
 }
 
 fn hwnd(window: &SetupWindow) -> Option<isize> {
@@ -561,6 +589,7 @@ fn preview(args: &Args, path: &Path, page: i32, mode: i32) -> Result<(), String>
         .and_then(Lang::from_code)
         .unwrap_or(Lang::En);
     hora_i18n::set_language(lang);
+    select_backend();
     let window = SetupWindow::new().map_err(|e| e.to_string())?;
     let _ = slint::select_bundled_translation(lang.code());
     match std::env::var("HORA_THEME").as_deref() {

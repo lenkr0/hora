@@ -40,6 +40,14 @@
 - Built with `tools\build-installer.ps1` (no NSIS needed): the setup program
   carries the files xz-compressed (LZMA2 with x86 filter).
 
+### Own title bar
+
+- Hora and Hora Setup draw their own title bar in the app's colors instead
+  of the standard Windows one: minimize, maximize/restore and close in the
+  Windows 11 style, drag anywhere in the top bar or on free header space,
+  double-click to maximize, resize at the window edges. Windows still adds
+  rounded corners, the shadow and snapping to screen edges.
+
 ### Smaller
 
 - `hora.exe` shrank from 31.5 to 23.3 MB: Hora's own code (including the UI
