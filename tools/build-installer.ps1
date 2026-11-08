@@ -2,7 +2,8 @@
 .SYNOPSIS
     Baut hora.exe und das Setup-Programm (Release) und packt daraus den
     Installer Hora-Setup-<Version>.exe. Kein NSIS mehr nötig: das Setup ist
-    crates\setup (Rust + Slint), die Programmdateien hängen zstd-komprimiert an.
+    crates\setup (Rust + Slint), die Programmdateien hängen xz-komprimiert an
+    (LZMA2 mit x86-Filter).
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
