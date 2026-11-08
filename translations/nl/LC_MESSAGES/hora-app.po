@@ -42,7 +42,7 @@ msgid "New event"
 msgstr "Nieuwe afspraak"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2796
+#: crates/app/src/main.rs:2815
 msgid "The repetition ends before the start."
 msgstr "De herhaling eindigt vóór het begin."
 
@@ -159,7 +159,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Veel gedaan: verhuizing gepland, belasting geregeld, eindelijk weer regelmatig hardgelopen.\n\n---\n\nVoor november: **meer lezen**, minder scherm."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2495
+#: crates/app/src/main.rs:2514
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Dagboek"
@@ -296,65 +296,65 @@ msgstr "Afspraak verwijderen?"
 msgid "Task: {}"
 msgstr "Taak: {}"
 
-#: crates/app/src/main.rs:1855
+#: crates/app/src/main.rs:1873
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:1885
+#: crates/app/src/main.rs:1903
 msgid "Windows language"
 msgstr "Windows-taal"
 
-#: crates/app/src/main.rs:1942
+#: crates/app/src/main.rs:1960
 msgid "Hora could not start: {}"
 msgstr "Hora kon niet starten: {}"
 
-#: crates/app/src/main.rs:1989
+#: crates/app/src/main.rs:2007
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "De database {} kan niet worden geopend ({}). Om niets te verliezen, wordt Hora afgesloten."
 
-#: crates/app/src/main.rs:2633
+#: crates/app/src/main.rs:2652
 msgid "Please choose a calendar that supports tasks."
 msgstr "Kies een agenda die taken ondersteunt."
 
-#: crates/app/src/main.rs:2642
+#: crates/app/src/main.rs:2661
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "De taak bestaat niet meer."
 
-#: crates/app/src/main.rs:2880
+#: crates/app/src/main.rs:2899
 msgid "Autostart not changed: {}"
 msgstr "Automatisch starten niet gewijzigd: {}"
 
-#: crates/app/src/main.rs:2891
+#: crates/app/src/main.rs:2910
 #: crates/app/ui/settings.slint:203
 msgid "Test notification"
 msgstr "Testmelding"
 
-#: crates/app/src/main.rs:2892
+#: crates/app/src/main.rs:2911
 msgid "This is what Hora's reminders look like"
 msgstr "Zo zien herinneringen van Hora eruit"
 
-#: crates/app/src/main.rs:2907
+#: crates/app/src/main.rs:2926
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Verzonden. Verschijnt er niets: Windows-instellingen → Systeem → Meldingen."
 
-#: crates/app/src/main.rs:2991
+#: crates/app/src/main.rs:3010
 msgid "Please enter the server address."
 msgstr "Voer het serveradres in."
 
-#: crates/app/src/main.rs:2993
+#: crates/app/src/main.rs:3012
 msgid "Please enter the username."
 msgstr "Voer de gebruikersnaam in."
 
-#: crates/app/src/main.rs:2995
+#: crates/app/src/main.rs:3014
 msgid "Please enter the password."
 msgstr "Voer het wachtwoord in."
 
-#: crates/app/src/main.rs:3082
+#: crates/app/src/main.rs:3101
 msgid "Hora keeps running in the notification area"
 msgstr "Hora blijft actief in het systeemvak"
 
-#: crates/app/src/main.rs:3083
+#: crates/app/src/main.rs:3102
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "Herinneringen blijven komen. Afsluiten via het pictogram in het systeemvak (rechtsklik)."
 
@@ -1788,8 +1788,8 @@ msgid "Closing the window doesn't quit Hora, so reminders and sync keep running"
 msgstr "Het venster sluiten beëindigt Hora niet, zodat herinneringen en synchronisatie doorgaan"
 
 #: crates/app/ui/settings.slint:315
-#: crates/setup/src/install.rs:215
-#: crates/setup/src/install.rs:253
+#: crates/setup/src/install.rs:232
+#: crates/setup/src/install.rs:275
 msgid "Done"
 msgstr "Klaar"
 
@@ -1943,15 +1943,15 @@ msgstr "Nog niets klaar."
 msgid "No open tasks. Type above and press Enter."
 msgstr "Geen open taken. Typ bovenaan en druk op Enter."
 
-#: crates/app/ui/week-view.slint:170
+#: crates/app/ui/week-view.slint:172
 msgid "Calendar grid, arrow keys select the time, Enter creates an event"
 msgstr "Agendaraster, pijltjestoetsen kiezen de tijd, Enter maakt een afspraak"
 
-#: crates/app/ui/week-view.slint:447
+#: crates/app/ui/week-view.slint:449
 msgid "Task {}"
 msgstr "Taak {}"
 
-#: crates/app/ui/week-view.slint:447
+#: crates/app/ui/week-view.slint:449
 msgid "{}, all day"
 msgstr "{}, hele dag"
 
@@ -2065,91 +2065,97 @@ msgstr "Meldingen worden door een beleid geblokkeerd."
 msgid "Notifications are only available on Windows"
 msgstr "Meldingen zijn alleen beschikbaar op Windows"
 
-#: crates/setup/src/install.rs:115
-#: crates/setup/src/main.rs:472
+#: crates/setup/src/install.rs:116
+#: crates/setup/src/main.rs:576
 msgid "Hora is still running. Please quit it (tray icon → Quit) and try again."
 msgstr "Hora is nog actief. Sluit het af (pictogram in het systeemvak → Afsluiten) en probeer het opnieuw."
 
-#: crates/setup/src/install.rs:128
+#: crates/setup/src/install.rs:133
 msgid "Can't write {}: {}"
 msgstr "Kan {} niet schrijven: {}"
 
-#: crates/setup/src/install.rs:154
-#: crates/setup/src/install.rs:222
+#: crates/setup/src/install.rs:164
+#: crates/setup/src/install.rs:244
 msgid "Closing Hora…"
 msgstr "Hora afsluiten…"
 
-#: crates/setup/src/install.rs:157
-#: crates/setup/src/install.rs:165
+#: crates/setup/src/install.rs:168
+#: crates/setup/src/install.rs:179
 msgid "Can't create the folder {}: {}"
 msgstr "Kan de map {} niet maken: {}"
 
-#: crates/setup/src/install.rs:161
-#: crates/setup/src/main.rs:469
+#: crates/setup/src/install.rs:174
+#: crates/setup/src/main.rs:571
 msgid "Copying {}…"
 msgstr "{} kopiëren…"
 
-#: crates/setup/src/install.rs:171
+#: crates/setup/src/install.rs:185
 msgid "Creating the uninstaller…"
 msgstr "Verwijderprogramma maken…"
 
-#: crates/setup/src/install.rs:174
+#: crates/setup/src/install.rs:188
 msgid "Adding Hora to the Start menu…"
 msgstr "Hora toevoegen aan het Startmenu…"
 
-#: crates/setup/src/install.rs:176
+#: crates/setup/src/install.rs:190
 #: crates/setup/ui/setup.slint:493
 msgid "Desktop calendar for Windows"
 msgstr "Desktopagenda voor Windows"
 
-#: crates/setup/src/install.rs:179
+#: crates/setup/src/install.rs:193
 msgid "Can't create the Start menu entry: {}"
 msgstr "Kan het item in het Startmenu niet maken: {}"
 
-#: crates/setup/src/install.rs:184
+#: crates/setup/src/install.rs:198
 msgid "Can't create the desktop shortcut: {}"
 msgstr "Kan de snelkoppeling op het bureaublad niet maken: {}"
 
-#: crates/setup/src/install.rs:190
+#: crates/setup/src/install.rs:204
 msgid "Registering Hora…"
 msgstr "Hora registreren…"
 
-#: crates/setup/src/install.rs:225
+#: crates/setup/src/install.rs:247
 msgid "Removing files…"
 msgstr "Bestanden verwijderen…"
 
-#: crates/setup/src/install.rs:228
+#: crates/setup/src/install.rs:250
 msgid "Can't delete {}: {}"
 msgstr "Kan {} niet verwijderen: {}"
 
-#: crates/setup/src/install.rs:238
+#: crates/setup/src/install.rs:260
 msgid "Removing shortcuts and registry entries…"
 msgstr "Snelkoppelingen en registervermeldingen verwijderen…"
 
-#: crates/setup/src/install.rs:248
+#: crates/setup/src/install.rs:270
 msgid "Deleting local data…"
 msgstr "Lokale gegevens verwijderen…"
 
-#: crates/setup/src/main.rs:133
+#: crates/setup/src/main.rs:150
 #: crates/setup/ui/setup.slint:412
 msgid "Hora Setup"
 msgstr "Hora installeren"
 
-#: crates/setup/src/main.rs:187
+#: crates/setup/src/main.rs:210
+#: crates/setup/src/main.rs:566
 msgid "Hora needs about {} MB of disk space."
 msgstr "Hora heeft ongeveer {} MB schijfruimte nodig."
 
-#: crates/setup/src/main.rs:209
+#: crates/setup/src/main.rs:233
 msgid "Choose a folder for Hora"
 msgstr "Kies een map voor Hora"
 
-#: crates/setup/src/main.rs:227
+#: crates/setup/src/main.rs:257
 msgid "Preparing…"
 msgstr "Voorbereiden…"
 
-#: crates/setup/src/main.rs:276
+#: crates/setup/src/main.rs:306
 msgid "Hora is not installed."
 msgstr "Hora is niet geïnstalleerd."
+
+#: crates/setup/src/payload.rs:197
+#: crates/setup/src/payload.rs:216
+msgid "The setup file is damaged. Please download it again."
+msgstr "Het installatiebestand is beschadigd. Download het opnieuw."
 
 #: crates/setup/ui/setup.slint:412
 msgid "Remove Hora"

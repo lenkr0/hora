@@ -23,7 +23,7 @@ hora-platform.workspace = true
 chrono.workspace = true
 dirs.workspace = true
 raw-window-handle.workspace = true
-zstd.workspace = true
+xz2.workspace = true
 png = { workspace = true, optional = true }
 slint = { workspace = true, features = [
     "std",

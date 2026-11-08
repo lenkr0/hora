@@ -46,19 +46,25 @@ raw-window-handle = "0.6.2"
 embed-resource = "3.0.6"
 windows-sys = "0.61.2"
 png = "0.18.1"
-zstd = { version = "0.13", default-features = false }
+xz2 = { version = "0.1.7", features = ["static"] }
 
 # Abhängigkeiten auch im Debug-Build optimieren, damit die Oberfläche flüssig bleibt.
 [profile.dev.package."*"]
 opt-level = 2
 
 [profile.release]
-lto = "thin"
+lto = "fat"
 codegen-units = 1
 strip = "symbols"
 
+# Horas eigener Code (mit der aus .slint erzeugten Oberfläche) ist der größte
+# Teil der exe; auf Größe optimiert ist er gut ein Drittel kleiner. Das
+# Zeichnen liegt in Slints Renderer-Crates und bleibt auf Tempo optimiert.
+[profile.release.package.hora-app]
+opt-level = "z"
+
 # Das Setup-Programm (Hora-Setup-<Version>.exe) auf Größe optimiert; die
-# Programmdateien trägt es zstd-komprimiert mit sich.
+# Programmdateien trägt es xz-komprimiert mit sich.
 [profile.setup]
 inherits = "release"
 opt-level = "z"

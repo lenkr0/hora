@@ -42,7 +42,7 @@ msgid "New event"
 msgstr "Nouvel événement"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2796
+#: crates/app/src/main.rs:2815
 msgid "The repetition ends before the start."
 msgstr "La répétition se termine avant le début."
 
@@ -159,7 +159,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Beaucoup de choses faites : déménagement planifié, impôts réglés, enfin de nouveau la course régulière.\n\n---\n\nPour novembre : **lire plus**, moins d'écrans."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2495
+#: crates/app/src/main.rs:2514
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Journal"
@@ -296,65 +296,65 @@ msgstr "Supprimer l'événement ?"
 msgid "Task: {}"
 msgstr "Tâche : {}"
 
-#: crates/app/src/main.rs:1855
+#: crates/app/src/main.rs:1873
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:1885
+#: crates/app/src/main.rs:1903
 msgid "Windows language"
 msgstr "Langue de Windows"
 
-#: crates/app/src/main.rs:1942
+#: crates/app/src/main.rs:1960
 msgid "Hora could not start: {}"
 msgstr "Hora n'a pas pu démarrer : {}"
 
-#: crates/app/src/main.rs:1989
+#: crates/app/src/main.rs:2007
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "La base de données {} ne peut pas être ouverte ({}). Pour ne rien perdre, Hora va se fermer."
 
-#: crates/app/src/main.rs:2633
+#: crates/app/src/main.rs:2652
 msgid "Please choose a calendar that supports tasks."
 msgstr "Choisissez un calendrier qui prend en charge les tâches."
 
-#: crates/app/src/main.rs:2642
+#: crates/app/src/main.rs:2661
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "Cette tâche n'existe plus."
 
-#: crates/app/src/main.rs:2880
+#: crates/app/src/main.rs:2899
 msgid "Autostart not changed: {}"
 msgstr "Démarrage automatique non modifié : {}"
 
-#: crates/app/src/main.rs:2891
+#: crates/app/src/main.rs:2910
 #: crates/app/ui/settings.slint:203
 msgid "Test notification"
 msgstr "Notification de test"
 
-#: crates/app/src/main.rs:2892
+#: crates/app/src/main.rs:2911
 msgid "This is what Hora's reminders look like"
 msgstr "Voici à quoi ressemblent les rappels de Hora"
 
-#: crates/app/src/main.rs:2907
+#: crates/app/src/main.rs:2926
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Envoyée. Si rien n'apparaît : Paramètres Windows → Système → Notifications."
 
-#: crates/app/src/main.rs:2991
+#: crates/app/src/main.rs:3010
 msgid "Please enter the server address."
 msgstr "Saisissez l'adresse du serveur."
 
-#: crates/app/src/main.rs:2993
+#: crates/app/src/main.rs:3012
 msgid "Please enter the username."
 msgstr "Saisissez le nom d'utilisateur."
 
-#: crates/app/src/main.rs:2995
+#: crates/app/src/main.rs:3014
 msgid "Please enter the password."
 msgstr "Saisissez le mot de passe."
 
-#: crates/app/src/main.rs:3082
+#: crates/app/src/main.rs:3101
 msgid "Hora keeps running in the notification area"
 msgstr "Hora continue de fonctionner dans la zone de notification"
 
-#: crates/app/src/main.rs:3083
+#: crates/app/src/main.rs:3102
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "Les rappels continuent d'arriver. Pour quitter, utilisez l'icône de la zone de notification (clic droit)."
 
@@ -1788,8 +1788,8 @@ msgid "Closing the window doesn't quit Hora, so reminders and sync keep running"
 msgstr "Fermer la fenêtre ne quitte pas Hora : les rappels et la synchronisation continuent"
 
 #: crates/app/ui/settings.slint:315
-#: crates/setup/src/install.rs:215
-#: crates/setup/src/install.rs:253
+#: crates/setup/src/install.rs:232
+#: crates/setup/src/install.rs:275
 msgid "Done"
 msgstr "Terminé"
 
@@ -1943,15 +1943,15 @@ msgstr "Rien de terminé pour l'instant."
 msgid "No open tasks. Type above and press Enter."
 msgstr "Aucune tâche ouverte. Tapez en haut et appuyez sur Entrée."
 
-#: crates/app/ui/week-view.slint:170
+#: crates/app/ui/week-view.slint:172
 msgid "Calendar grid, arrow keys select the time, Enter creates an event"
 msgstr "Grille du calendrier, les flèches choisissent l'heure, Entrée crée un événement"
 
-#: crates/app/ui/week-view.slint:447
+#: crates/app/ui/week-view.slint:449
 msgid "Task {}"
 msgstr "Tâche {}"
 
-#: crates/app/ui/week-view.slint:447
+#: crates/app/ui/week-view.slint:449
 msgid "{}, all day"
 msgstr "{}, toute la journée"
 
@@ -2065,91 +2065,97 @@ msgstr "Les notifications sont bloquées par une stratégie."
 msgid "Notifications are only available on Windows"
 msgstr "Les notifications ne sont disponibles que sous Windows"
 
-#: crates/setup/src/install.rs:115
-#: crates/setup/src/main.rs:472
+#: crates/setup/src/install.rs:116
+#: crates/setup/src/main.rs:576
 msgid "Hora is still running. Please quit it (tray icon → Quit) and try again."
 msgstr "Hora est encore en cours d'exécution. Quittez-le (icône de la zone de notification → Quitter) et réessayez."
 
-#: crates/setup/src/install.rs:128
+#: crates/setup/src/install.rs:133
 msgid "Can't write {}: {}"
 msgstr "Impossible d'écrire {} : {}"
 
-#: crates/setup/src/install.rs:154
-#: crates/setup/src/install.rs:222
+#: crates/setup/src/install.rs:164
+#: crates/setup/src/install.rs:244
 msgid "Closing Hora…"
 msgstr "Fermeture de Hora…"
 
-#: crates/setup/src/install.rs:157
-#: crates/setup/src/install.rs:165
+#: crates/setup/src/install.rs:168
+#: crates/setup/src/install.rs:179
 msgid "Can't create the folder {}: {}"
 msgstr "Impossible de créer le dossier {} : {}"
 
-#: crates/setup/src/install.rs:161
-#: crates/setup/src/main.rs:469
+#: crates/setup/src/install.rs:174
+#: crates/setup/src/main.rs:571
 msgid "Copying {}…"
 msgstr "Copie de {}…"
 
-#: crates/setup/src/install.rs:171
+#: crates/setup/src/install.rs:185
 msgid "Creating the uninstaller…"
 msgstr "Création du programme de désinstallation…"
 
-#: crates/setup/src/install.rs:174
+#: crates/setup/src/install.rs:188
 msgid "Adding Hora to the Start menu…"
 msgstr "Ajout de Hora au menu Démarrer…"
 
-#: crates/setup/src/install.rs:176
+#: crates/setup/src/install.rs:190
 #: crates/setup/ui/setup.slint:493
 msgid "Desktop calendar for Windows"
 msgstr "Calendrier de bureau pour Windows"
 
-#: crates/setup/src/install.rs:179
+#: crates/setup/src/install.rs:193
 msgid "Can't create the Start menu entry: {}"
 msgstr "Impossible de créer l'entrée du menu Démarrer : {}"
 
-#: crates/setup/src/install.rs:184
+#: crates/setup/src/install.rs:198
 msgid "Can't create the desktop shortcut: {}"
 msgstr "Impossible de créer le raccourci sur le bureau : {}"
 
-#: crates/setup/src/install.rs:190
+#: crates/setup/src/install.rs:204
 msgid "Registering Hora…"
 msgstr "Enregistrement de Hora…"
 
-#: crates/setup/src/install.rs:225
+#: crates/setup/src/install.rs:247
 msgid "Removing files…"
 msgstr "Suppression des fichiers…"
 
-#: crates/setup/src/install.rs:228
+#: crates/setup/src/install.rs:250
 msgid "Can't delete {}: {}"
 msgstr "Impossible de supprimer {} : {}"
 
-#: crates/setup/src/install.rs:238
+#: crates/setup/src/install.rs:260
 msgid "Removing shortcuts and registry entries…"
 msgstr "Suppression des raccourcis et des entrées du registre…"
 
-#: crates/setup/src/install.rs:248
+#: crates/setup/src/install.rs:270
 msgid "Deleting local data…"
 msgstr "Suppression des données locales…"
 
-#: crates/setup/src/main.rs:133
+#: crates/setup/src/main.rs:150
 #: crates/setup/ui/setup.slint:412
 msgid "Hora Setup"
 msgstr "Installation de Hora"
 
-#: crates/setup/src/main.rs:187
+#: crates/setup/src/main.rs:210
+#: crates/setup/src/main.rs:566
 msgid "Hora needs about {} MB of disk space."
 msgstr "Hora nécessite environ {} Mo d'espace disque."
 
-#: crates/setup/src/main.rs:209
+#: crates/setup/src/main.rs:233
 msgid "Choose a folder for Hora"
 msgstr "Choisir un dossier pour Hora"
 
-#: crates/setup/src/main.rs:227
+#: crates/setup/src/main.rs:257
 msgid "Preparing…"
 msgstr "Préparation…"
 
-#: crates/setup/src/main.rs:276
+#: crates/setup/src/main.rs:306
 msgid "Hora is not installed."
 msgstr "Hora n'est pas installé."
+
+#: crates/setup/src/payload.rs:197
+#: crates/setup/src/payload.rs:216
+msgid "The setup file is damaged. Please download it again."
+msgstr "Le fichier d'installation est endommagé. Veuillez le télécharger à nouveau."
 
 #: crates/setup/ui/setup.slint:412
 msgid "Remove Hora"

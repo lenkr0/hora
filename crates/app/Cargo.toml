@@ -14,8 +14,11 @@ path = "src/main.rs"
 
 [features]
 default = []
-# Zusätzlicher Skia-Renderer, nur für den Renderer-Vergleich.
+# Zusätzliche Renderer, nur für Vergleiche (SLINT_BACKEND=winit-femtovg bzw.
+# winit-skia). Standard ist der Software-Renderer: am wenigsten Speicher, läuft
+# auch per Remotedesktop, und die exe bleibt kleiner.
 skia = ["slint/renderer-skia"]
+femtovg = ["slint/renderer-femtovg"]
 # Entwicklerwerkzeuge: Screenshot (--snapshot) und Drag-Selbsttest (--selftest).
 devtools = ["dep:png"]
 
@@ -36,7 +39,6 @@ slint = { workspace = true, features = [
     "std",
     "compat-1-2",
     "backend-winit",
-    "renderer-femtovg",
     "renderer-software",
     "accessibility",
     "raw-window-handle-06",

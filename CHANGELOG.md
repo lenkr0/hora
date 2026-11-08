@@ -38,7 +38,16 @@
   uninstalls work as before (`/S`, `/D=<folder>`, `_?=<folder>`), plus
   `--lang=<code>`, `--no-autostart` and `--desktop-shortcut`.
 - Built with `tools\build-installer.ps1` (no NSIS needed): the setup program
-  carries the files zstd-compressed.
+  carries the files xz-compressed (LZMA2 with x86 filter).
+
+### Smaller
+
+- `hora.exe` shrank from 31.5 to 23.3 MB: Hora's own code (including the UI
+  generated from the .slint files) is optimized for size, release builds use
+  full LTO, and the unused OpenGL renderer femtovg is no longer built in (it
+  remains available as the cargo feature `femtovg`). Startup and memory are
+  unchanged (about 57 ms to a ready window, 12.4 MB).
+- The installer packs with xz (LZMA2 with x86 filter) and is 15.4 MB.
 
 ### Other changes
 

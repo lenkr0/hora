@@ -1,5 +1,5 @@
-//! Die Programmdateien im Setup: zstd-komprimiert hinter dem eigentlichen
-//! Programm angehängt (wie bei NSIS). Windows lädt nur den PE-Teil; der
+//! Die Programmdateien im Setup: als .xz (LZMA2 mit x86-Filter, wie NSIS und
+//! 7-Zip für Programme) hinter dem eigentlichen Programm angehängt. Windows lädt nur den PE-Teil; der
 //! Anhang bleibt beim Start unberührt.
 //!
 //! Aufbau: `<Setup-Programm> <komprimiertes Archiv> <Schluss, 32 Bytes>`.
@@ -12,11 +12,13 @@
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
+use hora_i18n::tr;
+use xz2::stream::{Check, Filters, LzmaOptions, Stream};
+
 const MAGIC: &[u8; 8] = b"HORASETP";
 const TRAILER: u64 = 32;
-/// zstd-Stufe beim Packen; 22 mit 128-MB-Fenster kommt nahe an LZMA heran
-const LEVEL: i32 = 22;
-const WINDOW_LOG: u32 = 27;
+/// xz-Stufe 9 "extrem" mit 64-MB-Wörterbuch; `fast` für Tests
+const PRESET_EXTREME: u32 = 1 << 31;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
@@ -117,17 +119,35 @@ pub fn collect(dir: &Path) -> Result<Vec<File>, String> {
     Ok(files)
 }
 
-/// Setup-Datei bauen: Programmteil `stub` plus komprimierte `files`
-pub fn pack(stub: &[u8], files: &[File], level: i32) -> Result<Vec<u8>, String> {
-    let raw = archive(files)?;
-    let mut encoder = zstd::stream::Encoder::new(Vec::new(), level).map_err(|e| e.to_string())?;
-    encoder
-        .long_distance_matching(true)
-        .and_then(|_| encoder.window_log(WINDOW_LOG))
-        .and_then(|_| encoder.include_checksum(true))
+/// .xz mit x86-Filter (Sprungziele relativ → absolut, dadurch packt LZMA
+/// Programmcode deutlich besser) und LZMA2
+fn compress(raw: &[u8], fast: bool) -> Result<Vec<u8>, String> {
+    let preset = if fast { 1 } else { 9 | PRESET_EXTREME };
+    let mut options = LzmaOptions::new_preset(preset).map_err(|e| e.to_string())?;
+    if !fast {
+        options.dict_size(64 << 20);
+    }
+    let mut filters = Filters::new();
+    filters.x86();
+    filters.lzma2(&options);
+    let stream = Stream::new_stream_encoder(&filters, Check::Crc64).map_err(|e| e.to_string())?;
+    let mut encoder = xz2::write::XzEncoder::new_stream(Vec::new(), stream);
+    encoder.write_all(raw).map_err(|e| e.to_string())?;
+    encoder.finish().map_err(|e| e.to_string())
+}
+
+fn decompress(packed: &[u8]) -> Result<Vec<u8>, String> {
+    let mut raw = Vec::new();
+    xz2::read::XzDecoder::new(packed)
+        .read_to_end(&mut raw)
         .map_err(|e| e.to_string())?;
-    encoder.write_all(&raw).map_err(|e| e.to_string())?;
-    let compressed = encoder.finish().map_err(|e| e.to_string())?;
+    Ok(raw)
+}
+
+/// Setup-Datei bauen: Programmteil `stub` plus komprimierte `files`
+pub fn pack(stub: &[u8], files: &[File], fast: bool) -> Result<Vec<u8>, String> {
+    let raw = archive(files)?;
+    let compressed = compress(&raw, fast)?;
     let mut out = Vec::with_capacity(stub.len() + compressed.len() + TRAILER as usize);
     out.extend_from_slice(stub);
     out.extend_from_slice(&compressed);
@@ -148,7 +168,7 @@ pub fn pack_command(dir: &Path, target: &Path) -> Result<String, String> {
     stub.truncate(stub_len as usize);
     let files = collect(dir)?;
     let raw: u64 = files.iter().map(|f| f.data.len() as u64).sum();
-    let packed = pack(&stub, &files, LEVEL)?;
+    let packed = pack(&stub, &files, false)?;
     std::fs::write(target, &packed).map_err(|e| format!("{}: {e}", target.display()))?;
     Ok(format!(
         "{} Dateien, {:.1} MB → {:.1} MB (Setup-Programm {:.1} MB)",
@@ -180,7 +200,7 @@ fn trailer(exe: &Path) -> Result<Option<(u64, u64)>, String> {
         .and_then(|n| n.checked_add(TRAILER))
         != Some(len)
     {
-        return Err("Die Setup-Datei ist beschädigt (Länge stimmt nicht).".into());
+        return Err(tr!("The setup file is damaged. Please download it again.").into());
     }
     Ok(Some((stub_len, packed_len)))
 }
@@ -200,17 +220,9 @@ pub fn read(exe: &Path) -> Result<Option<Payload>, String> {
         .and_then(|_| file.read_exact(&mut sum))
         .map_err(|e| e.to_string())?;
     if fnv1a(&packed) != u64::from_le_bytes(sum) {
-        return Err(
-            "Die Setup-Datei ist beschädigt (Prüfsumme stimmt nicht). Bitte erneut herunterladen."
-                .into(),
-        );
+        return Err(tr!("The setup file is damaged. Please download it again.").into());
     }
-    let mut decoder = zstd::stream::Decoder::new(packed.as_slice()).map_err(|e| e.to_string())?;
-    decoder
-        .window_log_max(WINDOW_LOG)
-        .map_err(|e| e.to_string())?;
-    let mut raw = Vec::new();
-    decoder.read_to_end(&mut raw).map_err(|e| e.to_string())?;
+    let raw = decompress(&packed)?;
     Ok(Some(Payload {
         files: unarchive(&raw)?,
         stub_len,
@@ -248,7 +260,7 @@ mod tests {
             },
         ];
         let stub = b"MZ-stub-bytes".to_vec();
-        let packed = pack(&stub, &files, 3).unwrap();
+        let packed = pack(&stub, &files, true).unwrap();
         let exe = dir.path().join("setup.exe");
         std::fs::write(&exe, &packed).unwrap();
         let payload = read(&exe).unwrap().unwrap();
@@ -264,7 +276,7 @@ mod tests {
         let mut broken = packed.clone();
         broken[stub.len() + 10] ^= 0xff;
         std::fs::write(&exe, &broken).unwrap();
-        assert!(read(&exe).unwrap_err().contains("Prüfsumme"));
+        assert!(read(&exe).unwrap_err().contains("damaged"));
     }
 
     #[test]

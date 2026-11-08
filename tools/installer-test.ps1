@@ -42,7 +42,8 @@ try {
     Check ($run -eq "`"$exe`" --tray") 'Autostart mit --tray eingetragen'
     Check ((Get-ItemProperty $settingsKey -ErrorAction SilentlyContinue).Language -eq 'de') 'Sprache aus dem Installer für Hora hinterlegt'
     $uninstaller = Get-Item "$dir\uninstall.exe"
-    Check ($uninstaller.Length -lt (Get-Item $Setup).Length / 2) ("Deinstaller ohne Programmdateien ({0:N1} MB)" -f ($uninstaller.Length / 1MB))
+    # Der Deinstaller ist das Setup ohne angehängte Programmdateien
+    Check ($uninstaller.Length -lt (Get-Item $Setup).Length - 4MB) ("Deinstaller ohne Programmdateien ({0:N1} MB)" -f ($uninstaller.Length / 1MB))
 
     # Aktualisieren über die bestehende Installation (Ordner aus der Registry)
     $before = (Get-Item $exe).LastWriteTimeUtc
