@@ -20,7 +20,8 @@ jobs:
   windows:
     name: Windows (Format, Clippy, Tests, Selbsttest)
     runs-on: windows-latest
-    timeout-minutes: 60
+    # Ohne Cache (neues Repo, neue Abhängigkeiten) braucht der Job knapp eine Stunde
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
