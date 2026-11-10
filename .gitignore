@@ -2,3 +2,5 @@
 /dist
 /screenshots
 *.log
+# Geheimer Signierschlüssel für Updates (nie einchecken)
+/.secrets

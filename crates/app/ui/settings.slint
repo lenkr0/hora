@@ -135,6 +135,16 @@ export component SettingsDialog inherits Modal {
     in property <string> status;
     callback changed();
     callback test-notification();
+    in-out property <bool> update-check;
+    in property <string> version;
+    // Version, die zum Installieren bereitliegt ("" = keine)
+    in property <string> update-version;
+    in property <string> update-status;
+    in property <bool> update-busy;
+    // Nur eine mit Hora Setup installierte Kopie aktualisiert sich
+    in property <bool> update-possible;
+    callback check-updates();
+    callback install-update();
     callback dismiss();
 
     title: @tr("Settings");
@@ -302,6 +312,47 @@ export component SettingsDialog inherits Modal {
                 checked <=> root.keep-running;
                 toggled => {
                     root.changed();
+                }
+            }
+        }
+
+        Rectangle {
+            height: 22px;
+        }
+
+        GroupLabel {
+            text: @tr("UPDATES");
+        }
+
+        Row {
+            label: @tr("Check for updates automatically");
+            description: @tr("Once a day Hora looks for a new version on GitHub and downloads it in the background. It installs only when you restart Hora.");
+
+            Toggle {
+                label: @tr("Check for updates automatically");
+                checked <=> root.update-check;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: @tr("Hora {}", root.version);
+            description: root.update-status;
+
+            Button {
+                text: root.update-version != "" ? @tr("Restart and update") : @tr("Check now");
+                primary: root.update-version != "";
+                enabled: root.update-possible && !root.update-busy;
+                clicked => {
+                    if root.update-version != "" {
+                        root.install-update();
+                    } else {
+                        root.check-updates();
+                    }
                 }
             }
         }

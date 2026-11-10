@@ -16,6 +16,7 @@ mod sample;
 mod shell;
 mod sync;
 mod tasks;
+mod updates;
 mod view;
 mod week;
 
@@ -105,6 +106,8 @@ struct Settings {
     show_tasks: bool,
     /// Erinnerung zur Fälligkeit (Aufgaben ohne eigene Erinnerung)
     task_reminders: bool,
+    /// Einmal am Tag nach Updates sehen und sie im Hintergrund laden
+    update_check: bool,
 }
 
 impl Settings {
@@ -120,6 +123,7 @@ impl Settings {
             keep_running: get("keep_running").as_deref() != Some("0"),
             show_tasks: get("show_tasks").as_deref() != Some("0"),
             task_reminders: get("task_reminders").as_deref() != Some("0"),
+            update_check: get("update_check").as_deref() != Some("0"),
         }
     }
 
@@ -129,6 +133,7 @@ impl Settings {
         let _ = store.set_setting("keep_running", flag(self.keep_running));
         let _ = store.set_setting("show_tasks", flag(self.show_tasks));
         let _ = store.set_setting("task_reminders", flag(self.task_reminders));
+        let _ = store.set_setting("update_check", flag(self.update_check));
         let reminder = self
             .default_reminder
             .map_or("none".to_string(), |m| m.to_string());
@@ -221,6 +226,7 @@ struct State {
     journal_create_busy: bool,
     journal_create_error: Option<String>,
     deleting_journal: Option<journal::Entry>,
+    updates: updates::Updates,
 }
 
 impl State {
@@ -1247,6 +1253,8 @@ fn open_settings(app: &AppWindow, state: &State) {
     app.set_settings_show_tasks(state.settings.show_tasks);
     app.set_settings_task_reminders(state.settings.task_reminders);
     app.set_settings_autostart(shell::autostart_enabled());
+    app.set_settings_update_check(state.settings.update_check);
+    updates::show(app, state);
     app.set_settings_status(
         state
             .shell
@@ -2051,6 +2059,7 @@ fn relabel(app: &AppWindow, state: &mut State) {
     if let Some(shell) = &state.shell {
         shell.relabel();
     }
+    updates::show(app, state);
     refresh(app, state, true);
 }
 
@@ -2205,8 +2214,10 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         journal_create_busy: false,
         journal_create_error: None,
         deleting_journal: None,
+        updates: updates::Updates::new(&dir),
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
+    updates::start(&app, &mut state.borrow_mut());
     // Infobereich und Benachrichtigungen erst nach dem ersten Bild: Das
     // Fenster erscheint so schneller (WinRT braucht gut 20 ms)
     slint::Timer::single_shot(Duration::from_millis(100), {
@@ -2987,6 +2998,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     }));
     app.on_settings_changed(with(&app, &state, |app, s| {
         let before = (s.settings.reminders, shell::autostart_enabled());
+        let checked_updates = s.settings.update_check;
+        s.settings.update_check = app.get_settings_update_check();
         let shown_tasks = s.settings.show_tasks;
         s.settings.reminders = app.get_settings_reminders();
         s.settings.keep_running = app.get_settings_keep_running();
@@ -3003,6 +3016,9 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             .then(|| reminders::TIMED.get(index as usize - 1).copied())
             .flatten();
         s.settings.save(&s.store);
+        if s.settings.update_check && !checked_updates {
+            updates::tick(app, s);
+        }
         if before.0 != s.settings.reminders {
             s.planner.dirty = true;
         }
@@ -3014,6 +3030,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             app.set_settings_autostart(before.1);
         }
     }));
+    app.on_check_updates(with(&app, &state, updates::check));
+    app.on_install_update(with(&app, &state, updates::install));
     app.on_test_notification(with(&app, &state, |app, s| {
         let Some(shell) = &s.shell else { return };
         let now = Utc::now();
@@ -3243,6 +3261,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     journal_ui::flush(&app, &mut state.borrow_mut());
     // Symbol im Infobereich entfernen
     state.borrow_mut().shell = None;
+    // Update angefordert: jetzt erst das Setup starten
+    updates::run_pending(&state.borrow().updates);
     Ok(())
 }
 

@@ -1,8 +1,9 @@
 name: Release
 
 # Ein Tag "v1.2.3" baut den Installer, testet ihn und legt ein GitHub-Release
-# mit Installer und SHA-256-Prüfsumme an. Von Hand gestartet entsteht nur das
-# Artefakt (zum Ausprobieren), kein Release.
+# mit Installer und SHA-256-Prüfsumme an, dazu update.txt und update.sig für
+# den Updater in der App (signiert mit dem Secret HORA_UPDATE_KEY). Von Hand
+# gestartet entsteht nur das Artefakt (zum Ausprobieren), kein Release.
 on:
   push:
     tags: ['v*']
@@ -51,6 +52,20 @@ jobs:
           $file = "Hora-Setup-$env:VERSION.exe"
           $hash = (Get-FileHash "dist\$file" -Algorithm SHA256).Hash.ToLower()
           "$hash  $file" | Out-File -Encoding ascii "dist\$file.sha256"
+
+      # update.txt (Version, Größe, SHA-256) und update.sig (Ed25519): Hora
+      # nimmt nur Updates an, die mit diesem Schlüssel signiert sind
+      - name: Update für die App signieren
+        env:
+          HORA_UPDATE_KEY: ${{ secrets.HORA_UPDATE_KEY }}
+        run: |
+          if (-not $env:HORA_UPDATE_KEY) {
+            if ($env:GITHUB_REF_TYPE -eq 'tag') { throw 'Secret HORA_UPDATE_KEY fehlt: ohne Signatur nimmt Hora das Update nicht an' }
+            Write-Warning 'Secret HORA_UPDATE_KEY fehlt, update.txt wird nicht erzeugt'
+            exit 0
+          }
+          cargo run -p hora-update --bin hora-sign --locked -- manifest "dist\Hora-Setup-$env:VERSION.exe" dist
+          if ($LASTEXITCODE -ne 0) { throw 'Signieren fehlgeschlagen' }
 
       - uses: actions/upload-artifact@v4
         with:

@@ -23,6 +23,8 @@
 //!   den einer Aufgabe; `--settings` die Einstellungen; `--quick <text>` die
 //!   Schnelleingabe mit diesem Text, `--quick-dialog <text>` gleich den
 //!   daraus vorbefüllten Dialog (wie Umschalt+Eingabe).
+//! - `--update-ready <version>` täuscht ein geladenes Update vor (Hinweis in
+//!   der Titelleiste, Zeile in den Einstellungen), für Bildschirmfotos.
 //! - `--reminder-check` (mit `--connect`): fällige Erinnerungen sofort zeigen,
 //!   im Infocenter nachsehen und die Test-Toasts wieder entfernen.
 //! - `--fill-test-data` legt im Datenordner (`HORA_DATA_DIR`) ein Testkonto
@@ -67,6 +69,20 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
     }
     if let Some(view) = value_of("--view").and_then(|v| v.parse::<i32>().ok()) {
         app.invoke_set_view(view);
+    }
+    if let Some(version) = value_of("--update-ready").and_then(|v| hora_update::Version::parse(&v))
+    {
+        let mut s = state.borrow_mut();
+        s.updates.status = crate::updates::Status::Ready {
+            manifest: hora_update::Manifest {
+                version,
+                file: hora_update::setup_name(version),
+                size: 1,
+                sha256: [0; 32],
+            },
+            path: std::path::PathBuf::new(),
+        };
+        crate::updates::show(app, &s);
     }
     // Journaleintrag mit diesem Titel zeigen (lesen bzw. schreiben)
     if let Some(title) = value_of("--journal").or_else(|| value_of("--journal-write")) {

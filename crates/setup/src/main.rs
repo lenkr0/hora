@@ -8,6 +8,7 @@
 //! - `/S` still, ohne Fenster; `/D=<Ordner>` Installationsordner (als Letztes)
 //! - Deinstaller: `/S` still, `_?=<Ordner>` im Ordner laufen und warten
 //! - `--lang=de`, `--no-autostart`, `--desktop-shortcut` für stille Installation
+//! - `--relaunch`: nach stiller Installation Hora starten (Update aus der App)
 //! - `--pack <Ordner> <Ziel.exe>` baut eine Setup-Datei (tools/build-installer.ps1)
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -44,6 +45,8 @@ struct Args {
     lang: Option<String>,
     no_autostart: bool,
     desktop: bool,
+    /// Nach stiller Installation Hora wieder starten (Update aus der App)
+    relaunch: bool,
     /// Entwicklung: Seite als Bild speichern (`--snapshot <png> <Seite> <Modus>`)
     snapshot: Option<(PathBuf, i32, i32)>,
     /// Entwicklung: die Schritte im Fenster selbst durchklicken (Test)
@@ -91,6 +94,8 @@ fn parse_args(args: &[String]) -> Args {
             a.no_autostart = true;
         } else if arg == "--desktop-shortcut" {
             a.desktop = true;
+        } else if arg == "--relaunch" {
+            a.relaunch = true;
         } else if arg == "--autopilot" {
             a.autopilot = true;
         }
@@ -183,7 +188,11 @@ fn installer(args: &Args, exe: &Path, payload: Payload) -> Result<(), String> {
             language: args.lang.clone(),
         };
         log(&format!("Stille Installation nach {}", opts.dir.display()));
-        return install::install(&payload, &stub, &opts, &|_, _| {});
+        install::install(&payload, &stub, &opts, &|_, _| {})?;
+        if args.relaunch {
+            win::launch(&opts.dir.join(install::EXE), &[])?;
+        }
+        return Ok(());
     }
     let lang = initial_language(args);
     hora_i18n::set_language(lang);
@@ -665,5 +674,14 @@ mod tests {
             Some((PathBuf::from("stage"), PathBuf::from("out.exe")))
         );
         assert_eq!(p.lang.as_deref(), Some("de"));
+    }
+
+    #[test]
+    fn update_from_the_app() {
+        // So startet Hora das geladene Setup
+        let a = args("/S --relaunch");
+        assert!(a.silent && a.relaunch && !a.uninstall);
+        assert_eq!(a.dir, None);
+        assert!(!args("/S").relaunch);
     }
 }

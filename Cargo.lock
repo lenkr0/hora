@@ -1767,6 +1767,7 @@ dependencies = [
  "hora-i18n",
  "hora-platform",
  "hora-storage",
+ "hora-update",
  "iana-time-zone",
  "png",
  "raw-window-handle",
@@ -1852,6 +1853,17 @@ dependencies = [
  "rusqlite",
  "tempfile",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "hora-update"
+version = "1.1.0"
+dependencies = [
+ "base64",
+ "hora-i18n",
+ "ring",
+ "tempfile",
+ "ureq",
 ]
 
 [[package]]

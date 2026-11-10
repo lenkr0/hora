@@ -41,6 +41,14 @@ SmartScreen may warn on first start ("More info" → "Run anyway").
 For scripts: `/S` installs silently, `/D=C:\Path` (last) picks the folder,
 `--lang=de`, `--no-autostart` and `--desktop-shortcut` set the options.
 
+**Updates:** once a day Hora looks for a new version here on GitHub and
+downloads it in the background. When it's ready, the title bar shows
+"Hora 1.2.0 is ready · Restart to update"; a click installs it and starts Hora
+again. Updates are signed, and Hora checks the signature, size and checksum
+before installing. The check only asks github.com for the latest release (it
+sends your IP address and `Hora/<version>`, nothing else); turn it off in
+Settings → Updates.
+
 ## Getting started
 
 Sidebar → **Add account**, then enter the DAV address (for Baïkal e.g.
@@ -73,9 +81,16 @@ cargo test --workspace                                          # unit tests
 
 More tests: CalDAV against Radicale and Baïkal in Docker
 (`cargo test -p hora-caldav --test servers -- --ignored --test-threads=1`), an end-to-end run
-(`tools\e2e-radicale.ps1`), the installer test (`tools\installer-test.ps1`)
-and a UI self-test (`--selftest`, feature `devtools`). CI runs on every push to
-`main`; a tag `v1.2.3` builds and publishes the installer.
+(`tools\e2e-radicale.ps1`), the installer test (`tools\installer-test.ps1`),
+the update test (`tools\update-test.ps1`: installs, offers a signed update on a
+local server, clicks it, checks the restart) and a UI self-test (`--selftest`,
+feature `devtools`). CI runs on every push to `main`; a tag `v1.2.3` builds
+and publishes the installer.
+
+Releases sign `update.txt` with the secret `HORA_UPDATE_KEY`, an Ed25519 key
+whose public half is built into Hora (`crates/update/src/lib.rs`). It was
+created once with `cargo run -p hora-update --bin hora-sign -- keygen <file>`;
+keep it safe – without it, installed copies won't accept new updates.
 
 | Crate | Contents |
 |---|---|
@@ -86,13 +101,14 @@ and a UI self-test (`--selftest`, feature `devtools`). CI runs on every push to
 | `i18n` | translations and date formats ([how to translate](translations/README.md)) |
 | `app` | the Slint UI |
 | `setup` | the installer |
+| `update` | update check, download and signature check; `hora-sign` for releases |
 
 ## Limitations
 
 - Only HTTP Basic Auth; tested with Radicale and Baïkal.
 - Translations other than German haven't been reviewed by native speakers
   yet – corrections are welcome.
-- No automatic updates; the installer isn't signed.
+- The installer isn't code-signed yet, so SmartScreen warns on first start.
 
 Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 

@@ -6,6 +6,7 @@ members = [
     "crates/caldav",
     "crates/storage",
     "crates/platform",
+    "crates/update",
     "crates/app",
     "crates/setup",
 ]
@@ -23,6 +24,7 @@ hora-core = { path = "crates/core" }
 hora-caldav = { path = "crates/caldav" }
 hora-storage = { path = "crates/storage" }
 hora-platform = { path = "crates/platform" }
+hora-update = { path = "crates/update" }
 
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
 chrono-tz = "0.10.4"
@@ -33,6 +35,8 @@ ureq = { version = "3.5.1", features = ["platform-verifier"] }
 roxmltree = "0.21.2"
 url = "2.5.8"
 base64 = "0.23.1"
+# Signatur (Ed25519) und SHA-256 der Updates; steckt über rustls schon im Programm
+ring = "0.17.14"
 keyring-core = "1.0.1"
 windows-native-keyring-store = "1.1.0"
 iana-time-zone = "0.1.65"

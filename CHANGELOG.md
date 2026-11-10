@@ -1,5 +1,26 @@
 # Changelog
 
+## [Unreleased]
+
+### Updates
+
+- Hora updates itself: once a day it looks for a new version on GitHub and
+  downloads it in the background. When it's ready, the title bar shows
+  "Hora 1.2.0 is ready · Restart to update"; a click quits Hora, installs the
+  update silently and starts Hora again. Settings → Updates turns the daily
+  check off, checks right away and shows the current state.
+- Updates are signed: each release carries `update.txt` (version, size and
+  SHA-256 of the installer) and `update.sig` (Ed25519 signature). Hora only
+  installs a file whose signature matches the key built into it and whose
+  size and checksum match; a damaged download is deleted.
+- Only a copy installed with Hora Setup updates itself. Installers downloaded
+  for an update are removed once Hora runs the new version.
+- Hora 1.1.0 and older don't have this yet: install the next version once by
+  hand.
+- Hora Setup: `--relaunch` starts Hora after a silent installation.
+- Releases: the workflow signs the update with the secret `HORA_UPDATE_KEY`
+  (`hora-sign`); `tools\update-test.ps1` tests the whole update from the app.
+
 ## [1.1.0] – 2026-11-08
 
 ### Languages

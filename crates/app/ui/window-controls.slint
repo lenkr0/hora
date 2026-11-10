@@ -101,6 +101,57 @@ export component WindowControls inherits HorizontalLayout {
     }
 }
 
+// Hinweis in der Titelleiste, wenn ein Update bereitliegt (wie bei Discord
+// oder VS Code). Klick: Hora beendet sich, das Setup aktualisiert still und
+// startet Hora wieder.
+export component UpdateNotice inherits Rectangle {
+    in property <string> version;
+    callback clicked();
+
+    height: 24px;
+    width: row.preferred-width;
+    border-radius: 12px;
+    background: ta.pressed ? Theme.accent-strong : ta.has-hover ? Theme.accent-hover : Theme.accent;
+    animate background { duration: Theme.dur-fast; }
+    accessible-role: button;
+    accessible-label: @tr("Hora {} is ready · Restart to update", root.version);
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 12px;
+        spacing: 6px;
+
+        VerticalLayout {
+            alignment: center;
+
+            Image {
+                source: @image-url("icons/refresh.svg");
+                width: 12px;
+                height: 12px;
+                colorize: Theme.accent-contrast;
+            }
+        }
+
+        Text {
+            text: @tr("Hora {} is ready · Restart to update", root.version);
+            font-size: 12px;
+            font-weight: 600;
+            color: Theme.accent-contrast;
+            vertical-alignment: center;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 // Fläche zum Verschieben: Drücken zieht das Fenster, Doppelklick maximiert.
 // Den Doppelklick erkennen wir selbst, weil Windows nach dem ersten Drücken
 // die Maus übernimmt.

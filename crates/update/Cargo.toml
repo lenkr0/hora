@@ -1,0 +1,22 @@
+[package]
+name = "hora-update"
+description = "Updates: neuestes Release prüfen, Setup laden und prüfen; Signierwerkzeug für Releases"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+hora-i18n.workspace = true
+ureq.workspace = true
+ring.workspace = true
+base64.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+# Nur für den Release-Workflow (signiert update.txt), nicht im Installer
+[[bin]]
+name = "hora-sign"
+path = "src/bin/hora-sign.rs"

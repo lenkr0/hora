@@ -28,6 +28,7 @@ hora-core.workspace = true
 hora-caldav.workspace = true
 hora-storage.workspace = true
 hora-platform.workspace = true
+hora-update.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
 iana-time-zone.workspace = true

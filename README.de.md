@@ -44,6 +44,14 @@ Für Skripte: `/S` installiert still, `/D=C:\Pfad` (als Letztes) wählt den
 Ordner, `--lang=de`, `--no-autostart` und `--desktop-shortcut` setzen die
 Optionen.
 
+**Updates:** Einmal am Tag sieht Hora hier auf GitHub nach einer neuen
+Version und lädt sie im Hintergrund. Liegt sie bereit, zeigt die Titelleiste
+„Hora 1.2.0 ist bereit · Zum Aktualisieren neu starten“; ein Klick installiert
+sie und startet Hora neu. Updates sind signiert, Hora prüft Signatur, Größe
+und Prüfsumme vor dem Installieren. Gefragt wird nur github.com nach dem
+neuesten Release (dabei gehen deine IP-Adresse und `Hora/<Version>` mit, sonst
+nichts); ausschalten unter Einstellungen → Updates.
+
 ## Loslegen
 
 Seitenleiste → **Konto hinzufügen**, dann DAV-Adresse (bei Baïkal z. B.
@@ -78,9 +86,12 @@ cargo test --workspace                                          # Unit-Tests
 Weitere Tests: CalDAV gegen Radicale und Baïkal in Docker
 (`cargo test -p hora-caldav --test servers -- --ignored --test-threads=1`), ein
 Ende-zu-Ende-Lauf (`tools\e2e-radicale.ps1`), der Installer-Test
-(`tools\installer-test.ps1`) und ein Selbsttest der Oberfläche (`--selftest`,
+(`tools\installer-test.ps1`), der Update-Test (`tools\update-test.ps1`:
+installiert, bietet auf einem lokalen Server ein signiertes Update an, klickt
+es und prüft den Neustart) und ein Selbsttest der Oberfläche (`--selftest`,
 Feature `devtools`). Die CI läuft bei jedem Push auf `main`; ein Tag `v1.2.3`
-baut und veröffentlicht den Installer. Aufbau und Crates stehen im
+baut und veröffentlicht den Installer. Releases signieren `update.txt` mit
+dem Secret `HORA_UPDATE_KEY`; Details, Aufbau und Crates stehen im
 [englischen README](README.md#build).
 
 ## Grenzen
@@ -88,7 +99,8 @@ baut und veröffentlicht den Installer. Aufbau und Crates stehen im
 - Nur HTTP Basic Auth; getestet mit Radicale und Baïkal.
 - Die Übersetzungen außer Deutsch hat noch kein Muttersprachler
   gegengelesen – Korrekturen sind willkommen.
-- Keine automatischen Updates; der Installer ist nicht signiert.
+- Der Installer ist noch nicht signiert, SmartScreen warnt deshalb beim
+  ersten Start.
 
 Änderungen stehen in [CHANGELOG.md](CHANGELOG.md).
 

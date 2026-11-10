@@ -1,7 +1,7 @@
 // Hauptfenster. Kopfzeile nach Calino (CalendarHeader.module.css).
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { WindowControls, DragArea, ResizeEdges } from "window-controls.slint";
+import { WindowControls, DragArea, ResizeEdges, UpdateNotice } from "window-controls.slint";
 import { Theme, Fmt, Locale } from "theme.slint";
 import { EventItem, WeekLogic } from "event-card.slint";
 import { WeekView, DayInfo, AllDayItem } from "week-view.slint";
@@ -594,6 +594,12 @@ export component AppWindow inherits Window {
     in property <[SelectOption]> format-options;
     in property <[SelectOption]> default-reminder-options;
     in property <string> settings-status;
+    // Updates: Version, die bereitliegt ("" = keine), Zeile in den Einstellungen
+    in property <string> update-version;
+    in property <string> update-status;
+    in property <bool> update-busy;
+    in property <bool> update-possible;
+    in-out property <bool> settings-update-check: true;
     in-out property <bool> scope-open;
     in property <bool> scope-deleting;
     in property <bool> scope-allow-this: true;
@@ -633,6 +639,8 @@ export component AppWindow inherits Window {
     callback language-changed();
     callback formats-changed();
     callback test-notification();
+    callback check-updates();
+    callback install-update();
     callback scope-chosen(int);
     callback scope-dismissed();
     callback dialog-delete();
@@ -878,6 +886,18 @@ export component AppWindow inherits Window {
 
                 HorizontalLayout {
                     alignment: end;
+                    spacing: 10px;
+
+                    if root.update-version != "": VerticalLayout {
+                        alignment: center;
+
+                        UpdateNotice {
+                            version: root.update-version;
+                            clicked => {
+                                root.install-update();
+                            }
+                        }
+                    }
 
                     WindowControls {
                         maximized: root.window-maximized;
@@ -1508,6 +1528,18 @@ export component AppWindow inherits Window {
         }
         test-notification => {
             root.test-notification();
+        }
+        update-check <=> root.settings-update-check;
+        version: root.version;
+        update-version: root.update-version;
+        update-status: root.update-status;
+        update-busy: root.update-busy;
+        update-possible: root.update-possible;
+        check-updates => {
+            root.check-updates();
+        }
+        install-update => {
+            root.install-update();
         }
         dismiss => {
             root.settings-open = false;
