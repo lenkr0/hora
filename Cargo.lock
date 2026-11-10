@@ -1756,7 +1756,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hora-app"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1779,7 +1779,7 @@ dependencies = [
 
 [[package]]
 name = "hora-caldav"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "base64",
  "chrono",
@@ -1795,7 +1795,7 @@ dependencies = [
 
 [[package]]
 name = "hora-core"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -1807,14 +1807,14 @@ dependencies = [
 
 [[package]]
 name = "hora-i18n"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
 ]
 
 [[package]]
 name = "hora-platform"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "hora-i18n",
  "keyring-core",
@@ -1826,7 +1826,7 @@ dependencies = [
 
 [[package]]
 name = "hora-setup"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "dirs",
@@ -1845,7 +1845,7 @@ dependencies = [
 
 [[package]]
 name = "hora-storage"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "chrono",
  "hora-core",
@@ -1857,7 +1857,7 @@ dependencies = [
 
 [[package]]
 name = "hora-update"
-version = "1.1.0"
+version = "1.2.0"
 dependencies = [
  "base64",
  "hora-i18n",
