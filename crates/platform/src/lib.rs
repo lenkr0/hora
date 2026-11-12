@@ -5,11 +5,13 @@
 //! - [`tray`]: Symbol im Infobereich mit Kontextmenü
 //! - [`instance`]: nur eine Instanz je Datenordner, Fenster nach vorn holen
 //! - [`autostart`]: Start mit Windows (HKCU, ohne Adminrechte)
+//! - [`activity`]: Vordergrund-App und letzte Eingabe, für die App-Zeiten
 //!
 //! Unter anderen Systemen gibt es dieselben Funktionen als Platzhalter.
 
 use std::time::Duration;
 
+pub mod activity;
 pub mod autostart;
 pub mod credentials;
 pub mod instance;

@@ -33,6 +33,10 @@
 //!   Messung mit vielen Daten. Beendet sich danach.
 //! - `--time-views` misst, wie lange jede Ansicht, Blättern und eine Suche in
 //!   der Befehlspalette brauchen (Mittel aus 5 Durchläufen), und beendet sich.
+//! - `--activities-demo` schaltet die App-Zeiten ein und legt, wenn es noch
+//!   keine gibt, zwei Beispiel-Aktivitäten mit gezählter Zeit an (nur mit
+//!   eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet die Einstellungen
+//!   mit dem Dialog für eine neue Aktivität.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -119,8 +123,15 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
         app.invoke_show_quick();
         app.set_quick_text(text.into());
     }
+    if has("--activities-demo") {
+        activities_demo(&mut state.borrow_mut());
+    }
     if has("--settings") {
         app.invoke_show_settings();
+    }
+    if has("--activity-dialog") {
+        app.invoke_show_settings();
+        crate::activity_ui::open_new(app, &mut state.borrow_mut());
     }
     if has("--sync-popup") {
         let weak = app.as_weak();
@@ -872,6 +883,39 @@ fn time_views(app: &AppWindow) {
 }
 
 /// Große Testdaten für die Messung (siehe `--fill-test-data`)
+/// Zwei Beispiel-Aktivitäten mit Zeit in dieser und der letzten Woche
+fn activities_demo(state: &mut State) {
+    use chrono::{TimeDelta, Utc};
+    state.settings.activities = true;
+    state.settings.save(&state.store);
+    if !state.store.activities().unwrap_or_default().is_empty() {
+        return;
+    }
+    let examples: [(&str, &str, &[&str], i64); 2] = [
+        ("Schreiben", "#34a853", &["writer.exe", "notes.exe"], 95),
+        ("Programmieren", "#4285f4", &["editor.exe"], 40),
+    ];
+    let now = Utc::now();
+    for (name, color, apps, minutes) in examples {
+        let apps: Vec<String> = apps.iter().map(|a| a.to_string()).collect();
+        let Ok(id) = state.store.add_activity(&hora_storage::ActivityDraft {
+            name,
+            color,
+            idle_limit: 60,
+            apps: &apps,
+        }) else {
+            continue;
+        };
+        for days in [0, 1, 9, 12] {
+            let end = now - TimeDelta::days(days) - TimeDelta::minutes(5);
+            let _ = state
+                .store
+                .add_activity_time(id, end - TimeDelta::minutes(minutes), end);
+        }
+    }
+    crate::activity_ui::apply(state);
+}
+
 fn fill_test_data(store: &mut hora_storage::Store) -> Result<String, hora_storage::Error> {
     use chrono::{Datelike, Days, Local, NaiveDate};
     let account = store.add_account(&hora_storage::NewAccount {

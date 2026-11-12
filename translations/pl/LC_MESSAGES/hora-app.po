@@ -9,6 +9,55 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n == 1 ? 0 : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 1 : 2);\n"
 
+#: crates/app/src/activity_ui.rs:28
+msgid "{} min"
+msgstr "{} min"
+
+#: crates/app/src/activity_ui.rs:30
+msgid "{} h"
+msgstr "{} godz."
+
+#: crates/app/src/activity_ui.rs:95
+msgid "No programs"
+msgstr "Brak programów"
+
+#: crates/app/src/activity_ui.rs:105
+msgid "{0} · this week {1} · total {2}"
+msgstr "{0} · w tym tygodniu {1} · łącznie {2}"
+
+#: crates/app/src/activity_ui.rs:130
+msgid "{} seconds"
+msgstr "{} sekund"
+
+#: crates/app/src/activity_ui.rs:169
+msgid "counts for {}"
+msgstr "liczy się do {}"
+
+#: crates/app/src/activity_ui.rs:210
+msgid "Delete “{0}” with its counted time ({1})? This can't be undone."
+msgstr "Usunąć „{0}” wraz z policzonym czasem ({1})? Tej operacji nie można cofnąć."
+
+#: crates/app/src/activity_ui.rs:255
+msgid "Please enter the program's file name, e.g. program.exe."
+msgstr "Wpisz nazwę pliku programu, np. program.exe."
+
+#: crates/app/src/activity_ui.rs:290
+msgid "Please enter a name."
+msgstr "Wpisz nazwę."
+
+#: crates/app/src/activity_ui.rs:301
+msgid "Please choose at least one program."
+msgstr "Wybierz co najmniej jeden program."
+
+#: crates/app/src/activity_ui.rs:132
+#: crates/app/src/reminders.rs:274
+#: crates/platform/src/notify.rs:63
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] "{n} minuta"
+msgstr[1] "{n} minuty"
+msgstr[2] "{n} minut"
+
 #: crates/app/src/editing.rs:119
 msgid "Please choose a calendar."
 msgstr "Wybierz kalendarz."
@@ -42,7 +91,7 @@ msgid "New event"
 msgstr "Nowe wydarzenie"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2889
+#: crates/app/src/main.rs:2915
 msgid "The repetition ends before the start."
 msgstr "Powtarzanie kończy się przed początkiem."
 
@@ -91,13 +140,13 @@ msgstr "Koniec musi być po początku."
 
 #: crates/app/src/items.rs:212
 #: crates/app/src/items.rs:237
-#: crates/app/src/main.rs:1298
+#: crates/app/src/main.rs:1315
 msgid "(untitled)"
 msgstr "(bez tytułu)"
 
 #: crates/app/src/journal.rs:107
 #: crates/app/src/journal.rs:148
-#: crates/app/src/main.rs:346
+#: crates/app/src/main.rs:359
 msgid "Sample events"
 msgstr "Przykładowe wydarzenia"
 
@@ -159,7 +208,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Dużo zrobione: przeprowadzka zaplanowana, podatki załatwione, wreszcie znowu regularnie biegam.\n\n---\n\nNa listopad: **więcej czytać**, mniej ekranów."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2588
+#: crates/app/src/main.rs:2614
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Dziennik"
@@ -214,172 +263,172 @@ msgid "The entry from {} will be deleted."
 msgstr "Wpis z dnia {} zostanie usunięty."
 
 #: crates/app/src/journal_ui.rs:491
-#: crates/app/src/main.rs:1483
-#: crates/app/src/main.rs:1509
+#: crates/app/src/main.rs:1500
+#: crates/app/src/main.rs:1526
 msgid "“{}” will be deleted."
 msgstr "„{}” zostanie usunięte."
 
-#: crates/app/src/main.rs:345
+#: crates/app/src/main.rs:358
 msgid "On this device"
 msgstr "Na tym urządzeniu"
 
-#: crates/app/src/main.rs:402
-#: crates/app/src/main.rs:961
+#: crates/app/src/main.rs:415
+#: crates/app/src/main.rs:974
 #: crates/app/src/quick_add.rs:135
 msgid "Sample events (only on this device)"
 msgstr "Przykładowe wydarzenia (tylko na tym urządzeniu)"
 
-#: crates/app/src/main.rs:426
+#: crates/app/src/main.rs:439
 msgid "W{}"
 msgstr "T{}"
 
-#: crates/app/src/main.rs:736
-#: crates/app/ui/app.slint:264
+#: crates/app/src/main.rs:749
+#: crates/app/ui/app.slint:265
 msgid "Tasks"
 msgstr "Zadania"
 
-#: crates/app/src/main.rs:772
+#: crates/app/src/main.rs:785
 msgid "Syncing…"
 msgstr "Synchronizowanie…"
 
-#: crates/app/src/main.rs:796
+#: crates/app/src/main.rs:809
 msgid "{} (+{} more)"
 msgstr "{} (+{} więcej)"
 
-#: crates/app/src/main.rs:814
+#: crates/app/src/main.rs:827
 msgid "Synced {}"
 msgstr "Zsynchronizowano o {}"
 
-#: crates/app/src/main.rs:818
+#: crates/app/src/main.rs:831
 msgid "Not synced yet"
 msgstr "Jeszcze nie zsynchronizowano"
 
-#: crates/app/src/main.rs:850
+#: crates/app/src/main.rs:863
 msgid "An event"
 msgstr "Wydarzenie"
 
-#: crates/app/src/main.rs:854
+#: crates/app/src/main.rs:867
 msgid "“{}” was changed on the server before your deletion was uploaded. Which version should apply?"
 msgstr "„{}” zmieniono na serwerze, zanim wysłano twoje usunięcie. Która wersja ma obowiązywać?"
 
-#: crates/app/src/main.rs:859
+#: crates/app/src/main.rs:872
 msgid "“{}” was changed on the server before your change was uploaded. Which version should apply?"
 msgstr "„{}” zmieniono na serwerze, zanim wysłano twoją zmianę. Która wersja ma obowiązywać?"
 
-#: crates/app/src/main.rs:1125
+#: crates/app/src/main.rs:1138
 msgid "No reminder"
 msgstr "Bez przypomnienia"
 
-#: crates/app/src/main.rs:1401
+#: crates/app/src/main.rs:1418
 msgid "No parent task"
 msgstr "Brak zadania nadrzędnego"
 
-#: crates/app/src/main.rs:1432
+#: crates/app/src/main.rs:1449
 msgid "Recurring task: {}. Completed {} times so far. The due date applies to the series."
 msgstr "Zadanie cykliczne: {}. Dotąd wykonane {} razy. Termin dotyczy całej serii."
 
-#: crates/app/src/main.rs:1494
+#: crates/app/src/main.rs:1511
 msgid "The whole series will be deleted."
 msgstr "Zostanie usunięta cała seria."
 
-#: crates/app/src/main.rs:1496
+#: crates/app/src/main.rs:1513
 msgid "Delete task?"
 msgstr "Usunąć zadanie?"
 
-#: crates/app/src/main.rs:1508
-#: crates/app/ui/app.slint:555
+#: crates/app/src/main.rs:1525
+#: crates/app/ui/app.slint:556
 msgid "Delete event?"
 msgstr "Usunąć wydarzenie?"
 
-#: crates/app/src/main.rs:1717
+#: crates/app/src/main.rs:1734
 #: crates/app/src/palette.rs:362
 msgid "Task: {}"
 msgstr "Zadanie: {}"
 
-#: crates/app/src/main.rs:1943
+#: crates/app/src/main.rs:1960
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:1973
+#: crates/app/src/main.rs:1990
 msgid "Windows language"
 msgstr "Język systemu Windows"
 
-#: crates/app/src/main.rs:2031
+#: crates/app/src/main.rs:2049
 msgid "Hora could not start: {}"
 msgstr "Nie udało się uruchomić Hora: {}"
 
-#: crates/app/src/main.rs:2079
+#: crates/app/src/main.rs:2097
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "Nie można otworzyć bazy danych {} ({}). Aby nic nie utracić, Hora zostanie zamknięta."
 
-#: crates/app/src/main.rs:2726
+#: crates/app/src/main.rs:2752
 msgid "Please choose a calendar that supports tasks."
 msgstr "Wybierz kalendarz obsługujący zadania."
 
-#: crates/app/src/main.rs:2735
+#: crates/app/src/main.rs:2761
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "To zadanie już nie istnieje."
 
-#: crates/app/src/main.rs:2978
+#: crates/app/src/main.rs:3010
 msgid "Autostart not changed: {}"
 msgstr "Nie zmieniono autostartu: {}"
 
-#: crates/app/src/main.rs:2991
-#: crates/app/ui/settings.slint:213
+#: crates/app/src/main.rs:3038
+#: crates/app/ui/settings.slint:233
 msgid "Test notification"
 msgstr "Powiadomienie testowe"
 
-#: crates/app/src/main.rs:2992
+#: crates/app/src/main.rs:3039
 msgid "This is what Hora's reminders look like"
 msgstr "Tak wyglądają przypomnienia Hora"
 
-#: crates/app/src/main.rs:3007
+#: crates/app/src/main.rs:3054
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Wysłano. Jeśli nic się nie pojawi: Ustawienia systemu Windows → System → Powiadomienia."
 
-#: crates/app/src/main.rs:3091
+#: crates/app/src/main.rs:3138
 msgid "Please enter the server address."
 msgstr "Wpisz adres serwera."
 
-#: crates/app/src/main.rs:3093
+#: crates/app/src/main.rs:3140
 msgid "Please enter the username."
 msgstr "Wpisz nazwę użytkownika."
 
-#: crates/app/src/main.rs:3095
+#: crates/app/src/main.rs:3142
 msgid "Please enter the password."
 msgstr "Wpisz hasło."
 
-#: crates/app/src/main.rs:3182
+#: crates/app/src/main.rs:3229
 msgid "Hora keeps running in the notification area"
 msgstr "Hora działa dalej w obszarze powiadomień"
 
-#: crates/app/src/main.rs:3183
+#: crates/app/src/main.rs:3230
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "Przypomnienia nadal będą się pojawiać. Zamknij przez ikonę w obszarze powiadomień (prawy przycisk)."
 
-#: crates/app/src/main.rs:776
+#: crates/app/src/main.rs:789
 msgid "{n} conflict while saving"
 msgid_plural "{n} conflicts while saving"
 msgstr[0] "{n} konflikt przy zapisie"
 msgstr[1] "{n} konflikty przy zapisie"
 msgstr[2] "{n} konfliktów przy zapisie"
 
-#: crates/app/src/main.rs:786
+#: crates/app/src/main.rs:799
 msgid "{n} change rejected by the server"
 msgid_plural "{n} changes rejected by the server"
 msgstr[0] "{n} zmiana odrzucona przez serwer"
 msgstr[1] "{n} zmiany odrzucone przez serwer"
 msgstr[2] "{n} zmian odrzuconych przez serwer"
 
-#: crates/app/src/main.rs:804
+#: crates/app/src/main.rs:817
 msgid "{n} change waiting to upload"
 msgid_plural "{n} changes waiting to upload"
 msgstr[0] "{n} zmiana czeka na wysłanie"
 msgstr[1] "{n} zmiany czekają na wysłanie"
 msgstr[2] "{n} zmian czeka na wysłanie"
 
-#: crates/app/src/main.rs:1486
+#: crates/app/src/main.rs:1503
 msgid "So will its subtask."
 msgid_plural "So will its {n} subtasks."
 msgstr[0] "Jego podzadanie również."
@@ -459,12 +508,12 @@ msgid "Tasks view"
 msgstr "Widok zadań"
 
 #: crates/app/src/palette.rs:153
-#: crates/app/ui/app.slint:75
+#: crates/app/ui/app.slint:76
 msgid "Previous"
 msgstr "Wstecz"
 
 #: crates/app/src/palette.rs:160
-#: crates/app/ui/app.slint:116
+#: crates/app/ui/app.slint:117
 #: crates/setup/ui/setup.slint:852
 msgid "Next"
 msgstr "Dalej"
@@ -584,7 +633,7 @@ msgid "done"
 msgstr "wykonane"
 
 #: crates/app/src/palette.rs:577
-#: crates/app/ui/settings.slint:229
+#: crates/app/ui/settings.slint:249
 msgid "TASKS"
 msgstr "ZADANIA"
 
@@ -768,14 +817,6 @@ msgid_plural "{n} hours"
 msgstr[0] "{n} godzina"
 msgstr[1] "{n} godziny"
 msgstr[2] "{n} godzin"
-
-#: crates/app/src/reminders.rs:274
-#: crates/platform/src/notify.rs:63
-msgid "{n} minute"
-msgid_plural "{n} minutes"
-msgstr[0] "{n} minuta"
-msgstr[1] "{n} minuty"
-msgstr[2] "{n} minut"
 
 #: crates/app/src/reminders.rs:288
 msgid "{n} day before at {}"
@@ -1065,24 +1106,32 @@ msgstr "Wywóz śmieci"
 msgid "Grandma's birthday"
 msgstr "Urodziny babci"
 
-#: crates/app/src/shell.rs:29
+#: crates/app/src/shell.rs:32
 msgid "Open Hora"
 msgstr "Otwórz Hora"
 
-#: crates/app/src/shell.rs:31
-#: crates/app/ui/app.slint:252
+#: crates/app/src/shell.rs:34
+#: crates/app/ui/app.slint:253
 msgid "Sync now"
 msgstr "Synchronizuj teraz"
 
-#: crates/app/src/shell.rs:32
+#: crates/app/src/shell.rs:37
+msgid "Pause app time"
+msgstr "Wstrzymaj czas aplikacji"
+
+#: crates/app/src/shell.rs:38
+msgid "Resume app time"
+msgstr "Wznów czas aplikacji"
+
+#: crates/app/src/shell.rs:42
 msgid "Settings…"
 msgstr "Ustawienia…"
 
-#: crates/app/src/shell.rs:34
+#: crates/app/src/shell.rs:44
 msgid "Quit"
 msgstr "Zakończ"
 
-#: crates/app/src/shell.rs:57
+#: crates/app/src/shell.rs:70
 msgid "Notifications not available: {}"
 msgstr "Powiadomienia niedostępne: {}"
 
@@ -1179,37 +1228,112 @@ msgstr "Zadania cykliczne nie mogą mieć podzadań."
 msgid "A task can't be inside its own subtask."
 msgstr "Zadanie nie może być wewnątrz własnego podzadania."
 
-#: crates/app/src/updates.rs:239
+#: crates/app/src/updates.rs:236
 msgid "This copy of Hora wasn't installed with Hora Setup, so it can't update itself."
 msgstr "Ta kopia Hora nie została zainstalowana przez Hora Setup, więc nie może się sama zaktualizować."
 
-#: crates/app/src/updates.rs:245
+#: crates/app/src/updates.rs:243
 msgid "Last checked: {}, {}"
 msgstr "Ostatnio sprawdzono: {}, {}"
 
-#: crates/app/src/updates.rs:251
+#: crates/app/src/updates.rs:249
 msgid "Hora looks for new versions on GitHub."
 msgstr "Hora szuka nowych wersji na GitHubie."
 
-#: crates/app/src/updates.rs:253
+#: crates/app/src/updates.rs:252
 msgid "Looking for updates…"
 msgstr "Szukanie aktualizacji…"
 
-#: crates/app/src/updates.rs:255
+#: crates/app/src/updates.rs:254
 msgid "Downloading Hora {}… {}%"
 msgstr "Pobieranie Hora {}… {}%"
 
-#: crates/app/src/updates.rs:257
+#: crates/app/src/updates.rs:256
 msgid "Hora is up to date."
 msgstr "Masz najnowszą wersję Hora."
 
-#: crates/app/src/updates.rs:259
+#: crates/app/src/updates.rs:258
 msgid "Hora {} is ready. It installs when Hora restarts."
 msgstr "Wersja {} jest gotowa i zostanie zainstalowana po ponownym uruchomieniu Hora."
 
-#: crates/app/src/updates.rs:261
+#: crates/app/src/updates.rs:263
 msgid "Couldn't check for updates: {}"
 msgstr "Nie udało się sprawdzić aktualizacji: {}"
+
+#: crates/app/ui/activity-dialog.slint:46
+msgid "Edit activity"
+msgstr "Edytuj aktywność"
+
+#: crates/app/ui/activity-dialog.slint:46
+msgid "New activity"
+msgstr "Nowa aktywność"
+
+#: crates/app/ui/activity-dialog.slint:59
+msgid "Name"
+msgstr "Nazwa"
+
+#: crates/app/ui/activity-dialog.slint:60
+msgid "e.g. Writing"
+msgstr "np. Pisanie"
+
+#: crates/app/ui/activity-dialog.slint:71
+msgid "Color"
+msgstr "Kolor"
+
+#: crates/app/ui/activity-dialog.slint:86
+#: crates/app/ui/sidebar.slint:466
+msgid "Color {}"
+msgstr "Kolor {}"
+
+#: crates/app/ui/activity-dialog.slint:110
+msgid "Programs"
+msgstr "Programy"
+
+#: crates/app/ui/activity-dialog.slint:114
+msgid "Time counts while one of these programs is in front. Shown are the programs open right now and those already chosen."
+msgstr "Czas liczy się, gdy jeden z tych programów jest na pierwszym planie. Widoczne są programy otwarte w tej chwili i już wybrane."
+
+#: crates/app/ui/activity-dialog.slint:118
+msgid "No open programs found. Open the program, or add it by its file name."
+msgstr "Nie znaleziono otwartych programów. Otwórz program lub dodaj go po nazwie pliku."
+
+#: crates/app/ui/activity-dialog.slint:156
+msgid "Add by file name"
+msgstr "Dodaj po nazwie pliku"
+
+#: crates/app/ui/activity-dialog.slint:169
+msgid "Add"
+msgstr "Dodaj"
+
+#: crates/app/ui/activity-dialog.slint:190
+msgid "Pause after"
+msgstr "Pauza po"
+
+#: crates/app/ui/activity-dialog.slint:194
+msgid "Counting pauses when there is no mouse, keyboard or pen input for this long, e.g. while you watch a video in the program."
+msgstr "Liczenie wstrzymuje się, gdy przez ten czas nie ma działań myszą, klawiaturą ani piórem, np. podczas oglądania filmu w programie."
+
+#: crates/app/ui/activity-dialog.slint:222
+#: crates/app/ui/activity-dialog.slint:271
+#: crates/app/ui/event-dialog.slint:609
+msgid "Delete"
+msgstr "Usuń"
+
+#: crates/app/ui/activity-dialog.slint:234
+#: crates/app/ui/dialogs.slint:188
+#: crates/app/ui/event-dialog.slint:621
+msgid "Cancel"
+msgstr "Anuluj"
+
+#: crates/app/ui/activity-dialog.slint:241
+#: crates/app/ui/event-dialog.slint:628
+#: crates/app/ui/task-dialog.slint:217
+msgid "Save"
+msgstr "Zapisz"
+
+#: crates/app/ui/activity-dialog.slint:264
+msgid "Keep"
+msgstr "Zachowaj"
 
 #: crates/app/ui/agenda-view.slint:48
 msgid "{}, {}, today – open day"
@@ -1231,53 +1355,53 @@ msgstr "Dodaj wydarzenie: {}"
 msgid "+ Add"
 msgstr "+ Dodaj"
 
-#: crates/app/ui/app.slint:134
+#: crates/app/ui/app.slint:135
 msgid "Search or add (Ctrl+K)"
 msgstr "Szukaj lub dodaj (Ctrl+K)"
 
-#: crates/app/ui/app.slint:156
+#: crates/app/ui/app.slint:157
 msgid "Search or add"
 msgstr "Szukaj lub dodaj"
 
-#: crates/app/ui/app.slint:173
+#: crates/app/ui/app.slint:174
 msgid "Ctrl K"
 msgstr "Ctrl K"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 msgid "Day"
 msgstr "Dzień"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 msgid "3 days"
 msgstr "3 dni"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 msgid "Week"
 msgstr "Tydzień"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 #: crates/app/ui/journal-view.slint:444
 msgid "Month"
 msgstr "Miesiąc"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 msgid "Year"
 msgstr "Rok"
 
-#: crates/app/ui/app.slint:264
+#: crates/app/ui/app.slint:265
 msgid "Agenda"
 msgstr "Agenda"
 
-#: crates/app/ui/app.slint:355
+#: crates/app/ui/app.slint:356
 msgctxt "Shortcut"
 msgid "Y"
 msgstr "Y"
 
-#: crates/app/ui/app.slint:362
+#: crates/app/ui/app.slint:363
 msgid "View: {}"
 msgstr "Widok: {}"
 
-#: crates/app/ui/app.slint:1308
+#: crates/app/ui/app.slint:1328
 msgid "Sync"
 msgstr "Synchronizacja"
 
@@ -1312,12 +1436,6 @@ msgstr "np. Baïkal w domu"
 #: crates/app/ui/dialogs.slint:161
 msgid "The password is stored in Windows Credential Manager, not in Hora's database."
 msgstr "Hasło jest przechowywane w Menedżerze poświadczeń Windows, a nie w bazie danych Hora."
-
-#: crates/app/ui/dialogs.slint:188
-#: crates/app/ui/event-dialog.slint:621
-#: crates/app/ui/event-dialog.slint:707
-msgid "Cancel"
-msgstr "Anuluj"
 
 #: crates/app/ui/dialogs.slint:196
 msgid "Connecting…"
@@ -1507,17 +1625,6 @@ msgstr "Miejsce"
 #: crates/app/ui/task-dialog.slint:160
 msgid "Description"
 msgstr "Opis"
-
-#: crates/app/ui/event-dialog.slint:609
-#: crates/app/ui/event-dialog.slint:719
-#: crates/app/ui/preview.slint:183
-msgid "Delete"
-msgstr "Usuń"
-
-#: crates/app/ui/event-dialog.slint:628
-#: crates/app/ui/task-dialog.slint:217
-msgid "Save"
-msgstr "Zapisz"
 
 #: crates/app/ui/event-dialog.slint:647
 msgid "Delete recurring event"
@@ -1729,6 +1836,7 @@ msgid "Select"
 msgstr "Wybierz"
 
 #: crates/app/ui/preview.slint:191
+#: crates/app/ui/settings.slint:332
 msgid "Edit"
 msgstr "Edytuj"
 
@@ -1760,124 +1868,145 @@ msgstr "Otwórz w oknie"
 msgid "Create"
 msgstr "Utwórz"
 
-#: crates/app/ui/settings.slint:148
+#: crates/app/ui/settings.slint:163
 #: crates/app/ui/sidebar.slint:426
 msgid "Settings"
 msgstr "Ustawienia"
 
-#: crates/app/ui/settings.slint:161
+#: crates/app/ui/settings.slint:181
 msgid "REMINDERS"
 msgstr "PRZYPOMNIENIA"
 
-#: crates/app/ui/settings.slint:165
-#: crates/app/ui/settings.slint:169
+#: crates/app/ui/settings.slint:185
+#: crates/app/ui/settings.slint:189
 msgid "Event reminders"
 msgstr "Przypomnienia o wydarzeniach"
 
-#: crates/app/ui/settings.slint:166
+#: crates/app/ui/settings.slint:186
 msgid "Windows notification before events start, even when Hora is in the notification area"
 msgstr "Powiadomienie Windows przed rozpoczęciem wydarzeń, także gdy Hora jest w obszarze powiadomień"
 
-#: crates/app/ui/settings.slint:180
+#: crates/app/ui/settings.slint:200
 msgid "Default reminder"
 msgstr "Domyślne przypomnienie"
 
-#: crates/app/ui/settings.slint:181
+#: crates/app/ui/settings.slint:201
 msgid "Reminder that new events start with"
 msgstr "Przypomnienie dla nowych wydarzeń"
 
-#: crates/app/ui/settings.slint:198
-#: crates/app/ui/settings.slint:202
+#: crates/app/ui/settings.slint:218
+#: crates/app/ui/settings.slint:222
 msgid "Task due reminders"
 msgstr "Przypomnienia o terminach zadań"
 
-#: crates/app/ui/settings.slint:199
+#: crates/app/ui/settings.slint:219
 msgid "Notify when a task is due: at the due time, or at {} for tasks with only a date"
 msgstr "Powiadamiaj o terminie zadania: o wyznaczonej godzinie lub o {} dla zadań z samą datą"
 
-#: crates/app/ui/settings.slint:214
+#: crates/app/ui/settings.slint:234
 msgid "Shows a notification right away to check Windows settings and sound"
 msgstr "Od razu pokazuje powiadomienie, aby sprawdzić ustawienia Windows i dźwięk"
 
-#: crates/app/ui/settings.slint:217
+#: crates/app/ui/settings.slint:237
 msgid "Send"
 msgstr "Wyślij"
 
-#: crates/app/ui/settings.slint:233
-#: crates/app/ui/settings.slint:237
+#: crates/app/ui/settings.slint:253
+#: crates/app/ui/settings.slint:257
 msgid "Show tasks in the calendar"
 msgstr "Pokaż zadania w kalendarzu"
 
-#: crates/app/ui/settings.slint:234
+#: crates/app/ui/settings.slint:254
 msgid "Open tasks appear in the week and month views on their due date"
 msgstr "Otwarte zadania pojawiają się w widoku tygodnia i miesiąca w dniu terminu"
 
-#: crates/app/ui/settings.slint:250
+#: crates/app/ui/settings.slint:270
+msgid "APP TIME"
+msgstr "CZAS APLIKACJI"
+
+#: crates/app/ui/settings.slint:274
+#: crates/app/ui/settings.slint:280
+msgid "Count app time"
+msgstr "Licz czas aplikacji"
+
+#: crates/app/ui/settings.slint:276
+msgid "Paused. Resume in the menu of the Hora icon in the notification area."
+msgstr "Wstrzymano. Wznów w menu ikony Hora w obszarze powiadomień."
+
+#: crates/app/ui/settings.slint:277
+msgid "Counts how long you actively use the programs of an activity: while one of them is in front and you use the mouse, keyboard or pen. The times stay on this PC."
+msgstr "Liczy, jak długo aktywnie używasz programów danej aktywności: gdy jeden z nich jest na pierwszym planie i używasz myszy, klawiatury lub pióra. Czasy zostają na tym komputerze."
+
+#: crates/app/ui/settings.slint:348
+msgid "New activity…"
+msgstr "Nowa aktywność…"
+
+#: crates/app/ui/settings.slint:361
 msgid "GENERAL"
 msgstr "OGÓLNE"
 
-#: crates/app/ui/settings.slint:254
+#: crates/app/ui/settings.slint:365
 msgid "Language"
 msgstr "Język"
 
-#: crates/app/ui/settings.slint:255
+#: crates/app/ui/settings.slint:366
 msgid "Language of menus, dates and notifications"
 msgstr "Język menu, dat i powiadomień"
 
-#: crates/app/ui/settings.slint:272
+#: crates/app/ui/settings.slint:383
 msgid "Date and time format"
 msgstr "Format daty i godziny"
 
-#: crates/app/ui/settings.slint:273
+#: crates/app/ui/settings.slint:384
 msgid "Order of day, month and year; 12 or 24 hours"
 msgstr "Kolejność dnia, miesiąca i roku; 12 lub 24 godziny"
 
-#: crates/app/ui/settings.slint:290
-#: crates/app/ui/settings.slint:294
+#: crates/app/ui/settings.slint:401
+#: crates/app/ui/settings.slint:405
 #: crates/setup/ui/setup.slint:699
 msgid "Start with Windows"
 msgstr "Uruchamiaj z systemem Windows"
 
-#: crates/app/ui/settings.slint:291
+#: crates/app/ui/settings.slint:402
 #: crates/setup/ui/setup.slint:700
 msgid "Hora starts quietly in the notification area when you sign in"
 msgstr "Hora uruchamia się dyskretnie w obszarze powiadomień po zalogowaniu"
 
-#: crates/app/ui/settings.slint:305
-#: crates/app/ui/settings.slint:309
+#: crates/app/ui/settings.slint:416
+#: crates/app/ui/settings.slint:420
 msgid "Keep running in the notification area"
 msgstr "Działaj dalej w obszarze powiadomień"
 
-#: crates/app/ui/settings.slint:306
+#: crates/app/ui/settings.slint:417
 msgid "Closing the window doesn't quit Hora, so reminders and sync keep running"
 msgstr "Zamknięcie okna nie kończy Hora, więc przypomnienia i synchronizacja działają dalej"
 
-#: crates/app/ui/settings.slint:322
+#: crates/app/ui/settings.slint:433
 msgid "UPDATES"
 msgstr "AKTUALIZACJE"
 
-#: crates/app/ui/settings.slint:326
-#: crates/app/ui/settings.slint:330
+#: crates/app/ui/settings.slint:437
+#: crates/app/ui/settings.slint:441
 msgid "Check for updates automatically"
 msgstr "Automatycznie sprawdzaj aktualizacje"
 
-#: crates/app/ui/settings.slint:327
+#: crates/app/ui/settings.slint:438
 msgid "Once a day Hora looks for a new version on GitHub and downloads it in the background. It installs only when you restart Hora."
 msgstr "Raz dziennie Hora szuka nowej wersji na GitHubie i pobiera ją w tle. Instaluje się dopiero po ponownym uruchomieniu Hora."
 
-#: crates/app/ui/settings.slint:341
+#: crates/app/ui/settings.slint:452
 msgid "Hora {}"
 msgstr "Hora {}"
 
-#: crates/app/ui/settings.slint:345
+#: crates/app/ui/settings.slint:456
 msgid "Restart and update"
 msgstr "Uruchom ponownie i zaktualizuj"
 
-#: crates/app/ui/settings.slint:345
+#: crates/app/ui/settings.slint:456
 msgid "Check now"
 msgstr "Sprawdź teraz"
 
-#: crates/app/ui/settings.slint:366
+#: crates/app/ui/settings.slint:477
 #: crates/setup/src/install.rs:232
 #: crates/setup/src/install.rs:275
 msgid "Done"
@@ -1902,10 +2031,6 @@ msgstr "Kolor dla {}"
 #: crates/app/ui/sidebar.slint:397
 msgid "Connect your CalDAV server to see your own events."
 msgstr "Połącz swój serwer CalDAV, aby widzieć własne wydarzenia."
-
-#: crates/app/ui/sidebar.slint:466
-msgid "Color {}"
-msgstr "Kolor {}"
 
 #: crates/app/ui/task-dialog.slint:59
 msgid "Edit task"
@@ -2397,7 +2522,7 @@ msgstr "Zainstaluj"
 msgid "Try again"
 msgstr "Spróbuj ponownie"
 
-#: crates/storage/src/lib.rs:23
+#: crates/storage/src/lib.rs:25
 msgid "Database: {}"
 msgstr "Baza danych: {}"
 

@@ -1,6 +1,6 @@
 //! Lokaler Offline-Cache in SQLite: Konten, Kalender und die `.ics`-Ressourcen
 //! so, wie sie vom Server kamen, dazu die Änderungs-Warteschlange für
-//! Offline-Bearbeitung ([`pending`]).
+//! Offline-Bearbeitung ([`pending`]) und die App-Zeiten ([`activities`]).
 //!
 //! Die Datenbank läuft im WAL-Modus, damit die Oberfläche lesen kann,
 //! während der Sync-Thread schreibt.
@@ -12,10 +12,12 @@ use hora_core::Tz;
 use hora_core::model::{CalendarObject, Kind};
 use rusqlite::{Connection, OptionalExtension, params};
 
+pub mod activities;
 mod migrations;
 pub mod pending;
 mod reminders;
 
+pub use activities::{Activity, ActivityDraft};
 pub use pending::{OpState, Operation, PendingOp, PendingSummary};
 
 #[derive(Debug, thiserror::Error)]

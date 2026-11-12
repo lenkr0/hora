@@ -1,6 +1,8 @@
 // Release-Build ohne Konsolenfenster
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod activity;
+mod activity_ui;
 mod editing;
 mod forms;
 mod items;
@@ -108,6 +110,8 @@ struct Settings {
     task_reminders: bool,
     /// Einmal am Tag nach Updates sehen und sie im Hintergrund laden
     update_check: bool,
+    /// App-Zeiten zählen (aus, bis man es einschaltet)
+    activities: bool,
 }
 
 impl Settings {
@@ -124,6 +128,7 @@ impl Settings {
             show_tasks: get("show_tasks").as_deref() != Some("0"),
             task_reminders: get("task_reminders").as_deref() != Some("0"),
             update_check: get("update_check").as_deref() != Some("0"),
+            activities: get("activities").as_deref() == Some("1"),
         }
     }
 
@@ -134,6 +139,7 @@ impl Settings {
         let _ = store.set_setting("show_tasks", flag(self.show_tasks));
         let _ = store.set_setting("task_reminders", flag(self.task_reminders));
         let _ = store.set_setting("update_check", flag(self.update_check));
+        let _ = store.set_setting("activities", flag(self.activities));
         let reminder = self
             .default_reminder
             .map_or("none".to_string(), |m| m.to_string());
@@ -227,6 +233,13 @@ struct State {
     journal_create_error: Option<String>,
     deleting_journal: Option<journal::Entry>,
     updates: updates::Updates,
+    /// Datenbankdatei, für Threads mit eigener Verbindung
+    db: PathBuf,
+    /// App-Zeiten: Zählung (nur wenn eingeschaltet und nicht pausiert),
+    /// Pause über den Infobereich, Dialog einer Aktivität
+    counter: Option<activity::Counter>,
+    counting_paused: bool,
+    activity_dialog: activity_ui::Dialog,
 }
 
 impl State {
@@ -1210,6 +1223,9 @@ fn on_tray(event: hora_platform::tray::TrayEvent) {
             shell::show_window(app);
             open_settings(app, &state.borrow());
         }
+        TrayEvent::Menu(shell::MENU_PAUSE) => {
+            activity_ui::toggle_pause(app, &mut state.borrow_mut());
+        }
         TrayEvent::Menu(shell::MENU_QUIT) | TrayEvent::Quit => {
             let _ = slint::quit_event_loop();
         }
@@ -1254,6 +1270,7 @@ fn open_settings(app: &AppWindow, state: &State) {
     app.set_settings_task_reminders(state.settings.task_reminders);
     app.set_settings_autostart(shell::autostart_enabled());
     app.set_settings_update_check(state.settings.update_check);
+    activity_ui::show(app, state);
     updates::show(app, state);
     app.set_settings_status(
         state
@@ -2059,6 +2076,7 @@ fn relabel(app: &AppWindow, state: &mut State) {
     if let Some(shell) = &state.shell {
         shell.relabel();
     }
+    activity_ui::show(app, state);
     updates::show(app, state);
     refresh(app, state, true);
 }
@@ -2134,7 +2152,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         Some(value) => value == "1",
         None => accounts.is_empty(),
     };
-    let worker = Worker::spawn(db, |update| {
+    let worker = Worker::spawn(db.clone(), |update| {
         let _ = slint::invoke_from_event_loop(move || dispatch(update));
     })
     .ok();
@@ -2215,6 +2233,10 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         journal_create_error: None,
         deleting_journal: None,
         updates: updates::Updates::new(&dir),
+        db,
+        counter: None,
+        counting_paused: false,
+        activity_dialog: activity_ui::Dialog::default(),
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
     updates::start(&app, &mut state.borrow_mut());
@@ -2226,7 +2248,11 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             let shell = shell::Shell::start(&instance_name, &dir, |event| {
                 let _ = slint::invoke_from_event_loop(move || on_tray(event));
             });
-            state.borrow_mut().shell = Some(shell);
+            let mut s = state.borrow_mut();
+            s.shell = Some(shell);
+            // App-Zeiten (falls eingeschaltet) ebenfalls erst jetzt
+            activity_ui::apply(&mut s);
+            drop(s);
             shell::refresh_autostart();
         }
     });
@@ -3004,6 +3030,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         s.settings.reminders = app.get_settings_reminders();
         s.settings.keep_running = app.get_settings_keep_running();
         s.settings.show_tasks = app.get_settings_show_tasks();
+        let counted = s.settings.activities;
+        s.settings.activities = app.get_settings_activities();
         if s.settings.task_reminders != app.get_settings_task_reminders() {
             s.settings.task_reminders = app.get_settings_task_reminders();
             s.planner.dirty = true;
@@ -3016,6 +3044,10 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             .then(|| reminders::TIMED.get(index as usize - 1).copied())
             .flatten();
         s.settings.save(&s.store);
+        if counted != s.settings.activities {
+            activity_ui::apply(s);
+            activity_ui::show(app, s);
+        }
         if s.settings.update_check && !checked_updates {
             updates::tick(app, s);
         }
@@ -3031,6 +3063,21 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         }
     }));
     app.on_check_updates(with(&app, &state, updates::check));
+    app.on_activity_new(with(&app, &state, activity_ui::open_new));
+    app.on_activity_edit(with_arg(&app, &state, activity_ui::open_edit));
+    app.on_activity_add_app({
+        let (weak, state) = (app.as_weak(), state.clone());
+        move |text| {
+            weak.upgrade()
+                .is_some_and(|app| activity_ui::add_app(&app, &mut state.borrow_mut(), &text))
+        }
+    });
+    app.on_activity_toggle_app({
+        let state = state.clone();
+        move |index, checked| activity_ui::toggle_app(&mut state.borrow_mut(), index, checked)
+    });
+    app.on_activity_save(with(&app, &state, activity_ui::save));
+    app.on_activity_delete(with(&app, &state, activity_ui::delete));
     app.on_install_update(with(&app, &state, updates::install));
     app.on_test_notification(with(&app, &state, |app, s| {
         let Some(shell) = &s.shell else { return };
@@ -3259,6 +3306,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     slint::run_event_loop_until_quit()?;
     // Beim Beenden über den Infobereich: offene Journal-Eingaben sichern
     journal_ui::flush(&app, &mut state.borrow_mut());
+    // App-Zeiten: laufenden Abschnitt abschließen
+    state.borrow_mut().counter = None;
     // Symbol im Infobereich entfernen
     state.borrow_mut().shell = None;
     // Update angefordert: jetzt erst das Setup starten

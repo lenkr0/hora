@@ -9,7 +9,8 @@ import { MonthView, MonthCell, MonthChip } from "month-view.slint";
 import { Sidebar, CalendarRow, MiniDay } from "sidebar.slint";
 import { AddAccountDialog, AboutDialog, DialogLogic } from "dialogs.slint";
 import { EventDialog, EventDraft, RuleDraft, ReminderChip, ConfirmDialog, ConflictDialog, ScopeDialog } from "event-dialog.slint";
-import { SettingsDialog } from "settings.slint";
+import { SettingsDialog, ActivityRow } from "settings.slint";
+import { ActivityDialog, AppChoice } from "activity-dialog.slint";
 import { TasksView, TaskRow } from "tasks-view.slint";
 import { TaskDialog, TaskDraft } from "task-dialog.slint";
 import { QuickAddDialog, QuickPreview } from "quick-add.slint";
@@ -21,7 +22,7 @@ import { EventPreview, EventDetails } from "preview.slint";
 import { SelectOption } from "inputs.slint";
 import { IconButton } from "controls.slint";
 
-export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit }
+export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice }
 
 component NavArrow inherits Rectangle {
     in property <image> icon;
@@ -600,6 +601,25 @@ export component AppWindow inherits Window {
     in property <bool> update-busy;
     in property <bool> update-possible;
     in-out property <bool> settings-update-check: true;
+    // App-Zeiten: Abschnitt in den Einstellungen und Dialog einer Aktivität
+    in-out property <bool> settings-activities;
+    in property <bool> activities-paused;
+    in property <[ActivityRow]> activity-rows;
+    in-out property <bool> activity-dialog-open;
+    in property <bool> activity-editing;
+    in-out property <string> activity-name;
+    in-out property <int> activity-color;
+    in property <[AppChoice]> activity-apps;
+    in property <[SelectOption]> activity-limit-options;
+    in-out property <int> activity-limit;
+    in property <string> activity-error;
+    in property <string> activity-delete-message;
+    callback activity-new();
+    callback activity-edit(int);
+    callback activity-add-app(string) -> bool;
+    callback activity-toggle-app(int, bool);
+    callback activity-save();
+    callback activity-delete();
     in-out property <bool> scope-open;
     in property <bool> scope-deleting;
     in property <bool> scope-allow-this: true;
@@ -1529,6 +1549,16 @@ export component AppWindow inherits Window {
         test-notification => {
             root.test-notification();
         }
+        activities <=> root.settings-activities;
+        activities-paused: root.activities-paused;
+        activity-rows: root.activity-rows;
+        covered: root.activity-dialog-open;
+        activity-new => {
+            root.activity-new();
+        }
+        activity-edit(id) => {
+            root.activity-edit(id);
+        }
         update-check <=> root.settings-update-check;
         version: root.version;
         update-version: root.update-version;
@@ -1544,6 +1574,32 @@ export component AppWindow inherits Window {
         dismiss => {
             root.settings-open = false;
             shortcuts.focus();
+        }
+    }
+
+    if root.activity-dialog-open: ActivityDialog {
+        editing: root.activity-editing;
+        name <=> root.activity-name;
+        color-index <=> root.activity-color;
+        apps: root.activity-apps;
+        limit-options: root.activity-limit-options;
+        limit <=> root.activity-limit;
+        error: root.activity-error;
+        delete-message: root.activity-delete-message;
+        add-app(text) => {
+            return root.activity-add-app(text);
+        }
+        toggle-app(i, checked) => {
+            root.activity-toggle-app(i, checked);
+        }
+        save => {
+            root.activity-save();
+        }
+        delete => {
+            root.activity-delete();
+        }
+        cancel => {
+            root.activity-dialog-open = false;
         }
     }
 

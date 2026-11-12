@@ -1,0 +1,282 @@
+// App-Zeiten: Aktivität anlegen oder bearbeiten (Name, Farbe, Programme,
+// Pausengrenze). Liegt über den Einstellungen.
+
+import { Theme } from "theme.slint";
+import { Button, TextField } from "controls.slint";
+import { Checkbox, Select, SelectOption } from "inputs.slint";
+import { Modal } from "dialogs.slint";
+
+// Programm zur Auswahl: Dateiname, gewählt, Hinweis (z. B. andere Aktivität)
+export struct AppChoice {
+    name: string,
+    checked: bool,
+    note: string,
+}
+
+component FieldLabel inherits Text {
+    font-size: 13px;
+    font-weight: 500;
+    color: Theme.ink-2;
+}
+
+component Hint inherits Text {
+    font-size: 12px;
+    color: Theme.ink-3;
+    wrap: word-wrap;
+}
+
+export component ActivityDialog inherits Modal {
+    in property <bool> editing;
+    in-out property <string> name;
+    // Index in Theme.calendar-colors
+    in-out property <int> color-index;
+    in property <[AppChoice]> apps;
+    in property <[SelectOption]> limit-options;
+    in-out property <int> limit;
+    in property <string> error;
+    // Rückfrage vor dem Löschen, mit der schon gezählten Zeit
+    in property <string> delete-message;
+    callback add-app(string) -> bool;
+    callback toggle-app(int, bool);
+    callback save();
+    callback delete();
+    callback cancel();
+
+    property <bool> confirm-delete;
+
+    title: root.editing ? @tr("Edit activity") : @tr("New activity");
+    card-width: 480px;
+    close => {
+        root.cancel();
+    }
+    opened => {
+        name-field.focus();
+    }
+
+    VerticalLayout {
+        spacing: 18px;
+
+        name-field := TextField {
+            label: @tr("Name");
+            placeholder: @tr("e.g. Writing");
+            text <=> root.name;
+            accepted => {
+                root.save();
+            }
+        }
+
+        VerticalLayout {
+            spacing: 8px;
+
+            FieldLabel {
+                text: @tr("Color");
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+
+                for c[i] in Theme.calendar-colors: Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: c;
+                    border-width: swatch-ta.has-hover ? 2px : 0px;
+                    border-color: Theme.modal-bg;
+                    accessible-role: button;
+                    accessible-label: @tr("Color {}", i + 1);
+                    accessible-item-selected: i == root.color-index;
+
+                    if i == root.color-index: Image {
+                        source: @image-url("icons/check.svg");
+                        width: 12px;
+                        height: 12px;
+                        colorize: #ffffff;
+                    }
+
+                    swatch-ta := TouchArea {
+                        mouse-cursor: MouseCursor.pointer;
+                        clicked => {
+                            root.color-index = i;
+                        }
+                    }
+                }
+            }
+        }
+
+        VerticalLayout {
+            spacing: 8px;
+
+            FieldLabel {
+                text: @tr("Programs");
+            }
+
+            Hint {
+                text: @tr("Time counts while one of these programs is in front. Shown are the programs open right now and those already chosen.");
+            }
+
+            if root.apps.length == 0: Hint {
+                text: @tr("No open programs found. Open the program, or add it by its file name.");
+            }
+
+            if root.apps.length > 0: Flickable {
+                height: Math.min(list.preferred-height, 210px);
+                content-height: list.preferred-height;
+
+                list := VerticalLayout {
+                    spacing: 8px;
+
+                    for app[i] in root.apps: HorizontalLayout {
+                        spacing: 10px;
+
+                        Checkbox {
+                            text: app.name;
+                            checked: app.checked;
+                            toggled => {
+                                root.toggle-app(i, self.checked);
+                            }
+                        }
+
+                        Text {
+                            horizontal-stretch: 1;
+                            text: app.note;
+                            font-size: 12px;
+                            color: Theme.ink-3;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                padding-top: 6px;
+
+                add-field := TextField {
+                    horizontal-stretch: 1;
+                    label: @tr("Add by file name");
+                    placeholder: "program.exe";
+                    accepted => {
+                        if root.add-app(self.text) {
+                            self.text = "";
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: end;
+
+                    Button {
+                        text: @tr("Add");
+                        enabled: add-field.text != "";
+                        clicked => {
+                            if root.add-app(add-field.text) {
+                                add-field.text = "";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 16px;
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+
+                FieldLabel {
+                    text: @tr("Pause after");
+                }
+
+                Hint {
+                    text: @tr("Counting pauses when there is no mouse, keyboard or pen input for this long, e.g. while you watch a video in the program.");
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Select {
+                    label: "";
+                    dots: false;
+                    width: 150px;
+                    options: root.limit-options;
+                    selected <=> root.limit;
+                }
+            }
+        }
+
+        if root.error != "": Text {
+            text: root.error;
+            font-size: 13px;
+            color: Theme.error;
+            wrap: word-wrap;
+        }
+
+        if !root.confirm-delete: HorizontalLayout {
+            spacing: 8px;
+
+            if root.editing: Button {
+                text: @tr("Delete");
+                danger: true;
+                clicked => {
+                    root.confirm-delete = true;
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+            }
+
+            Button {
+                text: @tr("Cancel");
+                clicked => {
+                    root.cancel();
+                }
+            }
+
+            Button {
+                text: @tr("Save");
+                primary: true;
+                clicked => {
+                    root.save();
+                }
+            }
+        }
+
+        if root.confirm-delete: VerticalLayout {
+            spacing: 12px;
+
+            Text {
+                text: root.delete-message;
+                font-size: 13px;
+                color: Theme.ink;
+                wrap: word-wrap;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: end;
+
+                Button {
+                    text: @tr("Keep");
+                    clicked => {
+                        root.confirm-delete = false;
+                    }
+                }
+
+                Button {
+                    text: @tr("Delete");
+                    danger: true;
+                    clicked => {
+                        root.delete();
+                    }
+                }
+            }
+        }
+    }
+}

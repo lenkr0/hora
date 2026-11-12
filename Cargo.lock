@@ -1816,6 +1816,8 @@ dependencies = [
 name = "hora-platform"
 version = "1.2.0"
 dependencies = [
+ "chrono",
+ "hora-core",
  "hora-i18n",
  "keyring-core",
  "thiserror 2.0.21",

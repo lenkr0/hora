@@ -22,6 +22,9 @@ memory.
   Markdown and tags.
 - **Quick add** turns "Lunch with Anna tomorrow 1pm at Cafe Luna" into an
   event; the **command palette** (`Ctrl+K`) searches everything.
+- **App time** (optional, off by default): counts how long you actively use
+  the programs of an activity – only while one is in front and you use the
+  mouse, keyboard or pen. The times stay on your PC.
 - **Seven languages** (English, Deutsch, Français, Español, Italiano,
   Nederlands, Polski), light and dark mode, fully usable from the keyboard.
 

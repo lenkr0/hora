@@ -2,6 +2,7 @@
 //! Autostart und Windows-Benachrichtigungen.
 
 use hora_i18n::tr;
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 
 use hora_platform::notify::{AUMID, Notifier, Toast};
@@ -20,22 +21,32 @@ pub const MENU_OPEN: u32 = 1;
 pub const MENU_SYNC: u32 = 2;
 pub const MENU_SETTINGS: u32 = 3;
 pub const MENU_QUIT: u32 = 4;
+pub const MENU_PAUSE: u32 = 5;
 
 /// Symbol für Benachrichtigungen und Infocenter
 const ICON_PNG: &[u8] = include_bytes!("../assets/hora.png");
 
-/// Menü im Infobereich, in der aktuellen Sprache
-fn tray_menu() -> Vec<MenuItem> {
-    vec![
+/// Menü im Infobereich, in der aktuellen Sprache. `counting`: App-Zeiten
+/// eingeschaltet, und ob sie gerade pausiert sind.
+fn tray_menu(counting: Option<bool>) -> Vec<MenuItem> {
+    let mut menu = vec![
         MenuItem {
             default: true,
             ..MenuItem::new(MENU_OPEN, tr!("Open Hora"))
         },
         MenuItem::new(MENU_SYNC, tr!("Sync now")),
+    ];
+    match counting {
+        Some(false) => menu.push(MenuItem::new(MENU_PAUSE, tr!("Pause app time"))),
+        Some(true) => menu.push(MenuItem::new(MENU_PAUSE, tr!("Resume app time"))),
+        None => {}
+    }
+    menu.extend([
         MenuItem::new(MENU_SETTINGS, tr!("Settings…")),
         MenuItem::separator(),
         MenuItem::new(MENU_QUIT, tr!("Quit")),
-    ]
+    ]);
+    menu
 }
 
 /// Benachrichtigungen und Infobereich; fehlt etwas, läuft Hora ohne weiter
@@ -44,6 +55,8 @@ pub struct Shell {
     /// Warum es keine Benachrichtigungen gibt
     pub notifier_error: Option<String>,
     pub tray: Option<Tray>,
+    /// Eintrag für die App-Zeiten im Menü (siehe [`tray_menu`])
+    counting: Cell<Option<bool>>,
 }
 
 impl Shell {
@@ -52,7 +65,7 @@ impl Shell {
         data_dir: &Path,
         on_tray: impl Fn(TrayEvent) + Send + 'static,
     ) -> Shell {
-        let tray = Tray::new(instance_name, "Hora", tray_menu(), on_tray)
+        let tray = Tray::new(instance_name, "Hora", tray_menu(None), on_tray)
             .map_err(|e| crate::log::write(&format!("Infobereich: {e}")))
             .ok();
         let (notifier, notifier_error) =
@@ -64,6 +77,7 @@ impl Shell {
             notifier,
             notifier_error,
             tray,
+            counting: Cell::new(None),
         }
     }
 
@@ -71,7 +85,14 @@ impl Shell {
     /// Texte nach einem Sprachwechsel erneuern
     pub fn relabel(&self) {
         if let Some(tray) = &self.tray {
-            tray.set_menu(tray_menu());
+            tray.set_menu(tray_menu(self.counting.get()));
+        }
+    }
+
+    /// Eintrag für die App-Zeiten zeigen (`Some(pausiert)`) oder entfernen
+    pub fn set_counting(&self, counting: Option<bool>) {
+        if self.counting.replace(counting) != counting {
+            self.relabel();
         }
     }
 

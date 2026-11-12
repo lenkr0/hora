@@ -117,6 +117,14 @@ component Divider inherits Rectangle {
     background: Theme.line-2;
 }
 
+// Aktivität der App-Zeiten: Farbe, Name, Programme und gezählte Zeit
+export struct ActivityRow {
+    id: int,
+    name: string,
+    color: color,
+    detail: string,
+}
+
 export component SettingsDialog inherits Modal {
     in-out property <bool> reminders;
     in-out property <int> default-reminder;
@@ -135,6 +143,14 @@ export component SettingsDialog inherits Modal {
     in property <string> status;
     callback changed();
     callback test-notification();
+    // App-Zeiten: eingeschaltet, über den Infobereich pausiert, Aktivitäten
+    in-out property <bool> activities;
+    in property <bool> activities-paused;
+    in property <[ActivityRow]> activity-rows;
+    // Ein Dialog darüber ist offen; danach den Fokus zurückholen
+    in property <bool> covered;
+    callback activity-new();
+    callback activity-edit(int);
     in-out property <bool> update-check;
     in property <string> version;
     // Version, die zum Installieren bereitliegt ("" = keine)
@@ -154,6 +170,11 @@ export component SettingsDialog inherits Modal {
     }
     opened => {
         first.focus();
+    }
+    changed covered => {
+        if !self.covered {
+            first.focus();
+        }
     }
 
     VerticalLayout {
@@ -240,6 +261,97 @@ export component SettingsDialog inherits Modal {
                 checked <=> root.show-tasks;
                 toggled => {
                     root.changed();
+                }
+            }
+        }
+
+        Rectangle {
+            height: 22px;
+        }
+
+        GroupLabel {
+            text: @tr("APP TIME");
+        }
+
+        Row {
+            label: @tr("Count app time");
+            description: root.activities-paused
+                ? @tr("Paused. Resume in the menu of the Hora icon in the notification area.")
+                : @tr("Counts how long you actively use the programs of an activity: while one of them is in front and you use the mouse, keyboard or pen. The times stay on this PC.");
+
+            Toggle {
+                label: @tr("Count app time");
+                checked <=> root.activities;
+                toggled => {
+                    root.changed();
+                }
+            }
+        }
+
+        if root.activities: VerticalLayout {
+            for row in root.activity-rows: VerticalLayout {
+                Divider { }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    padding-top: 10px;
+                    padding-bottom: 10px;
+
+                    VerticalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            width: 10px;
+                            height: 10px;
+                            border-radius: 5px;
+                            background: row.color;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        Text {
+                            text: row.name;
+                            font-size: 14px;
+                            color: Theme.ink;
+                            overflow: elide;
+                        }
+
+                        Text {
+                            text: row.detail;
+                            font-size: 12px;
+                            color: Theme.ink-3;
+                            wrap: word-wrap;
+                        }
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+
+                        Button {
+                            text: @tr("Edit");
+                            clicked => {
+                                root.activity-edit(row.id);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider { }
+
+            HorizontalLayout {
+                padding-top: 12px;
+                alignment: start;
+
+                Button {
+                    text: @tr("New activity…");
+                    clicked => {
+                        root.activity-new();
+                    }
                 }
             }
         }

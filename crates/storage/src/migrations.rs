@@ -68,6 +68,27 @@ const STEPS: &[&str] = &[
         key TEXT PRIMARY KEY,
         fired_at INTEGER NOT NULL
     );",
+    // 4: App-Zeiten (Aktivitäten, ihre Programme, gezählte Zeit)
+    "CREATE TABLE activities (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL,
+        idle_limit INTEGER NOT NULL DEFAULT 60,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+    );
+    CREATE TABLE activity_apps (
+        exe TEXT PRIMARY KEY COLLATE NOCASE,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE
+    );
+    CREATE INDEX activity_apps_activity ON activity_apps (activity_id);
+    CREATE TABLE activity_time (
+        id INTEGER PRIMARY KEY,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        start_ms INTEGER NOT NULL,
+        end_ms INTEGER NOT NULL
+    );
+    CREATE INDEX activity_time_activity ON activity_time (activity_id, start_ms);",
 ];
 
 pub fn run(conn: &Connection) -> rusqlite::Result<()> {

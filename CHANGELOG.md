@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### App time
+
+- New in Settings → App time (off by default): Hora counts how long you
+  actively use chosen programs. An activity has a name, a color, one or more
+  programs (picked from the open ones or entered by file name) and a pause
+  limit (default 1 minute).
+- Time counts only while one of the activity's programs is in front and there
+  is mouse, keyboard or pen input. Without input for the pause limit, counting
+  pauses and the waiting time doesn't count; switching to another program or
+  locking the screen stops it at once.
+- Hora watches the foreground without loading anything into other programs
+  and asks for input only while a counted program is in front. With app time
+  off, nothing runs at all.
+- The running stretch is saved at least once a minute. Settings show this
+  week's and the total time per activity; the notification area menu can
+  pause counting.
+
 ## [1.2.0] – 2026-11-10
 
 ### Updates

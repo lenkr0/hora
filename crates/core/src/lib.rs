@@ -16,7 +16,9 @@
 //! - [`journal`]: Journaleinträge (VJOURNAL) mit Markdown-Text und Tags.
 //! - [`edit`]: Termine ändern und anlegen, mit passender VTIMEZONE
 //!   ([`vtimezone`]).
+//! - [`activity`]: App-Zeiten, also aktive Zeit einer Anwendung im Vordergrund.
 
+pub mod activity;
 pub mod alarm;
 pub mod duration;
 pub mod edit;

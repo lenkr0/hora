@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    Misst Startzeit und Arbeitsspeicher im Leerlauf.
+    Misst Startzeit, Arbeitsspeicher und CPU-Zeit im Leerlauf.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File tools\measure.ps1 -Exe target\release\hora.exe
@@ -13,6 +13,9 @@
       Erstes Bild      erstes fertig gezeichnetes Bild; melden nur OpenGL-Renderer (femtovg)
     "Privat" ist der private Arbeitssatz, also der Wert in der Spalte
     "Arbeitsspeicher" des Task-Managers. "auto" lässt die App den Renderer wählen.
+    "CPU im Leerlauf" ist die Rechenzeit, die Hora ab der dritten Sekunde bis
+    zum Ende von -IdleSeconds verbraucht (für einen ruhigeren Wert z. B.
+    -IdleSeconds 60).
 
     Hora läuft dabei mit eigenem, leerem Datenordner (Beispieltermine), nie mit
     dem normalen unter %LOCALAPPDATA%\Hora. -DataDir nimmt stattdessen eine
@@ -56,6 +59,9 @@ foreach ($backend in $Backends) {
         while (-not (Test-Path $probe) -and -not $proc.HasExited -and (Get-Date) -lt $deadline) {
             Start-Sleep -Milliseconds 100
         }
+        $proc.Refresh()
+        $cpuStart = $proc.TotalProcessorTime
+        $idleWatch = [Diagnostics.Stopwatch]::StartNew()
         Start-Sleep -Seconds ([Math]::Max(0, $IdleSeconds - 3))
         if ($proc.HasExited) {
             $rows += [pscustomobject]@{ Renderer = $backend; Lauf = $run; 'main (ms)' = "abgestürzt, Exitcode $($proc.ExitCode)" }
@@ -64,6 +70,7 @@ foreach ($backend in $Backends) {
         $line = if (Test-Path $probe) { Get-Content $probe -Raw } else { '' }
         $perf = Get-CimInstance Win32_PerfFormattedData_PerfProc_Process -Filter "IDProcess=$($proc.Id)"
         $proc.Refresh()
+        $cpu = ($proc.TotalProcessorTime - $cpuStart).TotalMilliseconds
         $rows += [pscustomobject]@{
             Renderer                 = $backend
             Lauf                     = $run
@@ -73,6 +80,7 @@ foreach ($backend in $Backends) {
             'Privat (Task-Manager)'  = '{0:N1} MB' -f ($perf.WorkingSetPrivate / 1MB)
             'Arbeitssatz'            = '{0:N1} MB' -f ($proc.WorkingSet64 / 1MB)
             'Zugesichert'            = '{0:N1} MB' -f ($proc.PrivateMemorySize64 / 1MB)
+            'CPU im Leerlauf'        = '{0:N0} ms in {1:N0} s' -f $cpu, $idleWatch.Elapsed.TotalSeconds
         }
         Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
         Start-Sleep -Milliseconds 500
@@ -81,5 +89,5 @@ foreach ($backend in $Backends) {
 
 Remove-Item Env:SLINT_BACKEND, Env:HORA_MEASURE, Env:HORA_DATA_DIR, Env:HORA_CREDENTIALS -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
-$columns = 'Renderer', 'Lauf', 'main (ms)', 'Ereignisschleife (ms)', 'Erstes Bild (ms)', 'Privat (Task-Manager)', 'Arbeitssatz', 'Zugesichert'
+$columns = 'Renderer', 'Lauf', 'main (ms)', 'Ereignisschleife (ms)', 'Erstes Bild (ms)', 'Privat (Task-Manager)', 'Arbeitssatz', 'Zugesichert', 'CPU im Leerlauf'
 $rows | Format-Table -Property $columns -AutoSize
