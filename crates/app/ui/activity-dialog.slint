@@ -33,6 +33,8 @@ export component ActivityDialog inherits Modal {
     in property <[AppChoice]> apps;
     in property <[SelectOption]> limit-options;
     in-out property <int> limit;
+    in property <[SelectOption]> goal-options;
+    in-out property <int> goal;
     in property <string> error;
     // Rückfrage vor dem Löschen, mit der schon gezählten Zeit
     in property <string> delete-message;
@@ -206,6 +208,36 @@ export component ActivityDialog inherits Modal {
                     width: 150px;
                     options: root.limit-options;
                     selected <=> root.limit;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 16px;
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+
+                FieldLabel {
+                    text: @tr("Weekly goal");
+                }
+
+                Hint {
+                    text: @tr("Shown in the sidebar and the overview, with how many weeks in a row you reached it.");
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+
+                Select {
+                    label: "";
+                    dots: false;
+                    width: 150px;
+                    options: root.goal-options;
+                    selected <=> root.goal;
                 }
             }
         }

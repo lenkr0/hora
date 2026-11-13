@@ -38,7 +38,9 @@
 //!   an (nur mit eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet die
 //!   Einstellungen mit dem Dialog für eine neue Aktivität,
 //!   `--activity-overview` die Übersicht der ersten Aktivität (mit `--months`
-//!   den Verlauf nach Monaten).
+//!   den Verlauf nach Monaten). `--activity-plan` legt dazu ein Testkonto
+//!   ohne erreichbaren Server mit einer Serie Mo/Mi/Fr 9–10:30 an, die zur
+//!   ersten Aktivität gehört, samt gezählter Zeit in dieser Woche.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -127,6 +129,9 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
     }
     if has("--activities-demo") {
         activities_demo(&mut state.borrow_mut());
+    }
+    if has("--activity-plan") {
+        activity_plan(app, &mut state.borrow_mut());
     }
     if has("--settings") {
         app.invoke_show_settings();
@@ -900,18 +905,26 @@ fn activities_demo(state: &mut State) {
     if !state.store.activities().unwrap_or_default().is_empty() {
         return;
     }
-    let examples: [(&str, &str, &[&str], i64); 2] = [
-        ("Schreiben", "#34a853", &["writer.exe", "notes.exe"], 95),
-        ("Programmieren", "#4285f4", &["editor.exe"], 40),
+    // Name, Farbe, Programme, typische Minuten am Tag, Wochenziel in Minuten
+    let examples: [(&str, &str, &[&str], i64, i64); 2] = [
+        (
+            "Schreiben",
+            "#34a853",
+            &["writer.exe", "notes.exe"],
+            95,
+            360,
+        ),
+        ("Programmieren", "#4285f4", &["editor.exe"], 40, 0),
     ];
     let now = Utc::now();
-    for (name, color, apps, minutes) in examples {
+    for (name, color, apps, minutes, goal) in examples {
         let apps: Vec<String> = apps.iter().map(|a| a.to_string()).collect();
         let Ok(id) = state.store.add_activity(&hora_storage::ActivityDraft {
             name,
             color,
             idle_limit: 60,
             apps: &apps,
+            weekly_goal: goal,
         }) else {
             continue;
         };
@@ -942,6 +955,90 @@ fn activities_demo(state: &mut State) {
         }
     }
     crate::activity_ui::apply(state);
+}
+
+/// Testkonto mit einer Serie, die zur ersten Aktivität gehört (nur einmal)
+fn activity_plan(app: &AppWindow, state: &mut State) {
+    use chrono::{Days, NaiveTime};
+    let Some(activity) = state
+        .store
+        .activities()
+        .unwrap_or_default()
+        .into_iter()
+        .next()
+    else {
+        return;
+    };
+    if !state.store.accounts().unwrap_or_default().is_empty() {
+        return;
+    }
+    let result = (|| -> Result<(), hora_storage::Error> {
+        let account = state.store.add_account(&hora_storage::NewAccount {
+            name: "Plan",
+            url: "http://127.0.0.1:9/dav/",
+            username: "plan",
+            credential_key: "plan-ohne-passwort",
+            principal_url: None,
+            home_url: Some("http://127.0.0.1:9/dav/plan/"),
+        })?;
+        let href = "http://127.0.0.1:9/dav/plan/uebungen/";
+        state.store.sync_calendar_list(
+            account,
+            &[hora_storage::RemoteCalendar {
+                href,
+                name: "Übungen",
+                color: Some("#34A853"),
+                components: "VEVENT",
+                read_only: false,
+            }],
+        )?;
+        let calendar = state
+            .store
+            .calendars()?
+            .into_iter()
+            .find(|c| c.account_id == account)
+            .map(|c| c.id)
+            .unwrap_or_default();
+        let monday = crate::monday_of(state.now().date());
+        let first = (monday - Days::new(21)).format("%Y%m%d");
+        let ics = format!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Hora//Plan//DE\r\nBEGIN:VEVENT\r\nUID:plan-1\r\nDTSTAMP:20261101T080000Z\r\nDTSTART;TZID=Europe/Berlin:{first}T090000\r\nDTEND;TZID=Europe/Berlin:{first}T103000\r\nRRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR\r\nSUMMARY:{}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+            activity.name
+        );
+        state.store.apply_sync(
+            calendar,
+            &hora_storage::SyncBatch {
+                upserts: vec![("plan-1.ics", "\"1\"", ics.as_str())],
+                full: true,
+                ..Default::default()
+            },
+        )?;
+        state
+            .store
+            .set_event_activity("plan-1", Some(activity.id))?;
+        // Gezählte Zeit in den Terminen dieser Woche: Montag kürzer, Mittwoch länger
+        let at = |day: chrono::NaiveDate, h: u32, m: u32| {
+            hora_core::time::local_to_utc(
+                day.and_time(NaiveTime::from_hms_opt(h, m, 0).unwrap_or_default()),
+                state.home,
+            )
+        };
+        for (day, from, to) in [(0, (9, 5), (10, 15)), (2, (8, 50), (10, 55))] {
+            let day = monday + Days::new(day);
+            let (start, end) = (at(day, from.0, from.1), at(day, to.0, to.1));
+            if end < chrono::Utc::now() {
+                state.store.add_activity_time(activity.id, start, end)?;
+            }
+        }
+        Ok(())
+    })();
+    if let Err(e) = result {
+        println!("Plan fehlgeschlagen: {e}");
+        return;
+    }
+    state.reload_calendars();
+    state.demo_visible = false;
+    crate::refresh(app, state, false);
 }
 
 fn fill_test_data(store: &mut hora_storage::Store) -> Result<String, hora_storage::Error> {

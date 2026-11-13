@@ -89,6 +89,13 @@ const STEPS: &[&str] = &[
         end_ms INTEGER NOT NULL
     );
     CREATE INDEX activity_time_activity ON activity_time (activity_id, start_ms);",
+    // App-Zeiten: Wochenziel in Minuten (0 = keins) und Termine, die zu einer
+    // Aktivität gehören (nur auf diesem PC, nach UID, gilt für ganze Serien)
+    "ALTER TABLE activities ADD COLUMN weekly_goal INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE activity_events (
+        uid TEXT PRIMARY KEY,
+        activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE
+    );",
 ];
 
 pub fn run(conn: &Connection) -> rusqlite::Result<()> {

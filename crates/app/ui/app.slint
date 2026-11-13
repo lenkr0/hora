@@ -613,6 +613,11 @@ export component AppWindow inherits Window {
     in property <[AppChoice]> activity-apps;
     in property <[SelectOption]> activity-limit-options;
     in-out property <int> activity-limit;
+    in property <[SelectOption]> activity-goal-options;
+    in-out property <int> activity-goal;
+    // Termin-Dialog: Aktivität des Termins
+    in property <[SelectOption]> event-activity-options;
+    in-out property <int> event-activity;
     in property <string> activity-error;
     in property <string> activity-delete-message;
     callback activity-new();
@@ -1407,6 +1412,8 @@ export component AppWindow inherits Window {
         reminders: root.event-reminders;
         reminder-presets: root.reminder-presets;
         reminder-presets-all-day: root.reminder-presets-all-day;
+        activity-options: root.event-activity-options;
+        activity <=> root.event-activity;
         add-reminder(minutes, label) => {
             root.add-reminder(minutes, label);
         }
@@ -1616,6 +1623,8 @@ export component AppWindow inherits Window {
         apps: root.activity-apps;
         limit-options: root.activity-limit-options;
         limit <=> root.activity-limit;
+        goal-options: root.activity-goal-options;
+        goal <=> root.activity-goal;
         error: root.activity-error;
         delete-message: root.activity-delete-message;
         add-app(text) => {

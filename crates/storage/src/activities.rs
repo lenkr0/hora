@@ -5,6 +5,10 @@
 //! Abschnitte in Millisekunden seit 1970 (UTC) vor; der laufende Abschnitt
 //! wird beim Zählen regelmäßig verlängert, damit nach einem Absturz wenig
 //! fehlt. Wird eine Aktivität gelöscht, verschwindet ihre Zeit mit.
+//!
+//! Termine lassen sich einer Aktivität zuordnen. Die Zuordnung gilt für die
+//! UID, also für alle Vorkommen einer Serie, und bleibt auf diesem PC: Am
+//! Termin auf dem Server ändert sich nichts.
 
 use std::collections::HashMap;
 
@@ -23,6 +27,8 @@ pub struct Activity {
     pub idle_limit: i64,
     /// Dateinamen der Programme, z. B. `notepad.exe`, sortiert
     pub apps: Vec<String>,
+    /// Wochenziel in Minuten; 0 = keins
+    pub weekly_goal: i64,
 }
 
 /// Neue oder geänderte Aktivität
@@ -33,6 +39,8 @@ pub struct ActivityDraft<'a> {
     pub idle_limit: i64,
     /// Ist ein Programm schon einer anderen Aktivität zugeordnet, wechselt es
     pub apps: &'a [String],
+    /// Wochenziel in Minuten; 0 = keins
+    pub weekly_goal: i64,
 }
 
 fn ms(at: DateTime<Utc>) -> i64 {
@@ -46,7 +54,8 @@ fn from_ms(millis: i64) -> DateTime<Utc> {
 impl Store {
     pub fn activities(&self) -> Result<Vec<Activity>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, color, idle_limit FROM activities ORDER BY sort_order, id",
+            "SELECT id, name, color, idle_limit, weekly_goal FROM activities
+             ORDER BY sort_order, id",
         )?;
         let mut activities = stmt
             .query_map([], |r| {
@@ -56,6 +65,7 @@ impl Store {
                     color: r.get(2)?,
                     idle_limit: r.get(3)?,
                     apps: Vec::new(),
+                    weekly_goal: r.get(4)?,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -75,9 +85,9 @@ impl Store {
     pub fn add_activity(&mut self, draft: &ActivityDraft) -> Result<i64> {
         let tx = self.write()?;
         tx.execute(
-            "INSERT INTO activities (name, color, idle_limit, sort_order)
-             VALUES (?1, ?2, ?3, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM activities))",
-            params![draft.name, draft.color, draft.idle_limit],
+            "INSERT INTO activities (name, color, idle_limit, weekly_goal, sort_order)
+             VALUES (?1, ?2, ?3, ?4, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM activities))",
+            params![draft.name, draft.color, draft.idle_limit, draft.weekly_goal],
         )?;
         let id = tx.last_insert_rowid();
         set_apps(&tx, id, draft.apps)?;
@@ -88,8 +98,15 @@ impl Store {
     pub fn update_activity(&mut self, id: i64, draft: &ActivityDraft) -> Result<()> {
         let tx = self.write()?;
         tx.execute(
-            "UPDATE activities SET name = ?2, color = ?3, idle_limit = ?4 WHERE id = ?1",
-            params![id, draft.name, draft.color, draft.idle_limit],
+            "UPDATE activities SET name = ?2, color = ?3, idle_limit = ?4, weekly_goal = ?5
+             WHERE id = ?1",
+            params![
+                id,
+                draft.name,
+                draft.color,
+                draft.idle_limit,
+                draft.weekly_goal
+            ],
         )?;
         tx.execute("DELETE FROM activity_apps WHERE activity_id = ?1", [id])?;
         set_apps(&tx, id, draft.apps)?;
@@ -151,10 +168,22 @@ impl Store {
 
     /// Gezählte Abschnitte einer Aktivität, nach Beginn sortiert
     pub fn activity_spans(&self, activity_id: i64) -> Result<Vec<(DateTime<Utc>, DateTime<Utc>)>> {
+        self.activity_spans_between(activity_id, DateTime::UNIX_EPOCH, DateTime::<Utc>::MAX_UTC)
+    }
+
+    /// Gezählte Abschnitte einer Aktivität, die in den Zeitraum hineinreichen
+    /// (ungekürzt), nach Beginn sortiert
+    pub fn activity_spans_between(
+        &self,
+        activity_id: i64,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+    ) -> Result<Vec<(DateTime<Utc>, DateTime<Utc>)>> {
         let mut stmt = self.conn.prepare(
-            "SELECT start_ms, end_ms FROM activity_time WHERE activity_id = ?1 ORDER BY start_ms",
+            "SELECT start_ms, end_ms FROM activity_time
+             WHERE activity_id = ?1 AND end_ms > ?2 AND start_ms < ?3 ORDER BY start_ms",
         )?;
-        let rows = stmt.query_map(params![activity_id], |r| {
+        let rows = stmt.query_map(params![activity_id, ms(from), ms(to)], |r| {
             Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
         })?;
         let mut spans = Vec::new();
@@ -163,6 +192,33 @@ impl Store {
             spans.push((from_ms(start), from_ms(end)));
         }
         Ok(spans)
+    }
+}
+
+impl Store {
+    /// Termine mit ihrer Aktivität: UID → Aktivität
+    pub fn event_activities(&self) -> Result<HashMap<String, i64>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT uid, activity_id FROM activity_events")?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    /// Termin (alle Vorkommen mit dieser UID) einer Aktivität zuordnen;
+    /// `None` hebt die Zuordnung auf
+    pub fn set_event_activity(&self, uid: &str, activity_id: Option<i64>) -> Result<()> {
+        match activity_id {
+            Some(id) => self.conn.execute(
+                "INSERT INTO activity_events (uid, activity_id) VALUES (?1, ?2)
+                 ON CONFLICT (uid) DO UPDATE SET activity_id = excluded.activity_id",
+                params![uid, id],
+            )?,
+            None => self
+                .conn
+                .execute("DELETE FROM activity_events WHERE uid = ?1", [uid])?,
+        };
+        Ok(())
     }
 }
 
@@ -193,6 +249,7 @@ mod tests {
             color: "#4285f4",
             idle_limit: 60,
             apps,
+            weekly_goal: 0,
         }
     }
 
@@ -270,6 +327,35 @@ mod tests {
             vec![(t(-5), t(5)), (t(30), t(50))]
         );
         assert_eq!(store.activity_spans(b).unwrap(), vec![(t(-30), t(-10))]);
+        // Nur Abschnitte, die in den Zeitraum hineinreichen
+        assert_eq!(
+            store.activity_spans_between(a, t(0), t(30)).unwrap(),
+            vec![(t(-5), t(5))]
+        );
+    }
+
+    #[test]
+    fn goals_and_event_links_are_kept() {
+        let mut store = Store::open_in_memory().unwrap();
+        let mut writing = draft("Writing", &[]);
+        writing.weekly_goal = 360;
+        let a = store.add_activity(&writing).unwrap();
+        let b = store.add_activity(&draft("Code", &[])).unwrap();
+        assert_eq!(store.activities().unwrap()[0].weekly_goal, 360);
+        writing.weekly_goal = 0;
+        store.update_activity(a, &writing).unwrap();
+        assert_eq!(store.activities().unwrap()[0].weekly_goal, 0);
+
+        store.set_event_activity("uid-1", Some(a)).unwrap();
+        store.set_event_activity("uid-2", Some(a)).unwrap();
+        store.set_event_activity("uid-2", Some(b)).unwrap();
+        let links = store.event_activities().unwrap();
+        assert_eq!(links.get("uid-1"), Some(&a));
+        assert_eq!(links.get("uid-2"), Some(&b));
+        store.set_event_activity("uid-1", None).unwrap();
+        // Mit der Aktivität verschwinden auch ihre Termin-Zuordnungen
+        store.delete_activity(b).unwrap();
+        assert!(store.event_activities().unwrap().is_empty());
     }
 
     #[test]

@@ -10,6 +10,7 @@ use hora_i18n::{dates, tr, trn};
 use hora_storage::Activity;
 use slint::{ComponentHandle, ModelRc, VecModel};
 
+use crate::activity_events::hm;
 use crate::activity_ui::{color_of, short};
 use crate::{
     ActivityBar, ActivityRow, ActivitySession, ActivityStats, AppWindow, SelectOption, State,
@@ -24,21 +25,32 @@ fn utc(date: NaiveDate, home: Tz) -> DateTime<Utc> {
     hora_core::time::local_to_utc(date.and_time(NaiveTime::MIN), home)
 }
 
-/// Seitenleiste: Aktivitäten mit der Zeit dieser Woche; leer, wenn die
-/// App-Zeiten aus sind
-pub fn sidebar(app: &AppWindow, state: &State) {
-    let rows = if state.settings.activities {
-        sidebar_rows(state)
+/// Anteil am Ziel; ab 1 erreicht
+fn fraction(done: TimeDelta, goal: TimeDelta) -> f32 {
+    if goal > TimeDelta::zero() {
+        (done.num_seconds() as f64 / goal.num_seconds() as f64) as f32
     } else {
-        Vec::new()
-    };
-    app.set_activity_sidebar(ModelRc::new(VecModel::from(rows)));
+        1.0
+    }
 }
 
-fn sidebar_rows(state: &State) -> Vec<ActivityRow> {
+/// Seitenleiste: Aktivitäten mit der Zeit dieser Woche und dem Wochenziel;
+/// leer, wenn die App-Zeiten aus sind. Liefert die Summe der Woche in
+/// Millisekunden (zum Erkennen, ob neue Zeit dazukam).
+pub fn sidebar(app: &AppWindow, state: &State) -> i64 {
+    let (rows, sum) = if state.settings.activities {
+        sidebar_rows(state)
+    } else {
+        (Vec::new(), 0)
+    };
+    app.set_activity_sidebar(ModelRc::new(VecModel::from(rows)));
+    sum
+}
+
+fn sidebar_rows(state: &State) -> (Vec<ActivityRow>, i64) {
     let activities = state.store.activities().unwrap_or_default();
     if activities.is_empty() {
-        return Vec::new();
+        return (Vec::new(), 0);
     }
     let week = state
         .store
@@ -47,21 +59,47 @@ fn sidebar_rows(state: &State) -> Vec<ActivityRow> {
             Utc::now() + TimeDelta::days(1),
         )
         .unwrap_or_default();
-    activities
+    let sum = week.values().map(TimeDelta::num_milliseconds).sum();
+    let rows = activities
         .iter()
-        .map(|activity| ActivityRow {
-            id: activity.id as i32,
-            name: activity.name.clone().into(),
-            color: color_of(activity),
-            detail: short(week.get(&activity.id).copied().unwrap_or_default()).into(),
+        .map(|activity| {
+            let done = week.get(&activity.id).copied().unwrap_or_default();
+            let goal = TimeDelta::minutes(activity.weekly_goal);
+            let (detail, progress) = if activity.weekly_goal > 0 {
+                (tr!("{0} / {1} h", hm(done), hm(goal)), fraction(done, goal))
+            } else {
+                (short(done), -1.0)
+            };
+            ActivityRow {
+                id: activity.id as i32,
+                name: activity.name.clone().into(),
+                color: color_of(activity),
+                detail: detail.into(),
+                progress,
+            }
         })
-        .collect()
+        .collect();
+    (rows, sum)
 }
 
-/// Mit der Uhr: Seitenleiste nachziehen, solange das Fenster sichtbar ist
-pub fn tick(app: &AppWindow, state: &State) {
-    if state.settings.activities && app.window().is_visible() {
-        sidebar(app, state);
+/// Mit der Uhr, solange das Fenster sichtbar ist: Seitenleiste nachziehen;
+/// kam Zeit dazu, auch die Termine der Woche (ihr Fortschritt)
+pub fn tick(app: &AppWindow, state: &mut State) {
+    if !state.settings.activities || !app.window().is_visible() {
+        return;
+    }
+    let sum = sidebar(app, state);
+    if sum != state.activity_mark {
+        state.activity_mark = sum;
+        if crate::shows_columns(state)
+            && !state
+                .store
+                .event_activities()
+                .unwrap_or_default()
+                .is_empty()
+        {
+            crate::load_view(app, state, true);
+        }
     }
 }
 
@@ -151,6 +189,31 @@ fn scale(max: TimeDelta) -> TimeDelta {
     TimeDelta::minutes(top)
 }
 
+/// Wochen in Folge mit erreichtem Ziel, bis zur laufenden (älteste zuerst).
+/// Ist das Ziel diese Woche noch nicht erreicht, zählt die Serie bis letzte
+/// Woche. Liefert die Länge und ob die laufende Woche dazugehört.
+fn streak(weeks: &[TimeDelta], goal: TimeDelta) -> (usize, bool) {
+    let Some((current, past)) = weeks.split_last() else {
+        return (0, false);
+    };
+    let this = *current >= goal;
+    let before = past.iter().rev().take_while(|w| **w >= goal).count();
+    (before + usize::from(this), this)
+}
+
+fn streak_text(weeks: &[TimeDelta], goal: TimeDelta) -> String {
+    match streak(weeks, goal) {
+        (0, _) => String::new(),
+        (1, true) => tr!("Goal reached this week").to_string(),
+        (1, false) => tr!("Goal reached last week").to_string(),
+        (n, _) => trn!(
+            "Goal reached {n} week in a row",
+            "Goal reached {n} weeks in a row",
+            n as i64
+        ),
+    }
+}
+
 /// Beschriftung einer Linie: "15 min", "3 h"
 fn scale_label(d: TimeDelta) -> String {
     let minutes = d.num_minutes();
@@ -193,7 +256,15 @@ fn stats(
     let edges = bounds(today, months);
     let utc_edges: Vec<DateTime<Utc>> = edges.iter().map(|&d| utc(d, home)).collect();
     let values = per_range(spans, &utc_edges);
-    let top = scale(values.iter().copied().max().unwrap_or_default());
+    let goal = TimeDelta::minutes(activity.weekly_goal);
+    let has_goal = activity.weekly_goal > 0;
+    let biggest = values.iter().copied().max().unwrap_or_default();
+    // Nach Wochen soll die Ziellinie im Bild sein
+    let top = scale(if has_goal && !months {
+        biggest.max(goal)
+    } else {
+        biggest
+    });
     let bars: Vec<ActivityBar> = edges
         .windows(2)
         .zip(&values)
@@ -257,6 +328,30 @@ fn stats(
         })
         .collect();
 
+    // Alle Wochen seit der ersten gezählten, für die Serie
+    let streak = match spans.iter().map(|(start, _)| *start).min() {
+        Some(first) if has_goal => {
+            let mut monday_first = crate::monday_of(local(first).date());
+            let mut weeks_utc = Vec::new();
+            while monday_first <= monday {
+                weeks_utc.push(utc(monday_first, home));
+                monday_first += TimeDelta::weeks(1);
+            }
+            weeks_utc.push(utc(monday + TimeDelta::weeks(1), home));
+            streak_text(&per_range(spans, &weeks_utc), goal)
+        }
+        _ => String::new(),
+    };
+    let week_note = if has_goal {
+        tr!(
+            "goal {0} · {1} %",
+            short(goal),
+            (fraction(week_and_month[0], goal) * 100.0).round() as i64
+        )
+    } else {
+        dates::short_day_range(monday, monday + TimeDelta::days(6))
+    };
+
     ActivityStats {
         color: color_of(activity),
         total: short(total).into(),
@@ -268,11 +363,23 @@ fn stats(
             .unwrap_or_default()
             .into(),
         week: short(week_and_month[0]).into(),
-        week_range: dates::short_day_range(monday, monday + TimeDelta::days(6)).into(),
+        week_range: week_note.into(),
         month: short(week_and_month[1]).into(),
         month_name: dates::month_year(today.year(), today.month0() as usize).into(),
         scale_top: scale_label(top).into(),
         scale_mid: scale_label(top / 2).into(),
+        goal: if has_goal && !months {
+            fraction(goal, top)
+        } else {
+            -1.0
+        },
+        goal_label: if has_goal {
+            tr!("goal {}", short(goal))
+        } else {
+            String::new()
+        }
+        .into(),
+        streak: streak.into(),
         bars: ModelRc::new(VecModel::from(bars)),
         summary: summary.into(),
         sessions: ModelRc::new(VecModel::from(recent)),
@@ -303,6 +410,22 @@ mod tests {
     }
 
     #[test]
+    fn streaks_count_weeks_in_a_row() {
+        let h = TimeDelta::hours;
+        assert_eq!(streak(&[h(5), h(6), h(7), h(6)], h(6)), (3, true));
+        // Diese Woche noch nicht erreicht: Serie bis letzte Woche
+        assert_eq!(streak(&[h(6), h(6), h(2)], h(6)), (2, false));
+        assert_eq!(streak(&[h(6), h(1), h(2)], h(6)), (0, false));
+        assert_eq!(streak(&[], h(6)), (0, false));
+        let text = |weeks: &[TimeDelta]| {
+            hora_i18n::with_language(hora_i18n::Lang::En, || streak_text(weeks, h(6)))
+        };
+        assert_eq!(text(&[h(6), h(6), h(6)]), "Goal reached 3 weeks in a row");
+        assert_eq!(text(&[h(6), h(1)]), "Goal reached last week");
+        assert_eq!(text(&[h(1), h(1)]), "");
+    }
+
+    #[test]
     fn the_scale_is_round() {
         assert_eq!(scale(TimeDelta::zero()), TimeDelta::minutes(30));
         assert_eq!(scale(TimeDelta::minutes(30)), TimeDelta::minutes(30));
@@ -327,6 +450,7 @@ mod tests {
             color: "#34a853".into(),
             idle_limit: 60,
             apps: vec!["writer.exe".into()],
+            weekly_goal: 60,
         };
         let spans = [
             // Oktober: eine Stunde
@@ -345,6 +469,11 @@ mod tests {
         assert_eq!(s.week, "1:00 h");
         assert_eq!(s.month, "1:20 h");
         assert_eq!(s.scale_top, "1 h");
+        // Ziel 1 h: diese Woche erreicht, letzte Woche nicht
+        assert_eq!(s.week_range, "goal 1:00 h · 100 %");
+        assert_eq!(s.goal, 1.0);
+        assert_eq!(s.goal_label, "goal 1:00 h");
+        assert_eq!(s.streak, "Goal reached this week");
         let bars: Vec<ActivityBar> = s.bars.iter().collect();
         assert_eq!(bars.len(), BARS as usize);
         assert!(bars[BARS as usize - 1].current);

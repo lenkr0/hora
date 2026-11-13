@@ -187,7 +187,8 @@ pub struct Session {
     pub counted: TimeDelta,
 }
 
-/// Sitzungen aus den Abschnitten einer Aktivität, in zeitlicher Reihenfolge
+/// Sitzungen aus den Abschnitten einer Aktivität, in zeitlicher Reihenfolge.
+/// Überlappende Abschnitte zählen nur einmal.
 pub fn sessions(spans: &[Span], gap: TimeDelta) -> Vec<Session> {
     let mut spans = spans.to_vec();
     spans.sort();
@@ -198,8 +199,11 @@ pub fn sessions(spans: &[Span], gap: TimeDelta) -> Vec<Session> {
         }
         match out.last_mut() {
             Some(last) if start - last.end < gap => {
+                let added = end - start.max(last.end);
+                if added > TimeDelta::zero() {
+                    last.counted += added;
+                }
                 last.end = last.end.max(end);
-                last.counted += end - start;
             }
             _ => out.push(Session {
                 start,
@@ -401,6 +405,10 @@ mod tests {
         assert_eq!(found[1].counted, TimeDelta::minutes(10));
         // Leere Abschnitte zählen nicht
         assert!(sessions(&[span(10, 10)], gap).is_empty());
+        // Überlappende oder enthaltene Abschnitte zählen nur einmal
+        let found = sessions(&[span(0, 100), span(50, 150), span(60, 70)], gap);
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].counted, s(150));
     }
 
     #[test]

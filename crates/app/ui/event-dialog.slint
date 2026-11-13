@@ -278,6 +278,9 @@ export component EventDialog inherits Modal {
     in property <[ReminderChip]> reminders;
     in property <[SelectOption]> reminder-presets;
     in property <[SelectOption]> reminder-presets-all-day;
+    // App-Zeiten: "Keine" und die Aktivitäten; leer = App-Zeiten aus
+    in property <[SelectOption]> activity-options;
+    in-out property <int> activity;
     callback add-reminder(int, string);
     callback remove-reminder(int);
 
@@ -580,6 +583,35 @@ export component EventDialog inherits Modal {
                 accepted => {
                     root.submit();
                 }
+            }
+        }
+
+        // Nur für Termine auf dem Server: Beispieltermine haben keine feste Kennung
+        if root.activity-options.length > 0 && root.calendar >= 0 && root.calendar < root.calendar-options.length
+            && root.calendar-options[root.calendar].id >= 0: VerticalLayout {
+            spacing: 6px;
+
+            // Gleich breit wie die Kalenderauswahl darüber
+            HorizontalLayout {
+                spacing: 10px;
+
+                Select {
+                    label: @tr("Activity (app time)");
+                    options: root.activity-options;
+                    selected <=> root.activity;
+                    horizontal-stretch: 1;
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+            }
+
+            Text {
+                text: @tr("Shows the counted time in the event. Applies to all occurrences and stays on this PC.");
+                font-size: 12px;
+                color: Theme.ink-3;
+                wrap: word-wrap;
             }
         }
 

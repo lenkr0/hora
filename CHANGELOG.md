@@ -22,6 +22,15 @@
   overview: total (and since when), this week, this month, a history of the
   last 12 weeks or months, and the sessions with count, average and longest.
   Stretches less than 15 minutes apart count as one session.
+- Weekly goal per activity (optional, in hours). The sidebar shows progress
+  and a check mark once it is reached; the overview shows the goal as a line
+  in the history and how many weeks in a row you reached it.
+- An event can belong to an activity (event dialog, only for calendars on a
+  server). Once it has started, it shows the counted time against its length,
+  e.g. "1:12 / 1:30 h", with a bar; every session that reaches into the event
+  counts. The link applies to all occurrences of a series, also after
+  "this and all following", and stays on this PC – the event on the server
+  doesn't change.
 
 ## [1.2.0] – 2026-11-10
 

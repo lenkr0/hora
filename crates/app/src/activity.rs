@@ -296,6 +296,7 @@ mod tests {
                 color: "#4285f4",
                 idle_limit: 60,
                 apps: &["Writer.exe".to_string(), "notes.exe".to_string()],
+                weekly_goal: 0,
             })
             .unwrap();
         let config = Config::new(&store.activities().unwrap());

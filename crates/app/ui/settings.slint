@@ -123,6 +123,8 @@ export struct ActivityRow {
     name: string,
     color: color,
     detail: string,
+    // Anteil am Wochenziel (0–1, darüber erreicht); negativ = kein Ziel
+    progress: float,
 }
 
 export component SettingsDialog inherits Modal {

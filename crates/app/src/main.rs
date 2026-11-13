@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod activity;
+mod activity_events;
 mod activity_overview;
 mod activity_ui;
 mod editing;
@@ -243,6 +244,9 @@ struct State {
     activity_dialog: activity_ui::Dialog,
     /// Aktivität in der Übersicht der App-Zeiten
     activity_shown: Option<i64>,
+    /// Gezählte Zeit dieser Woche beim letzten Blick (ms): Kommt Zeit dazu,
+    /// zeigen die Termine ihren neuen Fortschritt
+    activity_mark: i64,
 }
 
 impl State {
@@ -448,6 +452,8 @@ fn load_week(app: &AppWindow, state: &mut State, first: NaiveDate, days: i64, ke
     app.set_week_label(tr!("W{}", first.iso_week().week()).into());
 
     let home = state.home;
+    // App-Zeiten: Fortschritt der Termine, die zu einer Aktivität gehören
+    let progress = activity_events::progress(state, &state.items);
     let mut rows: Vec<(String, EventItem)> = Vec::new();
     // (id, Titel, Farbe, erste Spalte, Spalte nach der letzten)
     let mut spans: Vec<(i32, String, u32, i32, i32)> = Vec::new();
@@ -471,6 +477,12 @@ fn load_week(app: &AppWindow, state: &mut State, first: NaiveDate, days: i64, ke
                             span: 1,
                             // Über Mitternacht geteilte Termine nur im Dialog ändern
                             editable: item.movable() && whole,
+                            progress_text: progress
+                                .get(&id)
+                                .map(|p| p.text.as_str())
+                                .unwrap_or_default()
+                                .into(),
+                            progress: progress.get(&id).map_or(0.0, |p| p.fraction),
                         },
                     ));
                 }
@@ -774,6 +786,11 @@ fn load_view(app: &AppWindow, state: &mut State, keep_order: bool) {
     }
     load_mini(app, state);
     update_now(app, state);
+}
+
+/// Ansicht mit Tagesspalten (Tag, drei Tage, Woche)
+fn shows_columns(state: &State) -> bool {
+    matches!(state.view, View::Day | View::ThreeDays | View::Week)
 }
 
 fn update_now(app: &AppWindow, state: &State) {
@@ -1081,6 +1098,7 @@ fn open_dialog(app: &AppWindow, state: &mut State, item: Option<Item>, times: Dr
     });
     app.set_event_error("".into());
     state.editing = item;
+    activity_events::dialog(app, state, state.editing.as_ref());
     app.set_event_dialog_open(true);
 }
 
@@ -2241,6 +2259,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         counting_paused: false,
         activity_dialog: activity_ui::Dialog::default(),
         activity_shown: None,
+        activity_mark: 0,
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
     updates::start(&app, &mut state.borrow_mut());
@@ -2257,7 +2276,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             // App-Zeiten (falls eingeschaltet) ebenfalls erst jetzt
             activity_ui::apply(&mut s);
             if let Some(app) = weak.upgrade().filter(|_| s.settings.activities) {
-                activity_overview::sidebar(&app, &s);
+                // Stand merken: Erst neue Zeit lädt die Woche neu
+                s.activity_mark = activity_overview::sidebar(&app, &s);
             }
             drop(s);
             shell::refresh_autostart();
@@ -2605,7 +2625,10 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 return;
             }
             match editing::save(&mut s, editing.as_ref(), &input) {
-                Ok(()) => {
+                Ok(uid) => {
+                    if let Some(uid) = uid {
+                        activity_events::save(&app, &s, &uid);
+                    }
                     app.set_event_dialog_open(false);
                     s.editing = None;
                     app.invoke_focus_main();
@@ -2930,6 +2953,13 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 _ => Scope::All,
             };
             let saving = matches!(action, SeriesAction::Save { .. });
+            // App-Zeiten: Die Aktivität gilt für die ganze Serie; vor dem
+            // Speichern setzen, damit eine geteilte Serie sie mitnimmt
+            if let SeriesAction::Save { item, .. } = &action
+                && let Some(uid) = activity_events::uid_of(item)
+            {
+                activity_events::save(&app, &s, uid);
+            }
             match editing::apply_series(&mut s, &action, scope) {
                 Ok(()) if saving => {
                     app.set_event_dialog_open(false);

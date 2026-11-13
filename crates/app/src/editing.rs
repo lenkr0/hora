@@ -422,7 +422,12 @@ pub fn check_series_save(state: &State, item: &Item, input: &DialogInput) -> Res
 
 /// Dialog speichern: `editing` ist der bearbeitete Termin, `None` bei neuen.
 /// Vorkommen von Serien gehen über [`SeriesAction::Save`].
-pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> Result<(), String> {
+/// Speichert den Termin aus dem Dialog; liefert bei Server-Terminen die UID
+pub fn save(
+    state: &mut State,
+    editing: Option<&Item>,
+    input: &DialogInput,
+) -> Result<Option<String>, String> {
     let today = state.now().date();
     let home = state.home;
     match editing.map(|i| &i.source) {
@@ -434,7 +439,7 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
                     return Err(tr!("Sample events can't repeat.").into());
                 }
                 put_demo(state, None, input, &start, &end);
-                return Ok(());
+                return Ok(None);
             }
             let uid = new_uid();
             let href = new_href(state, input.calendar, &uid)?;
@@ -449,7 +454,7 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
             let _ = state
                 .store
                 .set_setting("default_calendar", &input.calendar.to_string());
-            store_object(state, input.calendar, &href, &object)
+            store_object(state, input.calendar, &href, &object).map(|()| Some(uid))
         }
         Some(Source::DemoEvent(id) | Source::DemoAllDay(id)) => {
             let (start, end) = input.times.to_values(today, home, None)?;
@@ -457,7 +462,7 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
                 return Err(tr!("Sample events can't repeat.").into());
             }
             put_demo(state, Some(*id), input, &start, &end);
-            Ok(())
+            Ok(None)
         }
         Some(Source::Server {
             read_only: true, ..
@@ -486,8 +491,8 @@ pub fn save(state: &mut State, editing: Option<&Item>, input: &DialogInput) -> R
             if let Some(reminders) = &input.reminders {
                 reminders.apply(&mut object, uid, None, home, false);
             }
-            let href = href.to_string();
-            store_object(state, calendar_id, &href, &object)
+            let (href, uid) = (href.to_string(), uid.to_string());
+            store_object(state, calendar_id, &href, &object).map(|()| Some(uid))
         }
     }
 }
@@ -582,6 +587,8 @@ pub fn apply_series(state: &mut State, action: &SeriesAction, scope: Scope) -> R
     if let Some(new) = new {
         let new_href = new_href(state, calendar_id, &new_uid)?;
         store_object(state, calendar_id, &new_href, &new)?;
+        // App-Zeiten: Die neue Serie gehört zur selben Aktivität
+        crate::activity_events::carry_over(state, &uid, &new_uid);
     }
     store_object(state, calendar_id, &href, &object)
 }

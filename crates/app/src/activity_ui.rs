@@ -16,6 +16,8 @@ use crate::{ActivityRow, AppChoice, AppWindow, SelectOption, State};
 const LIMITS: [i64; 6] = [30, 60, 120, 300, 600, 900];
 /// Pausengrenze neuer Aktivitäten
 const DEFAULT_LIMIT: i64 = 60;
+/// Wahlmöglichkeiten für das Wochenziel in Minuten; 0 = keins
+const GOALS: [i64; 12] = [0, 60, 120, 180, 240, 300, 360, 480, 600, 720, 900, 1200];
 
 /// Dialog einer Aktivität: welche bearbeitet wird und die Programmliste
 #[derive(Default)]
@@ -121,6 +123,7 @@ fn rows(state: &State, activities: &[Activity]) -> Vec<ActivityRow> {
                     time(&total)
                 )
                 .into(),
+                progress: -1.0,
             }
         })
         .collect()
@@ -150,6 +153,31 @@ fn limit_options() -> ModelRc<SelectOption> {
         })
         .collect();
     ModelRc::new(VecModel::from(options))
+}
+
+fn goal_options() -> ModelRc<SelectOption> {
+    let options: Vec<SelectOption> = GOALS
+        .iter()
+        .map(|&minutes| SelectOption {
+            id: minutes as i32,
+            name: if minutes == 0 {
+                tr!("No goal").to_string()
+            } else {
+                hora_i18n::trn!("{n} hour", "{n} hours", minutes / 60)
+            }
+            .into(),
+            color: Default::default(),
+        })
+        .collect();
+    ModelRc::new(VecModel::from(options))
+}
+
+/// Wochenziel auf die nächste Wahlmöglichkeit runden (höchstens die größte)
+fn goal_index(minutes: i64) -> i32 {
+    GOALS
+        .iter()
+        .position(|&g| g >= minutes)
+        .unwrap_or(GOALS.len() - 1) as i32
 }
 
 fn limit_index(seconds: i64) -> i32 {
@@ -215,6 +243,8 @@ fn open(app: &AppWindow, state: &mut State, activity: Option<&Activity>) {
     app.set_activity_limit(limit_index(
         activity.map_or(DEFAULT_LIMIT, |a| a.idle_limit),
     ));
+    app.set_activity_goal_options(goal_options());
+    app.set_activity_goal(goal_index(activity.map_or(0, |a| a.weekly_goal)));
     app.set_activity_error(Default::default());
     if let Some(a) = activity {
         let time = state
@@ -329,11 +359,16 @@ pub fn save(app: &AppWindow, state: &mut State) {
         .copied()
         .unwrap_or(DEFAULT_LIMIT);
     let color = color_hex(app.get_activity_color());
+    let goal = GOALS
+        .get(app.get_activity_goal().max(0) as usize)
+        .copied()
+        .unwrap_or(0);
     let draft = ActivityDraft {
         name: &name,
         color: &color,
         idle_limit: limit,
         apps: &apps,
+        weekly_goal: goal,
     };
     let result = match state.activity_dialog.editing {
         Some(id) => state.store.update_activity(id, &draft),
@@ -385,6 +420,14 @@ mod tests {
         assert_eq!(short(TimeDelta::minutes(45)), "45 min");
         assert_eq!(short(TimeDelta::minutes(200)), "3:20 h");
         assert_eq!(short(TimeDelta::hours(120)), "120:00 h");
+    }
+
+    #[test]
+    fn goals_snap_to_a_choice() {
+        assert_eq!(goal_index(0), 0);
+        assert_eq!(goal_index(360), 6);
+        assert_eq!(goal_index(350), 6);
+        assert_eq!(goal_index(100_000), GOALS.len() as i32 - 1);
     }
 
     #[test]
