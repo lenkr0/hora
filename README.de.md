@@ -24,6 +24,14 @@ startet in deutlich unter einer Sekunde mit rund 12 MB Arbeitsspeicher.
   Markdown und Tags.
 - Die **Schnelleingabe** macht aus „Zahnarzt morgen 15 Uhr bei Dr. Weber“
   einen Termin; die **Befehlspalette** (`Strg+K`) durchsucht alles.
+- **App-Zeiten** (optional, standardmäßig aus): zählen, wie lange du die
+  Programme einer Aktivität aktiv nutzt – nur solange eines im Vordergrund ist
+  und du Maus, Tastatur oder Stift benutzt. Die Seitenleiste zeigt die Zeit
+  dieser Woche und ein optionales Wochenziel; die Übersicht ergänzt die
+  Gesamtzeit, den Monat, einen Verlauf nach Wochen oder Monaten, deine
+  Sitzungen und wie viele Wochen in Folge du das Ziel erreicht hast. Ein
+  Termin kann zu einer Aktivität gehören und zeigt dann die gezählte Zeit,
+  etwa „1:12 / 1:30 Std.“. Die Zeiten bleiben auf deinem PC.
 - **Sieben Sprachen** (English, Deutsch, Français, Español, Italiano,
   Nederlands, Polski), hell und dunkel, komplett per Tastatur bedienbar.
 
