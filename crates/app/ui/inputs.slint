@@ -157,15 +157,8 @@ export component Select inherits VerticalLayout {
             }
         }
 
-        TouchArea {
-            enabled: root.enabled;
-            mouse-cursor: MouseCursor.pointer;
-            clicked => {
-                fs.focus();
-                popup.show();
-            }
-        }
-
+        // Vor der TouchArea, damit der erste Klick die Liste öffnet: ein
+        // FocusScope ohne Fokus nimmt sonst den Klick für sich.
         fs := FocusScope {
             enabled: root.enabled;
             key-pressed(e) => {
@@ -182,6 +175,15 @@ export component Select inherits VerticalLayout {
                     return accept;
                 }
                 return reject;
+            }
+        }
+
+        TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: MouseCursor.pointer;
+            clicked => {
+                fs.focus();
+                popup.show();
             }
         }
 

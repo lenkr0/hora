@@ -32,6 +32,12 @@
   "this and all following", and stays on this PC – the event on the server
   doesn't change.
 
+### Fixes
+
+- Select fields (calendar, reminder, language …), calendars in the sidebar,
+  agenda entries and tasks now react to the first click. Before, the first
+  click only moved the keyboard focus there and a second click was needed.
+
 ## [1.2.0] – 2026-11-10
 
 ### Updates

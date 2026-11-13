@@ -95,14 +95,7 @@ component TaskLine inherits Rectangle {
     accessible-role: list-item;
     accessible-label: root.entry.title + (root.entry.done ? ", " + @tr("done") : "") + (root.entry.due != "" ? ", " + @tr("due {}", root.entry.due) : "");
 
-    row-ta := TouchArea {
-        mouse-cursor: MouseCursor.pointer;
-        clicked => {
-            fs.focus();
-            root.open();
-        }
-    }
-
+    // FocusScope vor der TouchArea, sonst nimmt er den ersten Klick
     fs := FocusScope {
         key-pressed(e) => {
             if e.text == " " {
@@ -122,6 +115,14 @@ component TaskLine inherits Rectangle {
                 return accept;
             }
             return reject;
+        }
+    }
+
+    row-ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.open();
         }
     }
 
