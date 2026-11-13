@@ -44,7 +44,7 @@ export struct JournalEdit {
 }
 
 // Umschalter wie Calinos Segmented Control
-component Segmented inherits Rectangle {
+export component Segmented inherits Rectangle {
     in property <[string]> labels;
     in property <int> current;
     in property <length> tab-w: 76px;

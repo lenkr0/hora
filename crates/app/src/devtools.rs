@@ -34,9 +34,11 @@
 //! - `--time-views` misst, wie lange jede Ansicht, Blättern und eine Suche in
 //!   der Befehlspalette brauchen (Mittel aus 5 Durchläufen), und beendet sich.
 //! - `--activities-demo` schaltet die App-Zeiten ein und legt, wenn es noch
-//!   keine gibt, zwei Beispiel-Aktivitäten mit gezählter Zeit an (nur mit
-//!   eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet die Einstellungen
-//!   mit dem Dialog für eine neue Aktivität.
+//!   keine gibt, zwei Beispiel-Aktivitäten mit gut drei Monaten gezählter Zeit
+//!   an (nur mit eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet die
+//!   Einstellungen mit dem Dialog für eine neue Aktivität,
+//!   `--activity-overview` die Übersicht der ersten Aktivität (mit `--months`
+//!   den Verlauf nach Monaten).
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -132,6 +134,13 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
     if has("--activity-dialog") {
         app.invoke_show_settings();
         crate::activity_ui::open_new(app, &mut state.borrow_mut());
+    }
+    if has("--activity-overview") {
+        app.set_activity_overview_months(has("--months"));
+        let first = state.borrow().store.activities().unwrap_or_default();
+        if let Some(activity) = first.first() {
+            crate::activity_overview::open(app, &mut state.borrow_mut(), activity.id as i32);
+        }
     }
     if has("--sync-popup") {
         let weak = app.as_weak();
@@ -906,11 +915,30 @@ fn activities_demo(state: &mut State) {
         }) else {
             continue;
         };
-        for days in [0, 1, 9, 12] {
-            let end = now - TimeDelta::days(days) - TimeDelta::minutes(5);
-            let _ = state
-                .store
-                .add_activity_time(id, end - TimeDelta::minutes(minutes), end);
+        // Gleiche Zahlen bei jedem Lauf: einfacher Zufallsgenerator
+        let mut seed = 0x9e37_79b9_u64 + id as u64;
+        let mut next = |n: i64| {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            ((seed >> 33) as i64).rem_euclid(n)
+        };
+        // Gut drei Monate, nicht jeden Tag, zuletzt etwas mehr
+        for days in 0..100_i64 {
+            if next(10) < 4 {
+                continue;
+            }
+            let scale = 50 + (100 - days) / 2;
+            let first = (minutes / 2 + next(minutes)) * scale / 100;
+            let end = now - TimeDelta::days(days) - TimeDelta::minutes(5 + next(240));
+            let start = end - TimeDelta::minutes(first.max(5));
+            let _ = state.store.add_activity_time(id, start, end);
+            // Manchmal nach kurzer Pause weiter: zählt als dieselbe Sitzung
+            if next(3) == 0 {
+                let end = start - TimeDelta::minutes(2 + next(8));
+                let begin = end - TimeDelta::minutes(10 + next(minutes / 2));
+                let _ = state.store.add_activity_time(id, begin, end);
+            }
         }
     }
     crate::activity_ui::apply(state);

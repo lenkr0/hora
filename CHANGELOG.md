@@ -18,6 +18,10 @@
 - The running stretch is saved at least once a minute. Settings show this
   week's and the total time per activity; the notification area menu can
   pause counting.
+- The sidebar lists the activities with this week's time. A click opens the
+  overview: total (and since when), this week, this month, a history of the
+  last 12 weeks or months, and the sessions with count, average and longest.
+  Stretches less than 15 minutes apart count as one session.
 
 ## [1.2.0] – 2026-11-10
 

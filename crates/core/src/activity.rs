@@ -171,6 +171,63 @@ impl Tracker {
     }
 }
 
+/// Liegt zwischen zwei Abschnitten weniger als das, gehören sie zu einer
+/// Sitzung (kurz etwas nachsehen, Kaffee holen).
+pub const SESSION_GAP: TimeDelta = TimeDelta::minutes(15);
+
+/// Gezählter Zeitraum einer Aktivität: Beginn und Ende
+pub type Span = (DateTime<Utc>, DateTime<Utc>);
+
+/// Abschnitte mit kurzen Unterbrechungen, zusammengefasst
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Session {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    /// Gezählte Zeit, ohne die Unterbrechungen
+    pub counted: TimeDelta,
+}
+
+/// Sitzungen aus den Abschnitten einer Aktivität, in zeitlicher Reihenfolge
+pub fn sessions(spans: &[Span], gap: TimeDelta) -> Vec<Session> {
+    let mut spans = spans.to_vec();
+    spans.sort();
+    let mut out: Vec<Session> = Vec::new();
+    for (start, end) in spans {
+        if end <= start {
+            continue;
+        }
+        match out.last_mut() {
+            Some(last) if start - last.end < gap => {
+                last.end = last.end.max(end);
+                last.counted += end - start;
+            }
+            _ => out.push(Session {
+                start,
+                end,
+                counted: end - start,
+            }),
+        }
+    }
+    out
+}
+
+/// Gezählte Zeit zwischen je zwei aufeinanderfolgenden Grenzen (aufsteigend;
+/// n Grenzen ergeben n − 1 Summen). Ein Abschnitt über eine Grenze zählt zu
+/// beiden Seiten mit seinem Teil.
+pub fn per_range(spans: &[Span], bounds: &[DateTime<Utc>]) -> Vec<TimeDelta> {
+    bounds
+        .windows(2)
+        .map(|range| {
+            spans
+                .iter()
+                .map(|&(start, end)| {
+                    (end.min(range[1]) - start.max(range[0])).max(TimeDelta::zero())
+                })
+                .fold(TimeDelta::zero(), |sum, part| sum + part)
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -326,6 +383,32 @@ mod tests {
             tracker.observe(t(90), None, s(0)),
             Some(seg("browser", 40, 90))
         );
+    }
+
+    fn span(start: i64, end: i64) -> Span {
+        (t(start), t(end))
+    }
+
+    #[test]
+    fn short_breaks_stay_in_one_session() {
+        let gap = TimeDelta::minutes(15);
+        // Unsortiert: 0–10 min, nach 5 min Pause 15–30 min, nach 20 min Pause 50–60 min
+        let spans = [span(3000, 3600), span(0, 600), span(900, 1800)];
+        let found = sessions(&spans, gap);
+        assert_eq!(found.len(), 2);
+        assert_eq!((found[0].start, found[0].end), (t(0), t(1800)));
+        assert_eq!(found[0].counted, TimeDelta::minutes(25));
+        assert_eq!(found[1].counted, TimeDelta::minutes(10));
+        // Leere Abschnitte zählen nicht
+        assert!(sessions(&[span(10, 10)], gap).is_empty());
+    }
+
+    #[test]
+    fn spans_are_split_at_the_bounds() {
+        let spans = [span(0, 100), span(150, 400)];
+        let bounds = [t(50), t(200), t(300), t(1000)];
+        assert_eq!(per_range(&spans, &bounds), vec![s(100), s(100), s(100)]);
+        assert!(per_range(&spans, &[t(0)]).is_empty());
     }
 
     #[test]

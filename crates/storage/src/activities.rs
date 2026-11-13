@@ -39,6 +39,10 @@ fn ms(at: DateTime<Utc>) -> i64 {
     at.timestamp_millis()
 }
 
+fn from_ms(millis: i64) -> DateTime<Utc> {
+    DateTime::from_timestamp_millis(millis).unwrap_or_default()
+}
+
 impl Store {
     pub fn activities(&self) -> Result<Vec<Activity>> {
         let mut stmt = self.conn.prepare(
@@ -144,6 +148,22 @@ impl Store {
         }
         Ok(totals)
     }
+
+    /// Gezählte Abschnitte einer Aktivität, nach Beginn sortiert
+    pub fn activity_spans(&self, activity_id: i64) -> Result<Vec<(DateTime<Utc>, DateTime<Utc>)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT start_ms, end_ms FROM activity_time WHERE activity_id = ?1 ORDER BY start_ms",
+        )?;
+        let rows = stmt.query_map(params![activity_id], |r| {
+            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
+        })?;
+        let mut spans = Vec::new();
+        for row in rows {
+            let (start, end) = row?;
+            spans.push((from_ms(start), from_ms(end)));
+        }
+        Ok(spans)
+    }
 }
 
 fn set_apps(tx: &rusqlite::Transaction, id: i64, apps: &[String]) -> Result<()> {
@@ -244,6 +264,12 @@ mod tests {
         assert_eq!(totals.get(&b), None);
         let all = store.activity_totals(t(-60), t(60)).unwrap();
         assert_eq!(all.get(&b), Some(&TimeDelta::minutes(20)));
+        // Die Abschnitte selbst, nach Beginn sortiert
+        assert_eq!(
+            store.activity_spans(a).unwrap(),
+            vec![(t(-5), t(5)), (t(30), t(50))]
+        );
+        assert_eq!(store.activity_spans(b).unwrap(), vec![(t(-30), t(-10))]);
     }
 
     #[test]

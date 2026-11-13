@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod activity;
+mod activity_overview;
 mod activity_ui;
 mod editing;
 mod forms;
@@ -240,6 +241,8 @@ struct State {
     counter: Option<activity::Counter>,
     counting_paused: bool,
     activity_dialog: activity_ui::Dialog,
+    /// Aktivität in der Übersicht der App-Zeiten
+    activity_shown: Option<i64>,
 }
 
 impl State {
@@ -2237,13 +2240,14 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         counter: None,
         counting_paused: false,
         activity_dialog: activity_ui::Dialog::default(),
+        activity_shown: None,
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
     updates::start(&app, &mut state.borrow_mut());
     // Infobereich und Benachrichtigungen erst nach dem ersten Bild: Das
     // Fenster erscheint so schneller (WinRT braucht gut 20 ms)
     slint::Timer::single_shot(Duration::from_millis(100), {
-        let state = state.clone();
+        let (weak, state) = (app.as_weak(), state.clone());
         move || {
             let shell = shell::Shell::start(&instance_name, &dir, |event| {
                 let _ = slint::invoke_from_event_loop(move || on_tray(event));
@@ -2252,6 +2256,9 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
             s.shell = Some(shell);
             // App-Zeiten (falls eingeschaltet) ebenfalls erst jetzt
             activity_ui::apply(&mut s);
+            if let Some(app) = weak.upgrade().filter(|_| s.settings.activities) {
+                activity_overview::sidebar(&app, &s);
+            }
             drop(s);
             shell::refresh_autostart();
         }
@@ -3078,6 +3085,9 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     });
     app.on_activity_save(with(&app, &state, activity_ui::save));
     app.on_activity_delete(with(&app, &state, activity_ui::delete));
+    app.on_activity_open(with_arg(&app, &state, activity_overview::open));
+    app.on_activity_overview_select(with_arg(&app, &state, activity_overview::select));
+    app.on_activity_overview_range(with(&app, &state, activity_overview::range));
     app.on_install_update(with(&app, &state, updates::install));
     app.on_test_notification(with(&app, &state, |app, s| {
         let Some(shell) = &s.shell else { return };
@@ -3228,7 +3238,10 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     clock.start(
         slint::TimerMode::Repeated,
         Duration::from_secs(20),
-        with(&app, &state, |app, s| update_now(app, s)),
+        with(&app, &state, |app, s| {
+            update_now(app, s);
+            activity_overview::tick(app, s);
+        }),
     );
     // Regelmäßig abgleichen; wartende Änderungen öfter versuchen
     let sync_timer = slint::Timer::default();

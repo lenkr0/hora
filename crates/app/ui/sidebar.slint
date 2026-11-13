@@ -3,6 +3,7 @@
 
 import { Theme, Locale } from "theme.slint";
 import { Button, IconButton } from "controls.slint";
+import { ActivityRow } from "settings.slint";
 
 export struct CalendarRow {
     // -1 = Beispieltermine auf diesem Gerät
@@ -254,6 +255,79 @@ component CalendarItem inherits Rectangle {
     }
 }
 
+// Aktivität der App-Zeiten: Farbe, Name, Zeit dieser Woche; öffnet die Übersicht
+component ActivityItem inherits Rectangle {
+    in property <ActivityRow> item;
+    callback clicked();
+
+    height: 32px;
+    border-radius: Theme.radius-sm;
+    background: ta.has-hover ? Theme.ink-raw.with-alpha(0.04) : transparent;
+    accessible-role: button;
+    accessible-label: root.item.name + ", " + root.item.detail;
+    accessible-action-default => {
+        root.clicked();
+    }
+    animate background { duration: Theme.dur-fast; }
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == " " || e.text == Key.Return {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.clicked();
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 8px;
+        spacing: 13px;
+
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 10px;
+                height: 10px;
+                border-radius: 5px;
+                background: root.item.color;
+            }
+        }
+
+        Text {
+            text: root.item.name;
+            font-size: 14px;
+            color: Theme.ink;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+
+        Text {
+            text: root.item.detail;
+            font-size: 12.5px;
+            color: Theme.ink-3;
+            vertical-alignment: center;
+        }
+    }
+
+    if fs.has-focus: Rectangle {
+        border-radius: Theme.radius-sm;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
 // Textverweis unten in der Seitenleiste, auch per Tab und Eingabe erreichbar
 component FooterLink inherits Text {
     callback clicked();
@@ -298,6 +372,9 @@ export component Sidebar inherits Rectangle {
     callback mini-prev();
     callback mini-next();
     callback mini-pick(int);
+    // App-Zeiten: Aktivitäten mit der Zeit dieser Woche
+    in property <[ActivityRow]> activities;
+    callback activity(int);
 
     property <int> picker-id: -1;
     property <length> picker-y;
@@ -414,6 +491,43 @@ export component Sidebar inherits Rectangle {
                             root.add-account();
                         }
                     }
+                }
+            }
+        }
+
+        if root.activities.length > 0: VerticalLayout {
+            spacing: 0px;
+
+            Rectangle {
+                height: 8px;
+            }
+
+            HorizontalLayout {
+                height: 28px;
+                spacing: 8px;
+
+                Text {
+                    text: @tr("APP TIME");
+                    font-size: 11.5px;
+                    font-weight: 700;
+                    letter-spacing: 1.03px;
+                    color: Theme.ink-3;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: @tr("this week");
+                    font-size: 11.5px;
+                    color: Theme.ink-3;
+                    vertical-alignment: center;
+                }
+            }
+
+            for row in root.activities: ActivityItem {
+                item: row;
+                clicked => {
+                    root.activity(row.id);
                 }
             }
         }

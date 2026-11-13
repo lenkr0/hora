@@ -1,0 +1,399 @@
+// App-Zeiten: Übersicht einer Aktivität mit Summen, Verlauf über Wochen
+// oder Monate und den letzten Sitzungen. Geöffnet aus der Seitenleiste.
+
+import { Theme } from "theme.slint";
+import { Button } from "controls.slint";
+import { Select, SelectOption } from "inputs.slint";
+import { Modal } from "dialogs.slint";
+import { Segmented } from "journal-view.slint";
+
+// Balken im Verlauf: Beschriftung darunter, Zeitraum und Wert für den
+// Hinweis, Höhe 0–1 (bezogen auf die oberste Linie)
+export struct ActivityBar {
+    label: string,
+    title: string,
+    text: string,
+    value: float,
+    current: bool,
+}
+
+// Sitzung: Tag, Uhrzeit von–bis, gezählte Zeit
+export struct ActivitySession {
+    day: string,
+    span: string,
+    length: string,
+}
+
+// Zahlen der gewählten Aktivität
+export struct ActivityStats {
+    color: color,
+    total: string,
+    since: string,
+    week: string,
+    week-range: string,
+    month: string,
+    month-name: string,
+    // Beschriftung der obersten und mittleren Linie im Verlauf
+    scale-top: string,
+    scale-mid: string,
+    bars: [ActivityBar],
+    summary: string,
+    sessions: [ActivitySession],
+}
+
+component SectionLabel inherits Text {
+    font-size: 13px;
+    font-weight: 500;
+    color: Theme.ink-2;
+}
+
+// Kachel mit einer großen Zahl
+component Tile inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <string> note;
+
+    // Alle Kacheln gleich breit, unabhängig von der Länge der Zahl
+    preferred-width: 1px;
+    horizontal-stretch: 1;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.line;
+    accessible-role: text;
+    accessible-label: root.label + ": " + root.value;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 2px;
+
+        Text {
+            text: root.label;
+            font-size: 12px;
+            color: Theme.ink-3;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.value;
+            font-family: Theme.serif-medium;
+            font-size: 24px;
+            color: Theme.ink;
+            overflow: elide;
+        }
+
+        Text {
+            text: root.note;
+            font-size: 12px;
+            color: Theme.ink-3;
+            overflow: elide;
+        }
+    }
+}
+
+// Säulen in der Farbe der Aktivität; Linien und Schrift bleiben zurückhaltend
+component Chart inherits Rectangle {
+    in property <[ActivityBar]> bars;
+    in property <color> bar-color;
+    in property <string> scale-top;
+    in property <string> scale-mid;
+
+    // Platz über der obersten Linie für den Hinweis
+    property <length> top-pad: 30px;
+    property <length> plot-h: 140px;
+    property <length> gutter: 44px;
+    property <length> slot: (root.width - root.gutter) / Math.max(1, root.bars.length);
+    property <length> bar-w: Math.max(6px, Math.min(26px, root.slot - 12px));
+    property <int> hovered: -1;
+
+    height: root.top-pad + root.plot-h + 26px;
+
+    for line[i] in [
+        { y: root.top-pad, text: root.scale-top },
+        { y: root.top-pad + root.plot-h / 2, text: root.scale-mid },
+        { y: root.top-pad + root.plot-h, text: "" },
+    ]: Rectangle {
+        y: line.y;
+        height: 1px;
+
+        Rectangle {
+            x: root.gutter;
+            width: root.width - root.gutter;
+            height: 1px;
+            background: i == 2 ? Theme.line : Theme.line-2;
+        }
+
+        Text {
+            x: 0;
+            y: -7px;
+            width: root.gutter - 10px;
+            height: 14px;
+            text: line.text;
+            font-size: 11px;
+            color: Theme.ink-3;
+            horizontal-alignment: right;
+            vertical-alignment: center;
+        }
+    }
+
+    for bar[i] in root.bars: Rectangle {
+        x: root.gutter + i * root.slot;
+        width: root.slot;
+        height: root.height;
+        accessible-role: list-item;
+        accessible-label: bar.title + ": " + bar.text;
+
+        if bar.value > 0: Rectangle {
+            x: (parent.width - root.bar-w) / 2;
+            width: root.bar-w;
+            height: Math.max(2px, Math.min(1, bar.value) * root.plot-h);
+            y: root.top-pad + root.plot-h - self.height;
+            border-radius: Math.min(4px, self.height / 2);
+            background: slot-ta.has-hover ? root.bar-color.darker(0.15) : root.bar-color;
+
+            // Unten eckig: Die Säule steht auf der Grundlinie
+            Rectangle {
+                y: parent.height - self.height;
+                height: Math.min(parent.height / 2, 4px);
+                background: parent.background;
+            }
+        }
+
+        Text {
+            y: root.top-pad + root.plot-h + 7px;
+            width: parent.width;
+            text: bar.label;
+            font-size: 11px;
+            font-weight: bar.current ? 600 : 400;
+            color: bar.current ? Theme.ink : Theme.ink-3;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+
+        slot-ta := TouchArea {
+            changed has-hover => {
+                if self.has-hover {
+                    root.hovered = i;
+                } else if root.hovered == i {
+                    root.hovered = -1;
+                }
+            }
+        }
+    }
+
+    if root.hovered >= 0 && root.hovered < root.bars.length: Rectangle {
+        property <ActivityBar> bar: root.bars[root.hovered];
+        property <length> top: root.top-pad + root.plot-h - Math.min(1, self.bar.value) * root.plot-h;
+
+        width: tip.preferred-width + 20px;
+        height: 26px;
+        x: Math.max(0px, Math.min(root.width - self.width, root.gutter + (root.hovered + 0.5) * root.slot - self.width / 2));
+        y: Math.max(0px, self.top - self.height - 6px);
+        border-radius: 6px;
+        background: Theme.popover-bg;
+        border-width: 1px;
+        border-color: Theme.popover-border;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: Theme.dark ? transparent : #0000001a;
+
+        tip := Text {
+            text: parent.bar.title + " · " + parent.bar.text;
+            font-size: 12px;
+            color: Theme.ink;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component ActivityOverview inherits Modal {
+    in property <[SelectOption]> options;
+    in-out property <int> index;
+    in property <ActivityStats> stats;
+    in-out property <bool> months;
+    callback select(int);
+    callback range-changed();
+    callback dismiss();
+
+    title: @tr("App time");
+    card-width: 620px;
+    close => {
+        root.dismiss();
+    }
+
+    changed index => {
+        root.select(root.index);
+    }
+
+    VerticalLayout {
+        spacing: 18px;
+
+        if root.options.length > 1: HorizontalLayout {
+            alignment: start;
+
+            Select {
+                width: 260px;
+                label: "";
+                options: root.options;
+                selected <=> root.index;
+            }
+        }
+
+        if root.options.length == 1: HorizontalLayout {
+            spacing: 10px;
+            alignment: start;
+
+            VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 5px;
+                    background: root.stats.color;
+                }
+            }
+
+            Text {
+                text: root.options[0].name;
+                font-size: 15px;
+                font-weight: 600;
+                color: Theme.ink;
+                overflow: elide;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            Tile {
+                label: @tr("Total");
+                value: root.stats.total;
+                note: root.stats.since;
+            }
+
+            Tile {
+                label: @tr("This week");
+                value: root.stats.week;
+                note: root.stats.week-range;
+            }
+
+            Tile {
+                label: @tr("This month");
+                value: root.stats.month;
+                note: root.stats.month-name;
+            }
+        }
+
+        VerticalLayout {
+            spacing: 4px;
+
+            HorizontalLayout {
+                SectionLabel {
+                    text: @tr("History");
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Segmented {
+                    labels: [@tr("Weeks"), @tr("Months")];
+                    current: root.months ? 1 : 0;
+                    tab-w: 84px;
+                    tab-h: 26px;
+                    font-px: 12.5px;
+                    select(i) => {
+                        root.months = i == 1;
+                        root.range-changed();
+                    }
+                }
+            }
+
+            Chart {
+                bars: root.stats.bars;
+                bar-color: root.stats.color;
+                scale-top: root.stats.scale-top;
+                scale-mid: root.stats.scale-mid;
+            }
+        }
+
+        VerticalLayout {
+            spacing: 6px;
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                SectionLabel {
+                    text: @tr("Sessions");
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: root.stats.summary;
+                    font-size: 12px;
+                    color: Theme.ink-3;
+                    vertical-alignment: center;
+                }
+            }
+
+            if root.stats.sessions.length == 0: Text {
+                text: @tr("No sessions yet. They appear here once you use a program of this activity.");
+                font-size: 13px;
+                color: Theme.ink-3;
+                wrap: word-wrap;
+            }
+
+            if root.stats.sessions.length > 0: Flickable {
+                height: Math.min(list.preferred-height, 190px);
+                content-height: list.preferred-height;
+
+                list := VerticalLayout {
+                    for session in root.stats.sessions: VerticalLayout {
+                        Rectangle {
+                            height: 1px;
+                            background: Theme.line-2;
+                        }
+
+                        HorizontalLayout {
+                            padding-top: 7px;
+                            padding-bottom: 7px;
+                            spacing: 12px;
+
+                            Text {
+                                text: session.day;
+                                font-size: 13px;
+                                color: Theme.ink;
+                                horizontal-stretch: 1;
+                                overflow: elide;
+                            }
+
+                            Text {
+                                text: session.span;
+                                font-size: 13px;
+                                color: Theme.ink-3;
+                            }
+
+                            Text {
+                                min-width: 64px;
+                                text: session.length;
+                                font-size: 13px;
+                                color: Theme.ink;
+                                horizontal-alignment: right;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalLayout {
+            alignment: end;
+
+            Button {
+                text: @tr("Close");
+                clicked => {
+                    root.dismiss();
+                }
+            }
+        }
+    }
+}

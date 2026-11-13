@@ -11,6 +11,7 @@ import { AddAccountDialog, AboutDialog, DialogLogic } from "dialogs.slint";
 import { EventDialog, EventDraft, RuleDraft, ReminderChip, ConfirmDialog, ConflictDialog, ScopeDialog } from "event-dialog.slint";
 import { SettingsDialog, ActivityRow } from "settings.slint";
 import { ActivityDialog, AppChoice } from "activity-dialog.slint";
+import { ActivityOverview, ActivityStats, ActivityBar, ActivitySession } from "activity-overview.slint";
 import { TasksView, TaskRow } from "tasks-view.slint";
 import { TaskDialog, TaskDraft } from "task-dialog.slint";
 import { QuickAddDialog, QuickPreview } from "quick-add.slint";
@@ -22,7 +23,7 @@ import { EventPreview, EventDetails } from "preview.slint";
 import { SelectOption } from "inputs.slint";
 import { IconButton } from "controls.slint";
 
-export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice }
+export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice, ActivityStats, ActivityBar, ActivitySession }
 
 component NavArrow inherits Rectangle {
     in property <image> icon;
@@ -620,6 +621,16 @@ export component AppWindow inherits Window {
     callback activity-toggle-app(int, bool);
     callback activity-save();
     callback activity-delete();
+    // App-Zeiten: Seitenleiste (Zeit dieser Woche) und Übersicht
+    in property <[ActivityRow]> activity-sidebar;
+    callback activity-open(int);
+    in-out property <bool> activity-overview-open;
+    in property <[SelectOption]> activity-overview-options;
+    in-out property <int> activity-overview-index;
+    in-out property <bool> activity-overview-months;
+    in property <ActivityStats> activity-stats;
+    callback activity-overview-select(int);
+    callback activity-overview-range();
     in-out property <bool> scope-open;
     in property <bool> scope-deleting;
     in property <bool> scope-allow-this: true;
@@ -1114,6 +1125,10 @@ export component AppWindow inherits Window {
                     mini-pick(i) => {
                         root.mini-pick(i);
                     }
+                    activities: root.activity-sidebar;
+                    activity(id) => {
+                        root.activity-open(id);
+                    }
                 }
 
                 HorizontalLayout {
@@ -1573,6 +1588,23 @@ export component AppWindow inherits Window {
         }
         dismiss => {
             root.settings-open = false;
+            shortcuts.focus();
+        }
+    }
+
+    if root.activity-overview-open: ActivityOverview {
+        options: root.activity-overview-options;
+        index <=> root.activity-overview-index;
+        months <=> root.activity-overview-months;
+        stats: root.activity-stats;
+        select(i) => {
+            root.activity-overview-select(i);
+        }
+        range-changed => {
+            root.activity-overview-range();
+        }
+        dismiss => {
+            root.activity-overview-open = false;
             shortcuts.focus();
         }
     }

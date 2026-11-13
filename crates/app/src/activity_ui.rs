@@ -46,8 +46,15 @@ fn color_index(hex: &str) -> i32 {
         .unwrap_or(0) as i32
 }
 
+/// Farbe einer Aktivität für die Oberfläche
+pub fn color_of(activity: &Activity) -> slint::Color {
+    crate::parse_hex(&activity.color)
+        .map(crate::rgb)
+        .unwrap_or_else(|| crate::rgb(crate::CALENDAR_COLORS[0]))
+}
+
 /// Beginn der laufenden Woche (Montag, 0 Uhr) in UTC
-fn week_start(state: &State) -> DateTime<Utc> {
+pub fn week_start(state: &State) -> DateTime<Utc> {
     let monday = crate::monday_of(state.now().date());
     hora_core::time::local_to_utc(monday.and_time(NaiveTime::MIN), state.home)
 }
@@ -106,9 +113,7 @@ fn rows(state: &State, activities: &[Activity]) -> Vec<ActivityRow> {
             ActivityRow {
                 id: activity.id as i32,
                 name: activity.name.clone().into(),
-                color: crate::parse_hex(&activity.color)
-                    .map(crate::rgb)
-                    .unwrap_or_else(|| crate::rgb(crate::CALENDAR_COLORS[0])),
+                color: color_of(activity),
                 detail: tr!(
                     "{0} · this week {1} · total {2}",
                     apps,
@@ -121,12 +126,13 @@ fn rows(state: &State, activities: &[Activity]) -> Vec<ActivityRow> {
         .collect()
 }
 
-/// Abschnitt in den Einstellungen füllen
+/// Abschnitt in den Einstellungen und die Seitenleiste füllen
 pub fn show(app: &AppWindow, state: &State) {
     app.set_settings_activities(state.settings.activities);
     app.set_activities_paused(state.counting_paused);
     let activities = state.store.activities().unwrap_or_default();
     app.set_activity_rows(ModelRc::new(VecModel::from(rows(state, &activities))));
+    crate::activity_overview::sidebar(app, state);
 }
 
 fn limit_options() -> ModelRc<SelectOption> {
