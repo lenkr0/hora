@@ -157,14 +157,7 @@ component CalendarItem inherits Rectangle {
     accessible-checked: root.cal.visible;
     animate background { duration: Theme.dur-fast; }
 
-    ta := TouchArea {
-        mouse-cursor: MouseCursor.pointer;
-        clicked => {
-            fs.focus();
-            root.toggle();
-        }
-    }
-
+    // FocusScope vor der TouchArea, sonst nimmt er den ersten Klick
     fs := FocusScope {
         key-pressed(e) => {
             if e.text == " " || e.text == Key.Return {
@@ -172,6 +165,14 @@ component CalendarItem inherits Rectangle {
                 return accept;
             }
             return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.toggle();
         }
     }
 

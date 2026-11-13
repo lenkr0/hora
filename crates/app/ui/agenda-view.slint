@@ -153,17 +153,7 @@ component AgendaItem inherits Rectangle {
         root.open(root.absolute-position.x, root.absolute-position.y, root.width);
     }
 
-    ta := TouchArea {
-        mouse-cursor: MouseCursor.pointer;
-        clicked => {
-            fs.focus();
-            root.show();
-        }
-        double-clicked => {
-            root.edit();
-        }
-    }
-
+    // FocusScope vor der TouchArea, sonst nimmt er den ersten Klick
     fs := FocusScope {
         key-pressed(e) => {
             if e.text == Key.Return || e.text == " " {
@@ -179,6 +169,17 @@ component AgendaItem inherits Rectangle {
                 return accept;
             }
             return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.show();
+        }
+        double-clicked => {
+            root.edit();
         }
     }
 
