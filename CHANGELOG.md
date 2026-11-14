@@ -1,5 +1,31 @@
 # Changelog
 
+## [Unreleased]
+
+### Easier to use
+
+- Date fields in the event and task dialogs have a calendar button: it opens
+  a small month sheet to pick a day with one click. Arrow keys move through
+  the days, Page Up/Down changes the month, Enter takes the day, Esc closes.
+  Typing the date still works as before.
+- A narrow bar on the left switches between calendar, agenda, tasks and
+  journal. The switch at the top only holds the calendar's time spans (day
+  to year); "Calendar" returns to the one you used last.
+- The empty strip at the top of the window is gone: small window buttons sit
+  in the top right corner with the time spans right below them, so the tabs
+  fit in narrower windows too. A ready update shows as a round button at the
+  bottom of the left bar; hovering it shows the version.
+- In narrow windows the sync status is just its colored dot; a click shows
+  the message.
+- Week view: the top corners are cleanly rounded. Narrow events give their
+  title the whole line, and those too narrow for any text show just their
+  color instead of "…". The current time next to the red line is no longer
+  cut off in 12-hour format ("12:54 PM").
+- Settings → Appearance chooses light, dark or the same as Windows (until now
+  only in the command palette).
+- An error message in the event or task dialog disappears as soon as you
+  change a field, instead of staying until the next save.
+
 ## [1.3.0] – 2026-11-13
 
 ### App time

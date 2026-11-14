@@ -1,12 +1,15 @@
 // Hauptfenster. Kopfzeile nach Calino (CalendarHeader.module.css).
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
-import { WindowControls, DragArea, ResizeEdges, UpdateNotice } from "window-controls.slint";
+import { WindowControls, DragArea, ResizeEdges } from "window-controls.slint";
 import { Theme, Fmt, Locale } from "theme.slint";
 import { EventItem, WeekLogic } from "event-card.slint";
 import { WeekView, DayInfo, AllDayItem } from "week-view.slint";
 import { MonthView, MonthCell, MonthChip } from "month-view.slint";
-import { Sidebar, CalendarRow, MiniDay } from "sidebar.slint";
+import { Sidebar, CalendarRow } from "sidebar.slint";
+import { MiniDay } from "mini-calendar.slint";
+import { DatePick } from "date-field.slint";
+import { AreaRail } from "rail.slint";
 import { AddAccountDialog, AboutDialog, DialogLogic } from "dialogs.slint";
 import { EventDialog, EventDraft, RuleDraft, ReminderChip, ConfirmDialog, ConflictDialog, ScopeDialog } from "event-dialog.slint";
 import { SettingsDialog, ActivityRow } from "settings.slint";
@@ -23,7 +26,7 @@ import { EventPreview, EventDetails } from "preview.slint";
 import { SelectOption } from "inputs.slint";
 import { IconButton } from "controls.slint";
 
-export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice, ActivityStats, ActivityBar, ActivitySession }
+export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice, ActivityStats, ActivityBar, ActivitySession, DatePick }
 
 component NavArrow inherits Rectangle {
     in property <image> icon;
@@ -196,7 +199,7 @@ component SyncStatus inherits HorizontalLayout {
     in property <int> state;
     in property <string> text;
     in property <string> detail;
-    // Schmal: Text nur, solange synchronisiert wird oder etwas schiefging
+    // Schmal: nur der Punkt; ein Klick zeigt bei Fehlern die Meldung
     in property <bool> compact;
     callback sync-now();
     // Klick auf Punkt oder Text: ganze Meldung zeigen (x, y unten links im Fenster)
@@ -228,7 +231,7 @@ component SyncStatus inherits HorizontalLayout {
                 }
             }
 
-            if !root.compact || root.state >= 2: Text {
+            if !root.compact: Text {
                 text: root.text;
                 font-size: 13px;
                 color: root.state == 3 ? Theme.error : Theme.ink-3;
@@ -265,22 +268,20 @@ component SyncStatus inherits HorizontalLayout {
 // Reiterbeschriftungen und ihre Breiten. Die Texte sind je Sprache
 // verschieden lang; unsichtbare Texte liefern die Breite (Text + 2 × 12 px).
 component TabLabels {
-    out property <[string]> labels: [@tr("Day"), @tr("3 days"), @tr("Week"), @tr("Month"), @tr("Year"), @tr("Agenda"), @tr("Tasks"), @tr("Journal")];
+    // Zeitspannen des Kalenders; Agenda, Aufgaben und Journal stehen in der Leiste
+    out property <[string]> labels: [@tr("Day"), @tr("3 days"), @tr("Week"), @tr("Month"), @tr("Year")];
     out property <[length]> widths: [
         t0.preferred-width + 24px, t1.preferred-width + 24px, t2.preferred-width + 24px, t3.preferred-width + 24px,
-        t4.preferred-width + 24px, t5.preferred-width + 24px, t6.preferred-width + 24px, t7.preferred-width + 24px
+        t4.preferred-width + 24px
     ];
     out property <[length]> lefts: [
         4px,
         4px + root.widths[0] + 2px,
         4px + root.widths[0] + root.widths[1] + 4px,
         4px + root.widths[0] + root.widths[1] + root.widths[2] + 6px,
-        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + 8px,
-        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + 10px,
-        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + root.widths[5] + 12px,
-        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + root.widths[4] + root.widths[5] + root.widths[6] + 14px
+        4px + root.widths[0] + root.widths[1] + root.widths[2] + root.widths[3] + 8px
     ];
-    out property <length> full-width: root.lefts[7] + root.widths[7] + 4px;
+    out property <length> full-width: root.lefts[4] + root.widths[4] + 4px;
 
     width: 0px;
     height: 0px;
@@ -290,9 +291,6 @@ component TabLabels {
     t2 := Text { text: root.labels[2]; font-size: 13px; font-weight: 500; opacity: 0; }
     t3 := Text { text: root.labels[3]; font-size: 13px; font-weight: 500; opacity: 0; }
     t4 := Text { text: root.labels[4]; font-size: 13px; font-weight: 500; opacity: 0; }
-    t5 := Text { text: root.labels[5]; font-size: 13px; font-weight: 500; opacity: 0; }
-    t6 := Text { text: root.labels[6]; font-size: 13px; font-weight: 500; opacity: 0; }
-    t7 := Text { text: root.labels[7]; font-size: 13px; font-weight: 500; opacity: 0; }
 }
 
 // Tab auf hellem, gleitendem Indikator
@@ -353,13 +351,13 @@ component ViewTabs inherits Rectangle {
     }
 }
 
-// Schmale Fenster: statt acht Reitern ein Knopf mit der Ansicht und Menü
+// Schmale Fenster: statt der Reiter ein Knopf mit der Zeitspanne und Menü
 component ViewMenu inherits Rectangle {
     in property <int> current;
     callback select(int);
 
     in property <[string]> labels;
-    property <[string]> keys: ["D", "X", "W", "M", @tr("Shortcut" => "Y"), "L", "A", "B"];
+    property <[string]> keys: ["D", "X", "W", "M", @tr("Shortcut" => "Y")];
 
     width: 136px;
     height: 40px;
@@ -419,7 +417,7 @@ component ViewMenu inherits Rectangle {
         x: root.width - 200px;
         y: root.height + 6px;
         width: 200px;
-        height: 8 * 34px + 12px;
+        height: 5 * 34px + 12px;
         close-policy: close-on-click-outside;
 
         Rectangle {
@@ -558,7 +556,7 @@ export component AppWindow inherits Window {
     in-out property <bool> event-dialog-open;
     in property <EventDraft> event-draft;
     in property <[SelectOption]> calendar-options;
-    in property <string> event-error;
+    in-out property <string> event-error;
     in-out property <bool> confirm-open;
     in property <string> confirm-title: @tr("Delete event?");
     in property <string> confirm-message;
@@ -571,7 +569,7 @@ export component AppWindow inherits Window {
     in property <TaskDraft> task-draft;
     in property <[SelectOption]> task-calendar-options;
     in property <[SelectOption]> task-parent-options;
-    in property <string> task-error;
+    in-out property <string> task-error;
     in-out property <bool> quick-open;
     in-out property <string> quick-text;
     in property <string> quick-error;
@@ -674,6 +672,7 @@ export component AppWindow inherits Window {
     callback settings-changed();
     callback language-changed();
     callback formats-changed();
+    callback theme-changed();
     callback test-notification();
     callback check-updates();
     callback install-update();
@@ -734,10 +733,24 @@ export component AppWindow inherits Window {
     // die Reiter sind je Sprache verschieden breit
     property <bool> compact-tabs;
     property <length> tabs-width: tab-labels.full-width;
+    // Platz für die Reiter: Leiste links (56 px), Name über der Seitenleiste,
+    // Navigation, Titel (höchstens 240 px breit gerechnet), Suche und Sync
+    property <length> title-w: Math.min(title-text.preferred-width, 240px);
     function fit-header() {
         root.narrow = root.width < 1560px;
         root.small-title = root.width < 1360px;
-        root.compact-tabs = root.width < 862px + root.tabs-width;
+        root.compact-tabs = root.width < 678px + root.title-w + root.tabs-width;
+    }
+    changed title-w => {
+        root.fit-header();
+    }
+
+    // Zuletzt gewählte Zeitspanne (Tag bis Jahr) für „Kalender“ in der Leiste
+    property <int> last-calendar-view: 2;
+    changed view => {
+        if root.view < 5 {
+            root.last-calendar-view = root.view;
+        }
     }
     changed width => {
         root.fit-header();
@@ -905,53 +918,29 @@ export component AppWindow inherits Window {
             return reject;
         }
 
-        VerticalLayout {
-            // Eigene Titelleiste statt der von Windows: in den Farben der App,
-            // zum Verschieben (Doppelklick maximiert), Knöpfe rechts
-            Rectangle {
-                height: 32px;
-
-                DragArea {
-                    drag => {
-                        root.window-drag();
-                    }
-                    double-click => {
-                        root.window-toggle-maximize();
-                    }
+        HorizontalLayout {
+            // Bereiche: Kalender, Agenda, Aufgaben, Journal
+            rail := AreaRail {
+                view: root.view;
+                update-version: root.update-version;
+                install-update => {
+                    root.install-update();
                 }
-
-                HorizontalLayout {
-                    alignment: end;
-                    spacing: 10px;
-
-                    if root.update-version != "": VerticalLayout {
-                        alignment: center;
-
-                        UpdateNotice {
-                            version: root.update-version;
-                            clicked => {
-                                root.install-update();
-                            }
-                        }
-                    }
-
-                    WindowControls {
-                        maximized: root.window-maximized;
-                        minimize => {
-                            root.window-minimize();
-                        }
-                        toggle-maximize => {
-                            root.window-toggle-maximize();
-                        }
-                        close => {
-                            root.window-close();
-                        }
-                    }
+                select(v) => {
+                    root.set-view(v < 0 ? root.last-calendar-view : v);
+                }
+                drag => {
+                    root.window-drag();
+                }
+                double-click => {
+                    root.window-toggle-maximize();
                 }
             }
 
-            // Kopfzeile, 72 px; die Marke steht über der Seitenleiste. Freie
-            // Stellen verschieben das Fenster wie die Titelleiste.
+            VerticalLayout {
+            // Kopfzeile: Name über der Seitenleiste, Navigation, Titel und
+            // Zeitspannen. Freie Stellen verschieben das Fenster; die
+            // Fensterknöpfe liegen klein darüber in der Ecke.
             Rectangle {
             height: Theme.header-height;
 
@@ -964,35 +953,16 @@ export component AppWindow inherits Window {
                 }
             }
 
+            // Unter den Fensterknöpfen oben rechts: Inhalt etwas tiefer
             HorizontalLayout {
+                padding-top: Theme.header-pad;
                 padding-right: 16px;
                 spacing: 0px;
 
                 HorizontalLayout {
                     width: Theme.sidebar-width;
-                    padding-left: 24px;
-                    spacing: 11px;
+                    padding-left: 20px;
                     alignment: start;
-
-                    Rectangle {
-                        width: 27px;
-
-                        Image {
-                            source: @image-url("icons/diamond.svg");
-                            width: 27px;
-                            height: 27px;
-                            colorize: Theme.focus-ring;
-                        }
-
-                        Image {
-                            source: @image-url("icons/diamond.svg");
-                            x: (27px - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                            width: 15.5px;
-                            height: 15.5px;
-                            colorize: Theme.accent;
-                        }
-                    }
 
                     Text {
                         text: "Hora";
@@ -1074,10 +1044,12 @@ export component AppWindow inherits Window {
                     width: 16px;
                 }
 
+                // Ohne Reiter (Agenda, Aufgaben, Journal) bleibt der Platz beim Titel
                 VerticalLayout {
                     alignment: center;
+                    horizontal-stretch: 0;
 
-                    if !root.compact-tabs: ViewTabs {
+                    if !root.compact-tabs && root.view < 5: ViewTabs {
                         labels: tab-labels.labels;
                         widths: tab-labels.widths;
                         lefts: tab-labels.lefts;
@@ -1088,7 +1060,7 @@ export component AppWindow inherits Window {
                         }
                     }
 
-                    if root.compact-tabs: ViewMenu {
+                    if root.compact-tabs && root.view < 5: ViewMenu {
                         labels: tab-labels.labels;
                         current: root.view;
                         select(v) => {
@@ -1336,6 +1308,46 @@ export component AppWindow inherits Window {
                     }
                 }
             }
+            }
+        }
+    }
+
+    // Fensterknöpfe klein in der Ecke oben rechts
+    WindowControls {
+        x: root.width - self.width;
+        y: 0px;
+        maximized: root.window-maximized;
+        minimize => {
+            root.window-minimize();
+        }
+        toggle-maximize => {
+            root.window-toggle-maximize();
+        }
+        close => {
+            root.window-close();
+        }
+    }
+
+    // Beschriftung zur Schaltfläche der Leiste unter der Maus
+    if rail.tip-text != "": Rectangle {
+        x: rail.width + 2px;
+        y: rail.tip-y - 14px;
+        width: tip.preferred-width + 20px;
+        height: 28px;
+        border-radius: Theme.radius-sm;
+        background: Theme.popover-bg;
+        border-width: 1px;
+        border-color: Theme.popover-border;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: Theme.dark ? transparent : #0000001a;
+
+        tip := Text {
+            text: rail.tip-text;
+            font-size: 12.5px;
+            color: Theme.ink;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
 
@@ -1405,7 +1417,7 @@ export component AppWindow inherits Window {
     if root.event-dialog-open: EventDialog {
         draft: root.event-draft;
         calendar-options: root.calendar-options;
-        error: root.event-error;
+        error <=> root.event-error;
         save(title, all-day, sd, st, ed, et, location, description, calendar, rule) => {
             root.save-event(title, all-day, sd, st, ed, et, location, description, calendar, rule);
         }
@@ -1439,7 +1451,7 @@ export component AppWindow inherits Window {
         draft: root.task-draft;
         calendar-options: root.task-calendar-options;
         parent-options: root.task-parent-options;
-        error: root.task-error;
+        error <=> root.task-error;
         save(title, mode, date, time, start, priority, calendar, parent, description) => {
             root.task-save(title, mode, date, time, start, priority, calendar, parent, description);
         }
@@ -1560,6 +1572,10 @@ export component AppWindow inherits Window {
         }
         formats <=> root.settings-formats;
         format-options: root.format-options;
+        theme <=> Theme.scheme-override;
+        theme-changed => {
+            root.theme-changed();
+        }
         formats-changed => {
             root.formats-changed();
         }

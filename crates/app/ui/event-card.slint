@@ -47,6 +47,8 @@ export component EventCardVisual inherits Rectangle {
     in property <float> progress;
 
     property <bool> tight: root.height < 38px;
+    // Zu schmal für Text (viele Termine nebeneinander): nur die Farbschiene
+    property <bool> slim: root.width < 44px;
     property <bool> raised: hovered || focused || lifted;
 
     border-radius: Theme.radius-event;
@@ -73,7 +75,7 @@ export component EventCardVisual inherits Rectangle {
         background: event-color.mix(Theme.canvas, 0.5);
     }
 
-    if !tight: VerticalLayout {
+    if !tight && !slim: VerticalLayout {
         padding-left: 13px;
         padding-right: 9px;
         padding-top: 3px;
@@ -111,7 +113,7 @@ export component EventCardVisual inherits Rectangle {
         }
     }
 
-    if tight: HorizontalLayout {
+    if tight && !slim: HorizontalLayout {
         padding-left: 13px;
         padding-right: 9px;
         spacing: 5px;
@@ -127,7 +129,8 @@ export component EventCardVisual inherits Rectangle {
             horizontal-stretch: 0;
         }
 
-        Text {
+        // Schmal: der Titel bekommt den ganzen Platz
+        if root.width >= 120px: Text {
             // Kurze Termine zeigen statt der Uhrzeit den Fortschritt
             text: root.progress-text != "" ? root.progress-text : root.time-text;
             font-size: 11.5px;

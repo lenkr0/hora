@@ -5,6 +5,7 @@ import { Theme, Fmt, Locale } from "theme.slint";
 import { Button, FocusRing, TextField } from "controls.slint";
 import { Checkbox, Select, SelectOption, TextArea } from "inputs.slint";
 import { Modal } from "dialogs.slint";
+import { DateField } from "date-field.slint";
 
 // Wiederholung im Termin-Dialog (wie Calinos RecurrenceFields)
 export struct RuleDraft {
@@ -274,7 +275,7 @@ component ReminderAdd inherits Rectangle {
 export component EventDialog inherits Modal {
     in property <EventDraft> draft;
     in property <[SelectOption]> calendar-options;
-    in property <string> error;
+    in-out property <string> error;
     in property <[ReminderChip]> reminders;
     in property <[SelectOption]> reminder-presets;
     in property <[SelectOption]> reminder-presets-all-day;
@@ -301,6 +302,14 @@ export component EventDialog inherits Modal {
     in-out property <int> rule-end: draft.rule.end;
     in-out property <string> until: draft.rule.until;
     in-out property <string> count: draft.rule.count;
+    // Eine Fehlermeldung gilt der Eingabe beim Speichern: Ändert sich danach
+    // ein Feld, verschwindet sie
+    property <string> input-key: root.title-text + "|" + (root.all-day ? "1" : "0") + "|" + root.start-date + "|" + root.start-time + "|"
+        + root.end-date + "|" + root.end-time + "|\{root.calendar}|\{root.repeat}|" + root.interval + "|\{root.weekdays}|\{root.monthly}|"
+        + "\{root.rule-end}|" + root.until + "|" + root.count;
+    changed input-key => {
+        root.error = "";
+    }
 
     // Titel, ganztägig, Beginn (Datum, Zeit), Ende (Datum, Zeit), Ort, Beschreibung, Kalender, Wiederholung
     callback save(string, bool, string, string, string, string, string, string, int, RuleDraft);
@@ -383,7 +392,7 @@ export component EventDialog inherits Modal {
         HorizontalLayout {
             spacing: 10px;
 
-            TextField {
+            DateField {
                 label: @tr("Start");
                 placeholder: Locale.date-placeholder;
                 text <=> root.start-date;
@@ -403,7 +412,7 @@ export component EventDialog inherits Modal {
                 }
             }
 
-            TextField {
+            DateField {
                 label: @tr("End");
                 placeholder: Locale.date-placeholder;
                 text <=> root.end-date;
@@ -466,7 +475,7 @@ export component EventDialog inherits Modal {
                 horizontal-stretch: 4;
             }
 
-            if root.repeating && root.rule-end == 1: TextField {
+            if root.repeating && root.rule-end == 1: DateField {
                 label: @tr("Until (inclusive)");
                 placeholder: Locale.date-placeholder;
                 text <=> root.until;

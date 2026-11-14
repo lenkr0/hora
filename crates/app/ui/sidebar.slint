@@ -4,6 +4,7 @@
 import { Theme, Locale } from "theme.slint";
 import { Button, IconButton } from "controls.slint";
 import { ActivityRow } from "settings.slint";
+import { MiniCalendar, MiniDay } from "mini-calendar.slint";
 
 export struct CalendarRow {
     // -1 = Beispieltermine auf diesem Gerät
@@ -15,133 +16,6 @@ export struct CalendarRow {
     read-only: bool,
     // Kontoname über dieser Zeile anzeigen
     first-of-account: bool,
-}
-
-export struct MiniDay {
-    number: string,
-    today: bool,
-    other-month: bool,
-    selected: bool,
-}
-
-// Mini-Kalender nach Calino (.mini …): Karte, Monat in Newsreader, 6 Wochen
-component MiniCalendar inherits Rectangle {
-    in property <string> month;
-    in property <string> year;
-    in property <[MiniDay]> days;
-    callback prev();
-    callback next();
-    callback pick(int);
-
-    property <length> cell: (root.width - 32px) / 7;
-
-    height: layout.preferred-height;
-    background: Theme.panel;
-    border-radius: Theme.radius-lg;
-    border-width: 1px;
-    border-color: Theme.line;
-    drop-shadow-offset-y: 2px;
-    drop-shadow-blur: 10px;
-    drop-shadow-color: Theme.dark ? transparent : #0000000a;
-
-    layout := VerticalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        padding-top: 16px;
-        padding-bottom: 18px;
-        spacing: 0px;
-
-        HorizontalLayout {
-            height: 28px;
-            spacing: 6px;
-
-            Text {
-                text: root.month;
-                font-family: Theme.serif-medium;
-                font-size: 20px;
-                font-weight: 500;
-                color: Theme.ink;
-                vertical-alignment: center;
-            }
-
-            Text {
-                text: root.year;
-                font-size: 16px;
-                color: Theme.ink-3;
-                vertical-alignment: center;
-                horizontal-stretch: 1;
-            }
-
-            IconButton {
-                icon: @image-url("icons/chevron-left.svg");
-                label: @tr("Previous month");
-                icon-size: 14px;
-                clicked => {
-                    root.prev();
-                }
-            }
-
-            IconButton {
-                icon: @image-url("icons/chevron-right.svg");
-                label: @tr("Next month");
-                icon-size: 14px;
-                clicked => {
-                    root.next();
-                }
-            }
-        }
-
-        Rectangle {
-            height: 16px;
-        }
-
-        HorizontalLayout {
-            for name in Locale.weekday-letter: Text {
-                width: root.cell;
-                text: name;
-                font-size: 10.5px;
-                font-weight: 600;
-                letter-spacing: 0.4px;
-                color: Theme.ink-3;
-                horizontal-alignment: center;
-            }
-        }
-
-        Rectangle {
-            height: 8px;
-        }
-
-        Rectangle {
-            height: 6 * root.cell;
-
-            for day[i] in root.days: Rectangle {
-                x: Math.mod(i, 7) * root.cell;
-                y: Math.floor(i / 7) * root.cell;
-                width: root.cell;
-                height: root.cell;
-                border-radius: Theme.radius-sm;
-                background: day.selected ? Theme.accent-strong : day-ta.has-hover ? Theme.hover-bg : transparent;
-                accessible-role: button;
-                accessible-label: day.number;
-
-                Text {
-                    text: day.number;
-                    font-size: 12.5px;
-                    font-weight: day.selected || day.today ? 600 : 400;
-                    color: day.selected ? Theme.accent-contrast : day.today ? Theme.accent-strong : day.other-month ? Theme.ink-3 : Theme.ink;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-
-                day-ta := TouchArea {
-                    mouse-cursor: MouseCursor.pointer;
-                    clicked => {
-                        root.pick(i);
-                    }
-                }
-            }
-        }
-    }
 }
 
 component CalendarItem inherits Rectangle {

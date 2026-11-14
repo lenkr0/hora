@@ -141,6 +141,9 @@ export component SettingsDialog inherits Modal {
     in-out property <int> formats;
     in property <[SelectOption]> format-options;
     callback formats-changed();
+    // Darstellung: 0 = wie Windows, 1 = hell, 2 = dunkel
+    in-out property <int> theme;
+    callback theme-changed();
     // Zustand der Windows-Benachrichtigungen, z. B. "ausgeschaltet"
     in property <string> status;
     callback changed();
@@ -396,6 +399,24 @@ export component SettingsDialog inherits Modal {
                 selected <=> root.formats;
                 changed selected => {
                     root.formats-changed();
+                }
+            }
+        }
+
+        Divider { }
+
+        Row {
+            label: @tr("Appearance");
+            description: @tr("Light, dark or the same as Windows");
+
+            Select {
+                label: "";
+                dots: false;
+                width: 210px;
+                options: [{ id: 0, name: @tr("Like Windows") }, { id: 1, name: @tr("Light") }, { id: 2, name: @tr("Dark") }];
+                selected <=> root.theme;
+                changed selected => {
+                    root.theme-changed();
                 }
             }
         }

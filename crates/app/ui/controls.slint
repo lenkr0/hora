@@ -130,8 +130,14 @@ export component TextField inherits VerticalLayout {
     in property <bool> password;
     in property <bool> enabled: true;
     in-out property <string> text;
+    // Optionales Symbol rechts im Feld (z. B. Kalender an Datumsfeldern)
+    in property <image> action-icon;
+    in property <string> action-label;
     callback accepted();
     callback edited();
+    callback action();
+
+    property <bool> has-action: root.action-label != "";
 
     forward-focus: input;
     spacing: 6px;
@@ -166,7 +172,7 @@ export component TextField inherits VerticalLayout {
 
         if root.text == "": Text {
             x: 12px;
-            width: parent.width - 24px;
+            width: parent.width - 24px - (root.has-action ? 28px : 0px);
             text: root.placeholder;
             font-size: 14px;
             color: Theme.ink-3;
@@ -176,7 +182,7 @@ export component TextField inherits VerticalLayout {
 
         input := TextInput {
             x: 12px;
-            width: parent.width - 24px;
+            width: parent.width - 24px - (root.has-action ? 28px : 0px);
             text <=> root.text;
             enabled: root.enabled;
             input-type: root.password ? InputType.password : InputType.text;
@@ -192,6 +198,15 @@ export component TextField inherits VerticalLayout {
             }
             edited => {
                 root.edited();
+            }
+        }
+
+        if root.has-action: IconButton {
+            x: parent.width - self.width - 6px;
+            icon: root.action-icon;
+            label: root.action-label;
+            clicked => {
+                root.action();
             }
         }
     }

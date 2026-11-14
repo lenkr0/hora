@@ -1,0 +1,249 @@
+// Schmale Leiste links mit den Bereichen von Hora: Kalender (Tag bis Jahr),
+// Agenda, Aufgaben und Journal. Oben die Raute als Zeichen der App, unten ein
+// Knopf, sobald ein Update bereitliegt.
+
+import { Theme } from "theme.slint";
+import { FocusRing } from "controls.slint";
+import { DragArea } from "window-controls.slint";
+
+component RailButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    in property <bool> active;
+    out property <bool> hovered: ta.has-hover;
+    callback clicked();
+
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: root.active ? Theme.panel : ta.has-hover ? Theme.hover-bg : transparent;
+    border-width: root.active ? 1px : 0px;
+    border-color: Theme.line;
+    accessible-role: tab;
+    accessible-label: root.label;
+    accessible-item-selected: root.active;
+    accessible-action-default => {
+        root.clicked();
+    }
+    animate background { duration: Theme.dur-fast; }
+
+    // Markierung am linken Rand der Leiste
+    if root.active: Rectangle {
+        x: -6px;
+        y: (parent.height - self.height) / 2;
+        width: 3px;
+        height: 18px;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+
+    Image {
+        source: root.icon;
+        width: 19px;
+        height: 19px;
+        colorize: root.active ? Theme.ink : ta.has-hover ? Theme.ink-2 : Theme.ink-3;
+    }
+
+    // Vor der TouchArea, damit der erste Klick zählt
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Return || e.text == " " {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: 10px;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+// Runder Knopf in Akzentfarbe: Update bereit, Klick startet Hora neu
+component UpdateButton inherits Rectangle {
+    in property <string> label;
+    out property <bool> hovered: ta.has-hover;
+    callback clicked();
+
+    width: 40px;
+    height: 40px;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    Rectangle {
+        width: 30px;
+        height: 30px;
+        border-radius: 15px;
+        background: ta.pressed ? Theme.accent-strong : ta.has-hover ? Theme.accent-hover : Theme.accent;
+        animate background { duration: Theme.dur-fast; }
+
+        Image {
+            source: @image-url("icons/refresh.svg");
+            width: 15px;
+            height: 15px;
+            colorize: Theme.accent-contrast;
+        }
+    }
+
+    // Vor der TouchArea, damit der erste Klick zählt
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Return || e.text == " " {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    if fs.has-focus: FocusRing {
+        radius: 20px;
+        w: root.width;
+        h: root.height;
+    }
+}
+
+export component AreaRail inherits Rectangle {
+    // Aktuelle Ansicht: 0–4 Kalender, 5 Agenda, 6 Aufgaben, 7 Journal
+    in property <int> view;
+    // -1 = Kalender in der zuletzt gewählten Zeitspanne, sonst die Ansicht
+    callback select(int);
+    callback drag();
+    callback double-click();
+    // Bereitliegendes Update ("" = keins)
+    in property <string> update-version;
+    callback install-update();
+
+    property <bool> update-hovered;
+    property <string> update-label: @tr("Hora {} is ready · Restart to update", root.update-version);
+
+    // Beschriftung zur Schaltfläche unter der Maus und deren Mitte im Fenster
+    out property <string> tip-text: calendar.hovered ? calendar.label : agenda.hovered ? agenda.label : tasks.hovered ? tasks.label : journal.hovered ? journal.label
+        : root.update-version != "" && root.update-hovered ? root.update-label : "";
+    out property <length> tip-y: root.update-version != "" && root.update-hovered ? root.height - 34px
+        : calendar.hovered ? calendar.absolute-position.y + 20px
+        : agenda.hovered ? agenda.absolute-position.y + 20px
+        : tasks.hovered ? tasks.absolute-position.y + 20px
+        : journal.absolute-position.y + 20px;
+
+    width: 56px;
+    accessible-role: tab-list;
+    accessible-label: @tr("Areas");
+
+    // Freie Stellen verschieben das Fenster
+    DragArea {
+        drag => {
+            root.drag();
+        }
+        double-click => {
+            root.double-click();
+        }
+    }
+
+    // Trennlinie zur Seitenleiste
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        background: Theme.line-2;
+    }
+
+    VerticalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        padding-bottom: 14px;
+        spacing: 6px;
+
+        // Raute auf Höhe des Namens „Hora“, mittig zum H
+        Rectangle {
+            height: Theme.header-height;
+
+            property <length> center: Theme.header-pad + (Theme.header-height - Theme.header-pad) / 2 - 2.5px;
+
+            Image {
+                source: @image-url("icons/diamond.svg");
+                y: parent.center - self.height / 2;
+                width: 27px;
+                height: 27px;
+                colorize: Theme.focus-ring;
+            }
+
+            Image {
+                source: @image-url("icons/diamond.svg");
+                y: parent.center - self.height / 2;
+                width: 15.5px;
+                height: 15.5px;
+                colorize: Theme.accent;
+            }
+        }
+
+        calendar := RailButton {
+            icon: @image-url("icons/calendar.svg");
+            label: @tr("Calendar");
+            active: root.view < 5;
+            clicked => {
+                root.select(-1);
+            }
+        }
+
+        agenda := RailButton {
+            icon: @image-url("icons/list.svg");
+            label: @tr("Agenda");
+            active: root.view == 5;
+            clicked => {
+                root.select(5);
+            }
+        }
+
+        tasks := RailButton {
+            icon: @image-url("icons/check-square.svg");
+            label: @tr("Tasks");
+            active: root.view == 6;
+            clicked => {
+                root.select(6);
+            }
+        }
+
+        journal := RailButton {
+            icon: @image-url("icons/book.svg");
+            label: @tr("Journal");
+            active: root.view == 7;
+            clicked => {
+                root.select(7);
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        if root.update-version != "": UpdateButton {
+            label: root.update-label;
+            changed hovered => {
+                root.update-hovered = self.hovered;
+            }
+            clicked => {
+                root.install-update();
+            }
+        }
+    }
+}

@@ -290,7 +290,8 @@ export component WeekView inherits Rectangle {
         }
 
         if root.today-index >= 0: Rectangle {
-            x: Theme.gutter-width - self.width - 3px;
+            // "12:54 PM" ist breiter als die Zeitleiste: dann bis an den Rand
+            x: Math.max(1px, Theme.gutter-width - self.width - 3px);
             y: root.now-min / 60 * Theme.hour-height - 8px;
             width: now-text.preferred-width + 8px;
             height: 16px;
@@ -369,6 +370,9 @@ export component WeekView inherits Rectangle {
         width: inner-w;
         height: head-h;
         background: Theme.panel;
+        // Die Karte schneidet ihre Kinder nicht rund ab
+        border-top-left-radius: Theme.radius-lg - 1px;
+        border-top-right-radius: Theme.radius-lg - 1px;
         drop-shadow-offset-y: 2px;
         drop-shadow-blur: 8px;
         drop-shadow-color: flick.content-y < 0px && !Theme.dark ? #0000000d : transparent;

@@ -7,6 +7,7 @@ import { Theme, Fmt, Locale } from "theme.slint";
 import { Button, TextField } from "controls.slint";
 import { Select, SelectOption, TextArea } from "inputs.slint";
 import { Modal } from "dialogs.slint";
+import { DateField } from "date-field.slint";
 
 export struct TaskDraft {
     is-new: bool,
@@ -34,7 +35,7 @@ export component TaskDialog inherits Modal {
     in property <TaskDraft> draft;
     in property <[SelectOption]> calendar-options;
     in property <[SelectOption]> parent-options;
-    in property <string> error;
+    in-out property <string> error;
 
     in-out property <string> title-text: draft.title;
     in-out property <int> due-mode: draft.due-mode;
@@ -45,6 +46,13 @@ export component TaskDialog inherits Modal {
     in-out property <int> calendar: draft.calendar;
     in-out property <int> parent: draft.parent;
     in-out property <string> description: draft.description;
+    // Eine Fehlermeldung gilt der Eingabe beim Speichern: Ändert sich danach
+    // ein Feld, verschwindet sie
+    property <string> input-key: root.title-text + "|\{root.due-mode}|" + root.due-date + "|" + root.due-time + "|" + root.start-date
+        + "|\{root.calendar}|\{root.parent}";
+    changed input-key => {
+        root.error = "";
+    }
 
     // Titel, Fälligkeit (Art, Datum, Uhrzeit), Beginn, Priorität, Kalender, übergeordnete Aufgabe, Beschreibung
     callback save(string, int, string, string, string, int, int, int, string);
@@ -58,7 +66,8 @@ export component TaskDialog inherits Modal {
     }
 
     title: draft.is-new ? @tr("New task") : @tr("Edit task");
-    card-width: 560px;
+    // Breit genug für Fälligkeit, Datum, Uhrzeit und Beginn in einer Zeile
+    card-width: 600px;
     close => {
         root.cancel();
     }
@@ -90,12 +99,12 @@ export component TaskDialog inherits Modal {
                 horizontal-stretch: 3;
             }
 
-            if root.due-mode > 0: TextField {
+            if root.due-mode > 0: DateField {
                 label: @tr("Date");
                 placeholder: Locale.date-placeholder;
                 enabled: !draft.times-locked;
                 text <=> root.due-date;
-                min-width: 112px;
+                min-width: 136px;
                 horizontal-stretch: 3;
                 accepted => {
                     root.submit();
@@ -114,11 +123,12 @@ export component TaskDialog inherits Modal {
                 }
             }
 
-            if root.due-mode > 0: TextField {
+            if root.due-mode > 0: DateField {
                 label: @tr("Start (optional)");
                 placeholder: Locale.date-placeholder;
                 enabled: !draft.times-locked;
                 text <=> root.start-date;
+                min-width: 136px;
                 horizontal-stretch: 3;
                 accepted => {
                     root.submit();

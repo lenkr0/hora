@@ -5,6 +5,7 @@ mod activity;
 mod activity_events;
 mod activity_overview;
 mod activity_ui;
+mod date_picker;
 mod editing;
 mod forms;
 mod items;
@@ -247,6 +248,8 @@ struct State {
     /// Gezählte Zeit dieser Woche beim letzten Blick (ms): Kommt Zeit dazu,
     /// zeigen die Termine ihren neuen Fortschritt
     activity_mark: i64,
+    /// Offene Datumsauswahl an einem Datumsfeld
+    picker: date_picker::Picker,
 }
 
 impl State {
@@ -745,19 +748,7 @@ fn load_year(app: &AppWindow, state: &State, first: NaiveDate, keep_order: bool)
 }
 
 fn load_mini(app: &AppWindow, state: &State) {
-    let first = monday_of(state.mini_month);
-    let today = state.now().date();
-    let days: Vec<MiniDay> = (0..42)
-        .map(|i| {
-            let date = first + Days::new(i);
-            MiniDay {
-                number: date.day().to_string().into(),
-                today: date == today,
-                other_month: date.month() != state.mini_month.month(),
-                selected: date == state.anchor,
-            }
-        })
-        .collect();
+    let days = date_picker::sheet(state.mini_month, state.now().date(), Some(state.anchor));
     app.set_mini_month(dates::capitalize(dates::month(state.mini_month.month0() as usize)).into());
     app.set_mini_year(state.mini_month.year().to_string().into());
     app.set_mini_days(ModelRc::new(VecModel::from(days)));
@@ -1765,6 +1756,13 @@ where
     }
 }
 
+/// Gewählte Darstellung (wie Windows, hell, dunkel) merken
+fn save_theme(app: &AppWindow, state: &State) {
+    let index = app.global::<Theme>().get_scheme_override().clamp(0, 2);
+    let name = ["system", "light", "dark"][index as usize];
+    let _ = state.store.set_setting("theme", name);
+}
+
 /// Treffer der Befehlspalette anzeigen; Auswahl auf dem ersten Eintrag
 fn palette_query(app: &AppWindow, state: &mut State, query: &str) {
     let entries = palette::entries(state, query);
@@ -1863,10 +1861,8 @@ fn run_palette_action(app: &AppWindow, state: &Rc<RefCell<State>>, action: palet
         Action::Theme => {
             // System → hell → dunkel → System
             let theme = app.global::<Theme>();
-            let next = (theme.get_scheme_override() + 1).rem_euclid(3);
-            theme.set_scheme_override(next);
-            let name = ["system", "light", "dark"][next as usize];
-            let _ = state.borrow().store.set_setting("theme", name);
+            theme.set_scheme_override((theme.get_scheme_override() + 1).rem_euclid(3));
+            save_theme(app, &state.borrow());
         }
         Action::ToggleCalendar(id) => app.invoke_toggle_calendar(id as i32),
         Action::GoTo(day) => go_to_day(app, &mut state.borrow_mut(), day),
@@ -2260,6 +2256,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         activity_dialog: activity_ui::Dialog::default(),
         activity_shown: None,
         activity_mark: 0,
+        picker: date_picker::Picker::default(),
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
     updates::start(&app, &mut state.borrow_mut());
@@ -3047,6 +3044,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         app.set_settings_language(index);
         relabel(app, s);
     }));
+    app.on_theme_changed(with(&app, &state, |app, s| save_theme(app, s)));
     app.on_formats_changed(with(&app, &state, |app, s| {
         let index = app.get_settings_formats();
         let choice = usize::try_from(index - 1)
@@ -3116,6 +3114,17 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     app.on_activity_save(with(&app, &state, activity_ui::save));
     app.on_activity_delete(with(&app, &state, activity_ui::delete));
     app.on_activity_open(with_arg(&app, &state, activity_overview::open));
+    // Datumsauswahl an Datumsfeldern
+    let picker = app.global::<DatePick>();
+    picker.on_open(with_arg(&app, &state, |app, s, text: SharedString| {
+        date_picker::open(app, s, &text);
+    }));
+    picker.on_shift(with_arg(&app, &state, date_picker::shift));
+    picker.on_move(with_arg(&app, &state, date_picker::move_cursor));
+    {
+        let state = state.clone();
+        picker.on_pick(move |i| date_picker::pick(&state.borrow(), i).into());
+    }
     app.on_activity_overview_select(with_arg(&app, &state, activity_overview::select));
     app.on_activity_overview_range(with(&app, &state, activity_overview::range));
     app.on_install_update(with(&app, &state, updates::install));
