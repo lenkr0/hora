@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.5.0] – 2026-11-14
 
 ### Back up calendars on this PC
 
