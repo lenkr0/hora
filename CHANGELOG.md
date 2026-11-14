@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.0] – 2026-11-14
 
 ### Calendars on this PC
 
