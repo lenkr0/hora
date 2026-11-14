@@ -109,6 +109,68 @@ pub fn layout_day(spans: &[(i32, i32)]) -> Vec<Slot> {
     slots
 }
 
+/// Hinweis "+n" für Termine, die nicht mehr nebeneinander passen: Beginn der
+/// ersten und Anzahl einer zusammenhängenden Gruppe solcher Termine
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Overflow {
+    pub start: i32,
+    pub count: i32,
+}
+
+/// Ergebnis von [`limit_lanes`]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Limited {
+    /// Termin fällt weg (kein Platz mehr nebeneinander)
+    pub hidden: Vec<bool>,
+    /// Termin teilt sich die Zeit mit weggefallenen: Er lässt rechts Platz
+    /// für den Hinweis
+    pub crowded: Vec<bool>,
+    pub overflows: Vec<Overflow>,
+}
+
+/// Höchstens `max` Spalten nebeneinander (Ergebnis von [`layout_day`]):
+/// Termine weiter rechts fallen weg, die übrigen teilen sich die Breite.
+pub fn limit_lanes(slots: &mut [Slot], spans: &[(i32, i32)], max: i32) -> Limited {
+    let max = max.max(1);
+    let hidden: Vec<bool> = slots.iter().map(|s| s.lane >= max).collect();
+    let crowded: Vec<bool> = slots
+        .iter()
+        .map(|s| s.lane < max && s.lanes > max)
+        .collect();
+    for slot in slots.iter_mut().filter(|s| s.lane < max) {
+        slot.lanes = slot.lanes.min(max);
+        slot.span = slot.span.min(max - slot.lane);
+    }
+    // Weggefallene, die sich (auch über andere weggefallene) überschneiden,
+    // teilen sich einen Hinweis
+    let mut gone: Vec<(i32, i32)> = spans
+        .iter()
+        .zip(&hidden)
+        .filter(|(_, h)| **h)
+        .map(|(&(s, e), _)| (s, e.max(s + MIN_LAYOUT_MINUTES)))
+        .collect();
+    gone.sort();
+    let mut overflows: Vec<Overflow> = Vec::new();
+    let mut end = i32::MIN;
+    for (start, stop) in gone {
+        match overflows.last_mut() {
+            Some(last) if start < end => {
+                last.count += 1;
+                end = end.max(stop);
+            }
+            _ => {
+                overflows.push(Overflow { start, count: 1 });
+                end = stop;
+            }
+        }
+    }
+    Limited {
+        hidden,
+        crowded,
+        overflows,
+    }
+}
+
 fn overlaps(a: (i32, i32), b: (i32, i32)) -> bool {
     a.0 < b.1 && b.0 < a.1
 }
@@ -200,6 +262,77 @@ mod tests {
         assert_eq!(snap_resize(9 * H, 60, -200.0), 15);
         // nicht über Mitternacht
         assert_eq!(snap_resize(23 * H, 30, 120.0), 60);
+    }
+
+    #[test]
+    fn at_most_two_side_by_side() {
+        // Fünf Termine: 9–10:30, 9–10, 9:30–11, 9:45–10:15, 10–11:30
+        let spans = [(540, 630), (540, 600), (570, 660), (585, 615), (600, 690)];
+        let mut slots = layout_day(&spans);
+        assert_eq!(slots[0].lanes, 4);
+        let Limited {
+            hidden,
+            crowded,
+            overflows,
+        } = limit_lanes(&mut slots, &spans, 2);
+        // Sichtbar: 9–10:30 links, 9–10 und danach 10–11:30 rechts
+        assert_eq!(hidden, [false, false, true, true, false]);
+        assert_eq!(crowded, [true, true, false, false, true]);
+        assert_eq!(slots[0], slot(0, 2, 1));
+        assert_eq!(slots[1], slot(1, 2, 1));
+        assert_eq!(slots[4], slot(1, 2, 1));
+        // Die zwei weggefallenen überschneiden sich: ein Hinweis ab 9:30
+        assert_eq!(
+            overflows,
+            [Overflow {
+                start: 570,
+                count: 2
+            }]
+        );
+
+        // Ohne Überlauf ändert sich nichts
+        let spans = [(540, 600), (570, 630)];
+        let mut slots = layout_day(&spans);
+        let before = slots.clone();
+        let limited = limit_lanes(&mut slots, &spans, 2);
+        assert_eq!(slots, before);
+        assert!(limited.hidden.iter().chain(&limited.crowded).all(|h| !h));
+        assert!(limited.overflows.is_empty());
+
+        // Getrennte Gruppen weggefallener Termine bekommen eigene Hinweise
+        let spans = [
+            (540, 600),
+            (540, 600),
+            (540, 600),
+            (840, 900),
+            (840, 900),
+            (840, 900),
+        ];
+        let mut slots = layout_day(&spans);
+        assert_eq!(
+            limit_lanes(&mut slots, &spans, 2).overflows,
+            [
+                Overflow {
+                    start: 540,
+                    count: 1
+                },
+                Overflow {
+                    start: 840,
+                    count: 1
+                }
+            ]
+        );
+        // Ein ausgedehnter Termin bleibt in den erlaubten Spalten
+        let spans = [(540, 660), (540, 570), (540, 570), (600, 630)];
+        let mut slots = layout_day(&spans);
+        let hidden = limit_lanes(&mut slots, &spans, 2).hidden;
+        assert!(
+            slots
+                .iter()
+                .zip(&hidden)
+                .filter(|(_, h)| !**h)
+                .all(|(s, _)| s.lane + s.span <= 2)
+        );
     }
 
     #[test]

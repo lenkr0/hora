@@ -2,7 +2,7 @@
 // Calino: Copyright (c) 2025 Ivan Malinovski, MIT-Lizenz.
 
 import { Theme, Fmt } from "theme.slint";
-import { EventItem, EventCard, EventCardVisual } from "event-card.slint";
+import { EventItem, WeekMore, EventCard, EventCardVisual } from "event-card.slint";
 
 export struct DayInfo {
     name: string,
@@ -27,6 +27,9 @@ export component WeekView inherits Rectangle {
     in property <[EventItem]> events;
     in property <[AllDayItem]> all-day;
     in property <int> all-day-lanes;
+    // "+n" für Termine, die nicht mehr nebeneinander passen
+    in property <[WeekMore]> more;
+    callback open-day(int);
     in property <string> week-label;
     in property <int> today-index: -1;
     in property <int> now-min;
@@ -223,9 +226,11 @@ export component WeekView inherits Rectangle {
                 col-w: col-w;
                 hour-h: Theme.hour-height;
                 day-count: day-count;
-                x: col-w * ev.day + col-w * (ev.lane / ev.lanes) + col-w * 0.02;
+                // Mit Überlauf bleibt rechts ein Streifen für "+n"
+                property <length> usable: ev.crowded ? col-w - 26px : col-w;
+                x: col-w * ev.day + self.usable * (ev.lane / ev.lanes) + col-w * 0.02;
                 y: ev.start-min / 60 * Theme.hour-height;
-                width: col-w * (ev.span / ev.lanes) - col-w * 0.04;
+                width: self.usable * (ev.span / ev.lanes) - col-w * 0.04;
                 height: Math.max(ev.dur-min / 60 * Theme.hour-height, 16px);
                 dimmed: root.drag-id == ev.id;
 
@@ -254,6 +259,42 @@ export component WeekView inherits Rectangle {
                 }
                 remove => {
                     root.delete-event(ev.id);
+                }
+            }
+
+            // "+n": weitere Termine zur selben Zeit; Klick öffnet den Tag
+            for m in root.more: Rectangle {
+                x: col-w * (m.day + 1) - self.width - 3px;
+                y: m.start-min / 60 * Theme.hour-height + 3px;
+                width: Math.max(22px, more-text.preferred-width + 10px);
+                height: 20px;
+                border-radius: 10px;
+                background: more-ta.has-hover ? Theme.hover-bg : Theme.panel;
+                border-width: 1px;
+                border-color: Theme.line;
+                drop-shadow-offset-y: 1px;
+                drop-shadow-blur: 3px;
+                drop-shadow-color: Theme.shadow-event;
+                accessible-role: button;
+                accessible-label: @tr("+{} more", m.count);
+                accessible-action-default => {
+                    root.open-day(m.day);
+                }
+
+                more-text := Text {
+                    text: "+" + m.count;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: Theme.ink;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                more-ta := TouchArea {
+                    mouse-cursor: MouseCursor.pointer;
+                    clicked => {
+                        root.open-day(m.day);
+                    }
                 }
             }
 

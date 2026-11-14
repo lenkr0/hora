@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fuller weeks stay readable
+
+- The week shows at most two events side by side (three days: three); more
+  at the same time appear as "+n" next to them. A click opens that day,
+  where all of them have room. The day view itself shows everything.
+
 ## [1.4.0] – 2026-11-14
 
 ### Calendars on this PC

@@ -3,7 +3,7 @@
 
 import { WindowControls, DragArea, ResizeEdges } from "window-controls.slint";
 import { Theme, Fmt, Locale } from "theme.slint";
-import { EventItem, WeekLogic } from "event-card.slint";
+import { EventItem, WeekLogic, WeekMore } from "event-card.slint";
 import { WeekView, DayInfo, AllDayItem } from "week-view.slint";
 import { MonthView, MonthCell, MonthChip } from "month-view.slint";
 import { Sidebar, CalendarRow } from "sidebar.slint";
@@ -26,7 +26,7 @@ import { EventPreview, EventDetails } from "preview.slint";
 import { SelectOption } from "inputs.slint";
 import { IconButton } from "controls.slint";
 
-export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice, ActivityStats, ActivityBar, ActivitySession, DatePick }
+export { Theme, Locale, WeekLogic, DialogLogic, EventItem, DayInfo, AllDayItem, CalendarRow, MonthCell, MonthChip, MiniDay, EventDetails, EventDraft, RuleDraft, ReminderChip, SelectOption, TaskRow, TaskDraft, QuickPreview, AgendaLine, YearMonth, YearCell, PaletteItem, JournalRow, JournalBlock, JournalCalendar, JournalEdit, ActivityRow, AppChoice, ActivityStats, ActivityBar, ActivitySession, DatePick, WeekMore }
 
 component NavArrow inherits Rectangle {
     in property <image> icon;
@@ -489,6 +489,8 @@ export component AppWindow inherits Window {
     in property <string> month-title;
     in property <string> week-label;
     in property <[DayInfo]> days;
+    // Woche: "+n" für Termine, die nicht mehr nebeneinander passen
+    in property <[WeekMore]> week-more;
     in property <[EventItem]> events;
     in property <[AllDayItem]> all-day;
     in property <int> all-day-lanes;
@@ -1149,6 +1151,7 @@ export component AppWindow inherits Window {
                             visible: root.view < 3;
                             days: root.days;
                             events: root.events;
+                            more: root.week-more;
                             all-day: root.all-day;
                             all-day-lanes: root.all-day-lanes;
                             week-label: root.week-label;
@@ -1159,6 +1162,9 @@ export component AppWindow inherits Window {
                             }
                             new-event-at(day, start) => {
                                 root.new-event-at(day, start);
+                            }
+                            open-day(d) => {
+                                root.open-day(d);
                             }
                             open-event(id, x, y, w) => {
                                 root.open-event(id, x, y, w);

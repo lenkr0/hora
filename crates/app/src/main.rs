@@ -375,7 +375,11 @@ fn view_title(view: View, anchor: NaiveDate, first: NaiveDate, days: i64) -> Str
 }
 
 /// Spaltenaufteilung je Tag neu berechnen.
-fn apply_layout(items: &mut [EventItem]) {
+/// Spalten der Termine je Tag; höchstens `max_lanes` nebeneinander. Liefert,
+/// welche Termine dafür wegfallen, und die Hinweise "+n" (Tag, Beginn, Anzahl).
+fn apply_layout(items: &mut [EventItem], max_lanes: i32) -> (Vec<bool>, Vec<WeekMore>) {
+    let mut hidden = vec![false; items.len()];
+    let mut more = Vec::new();
     let days = items.iter().map(|it| it.day).max().map_or(0, |d| d + 1);
     for day in 0..days {
         let indices: Vec<usize> = (0..items.len()).filter(|&i| items[i].day == day).collect();
@@ -383,12 +387,22 @@ fn apply_layout(items: &mut [EventItem]) {
             .iter()
             .map(|&i| (items[i].start_min, items[i].start_min + items[i].dur_min))
             .collect();
-        for (slot, &i) in week::layout_day(&spans).into_iter().zip(&indices) {
+        let mut slots = week::layout_day(&spans);
+        let limited = week::limit_lanes(&mut slots, &spans, max_lanes);
+        for (n, (slot, &i)) in slots.into_iter().zip(&indices).enumerate() {
             items[i].lane = slot.lane;
             items[i].lanes = slot.lanes;
             items[i].span = slot.span;
+            items[i].crowded = limited.crowded[n];
+            hidden[i] = limited.hidden[n];
         }
+        more.extend(limited.overflows.into_iter().map(|o| WeekMore {
+            day,
+            start_min: o.start,
+            count: o.count,
+        }));
     }
+    (hidden, more)
 }
 
 fn calendar_rows(state: &State) -> Vec<CalendarRow> {
@@ -525,6 +539,7 @@ fn load_week(app: &AppWindow, state: &mut State, first: NaiveDate, days: i64, ke
                             lane: 0,
                             lanes: 1,
                             span: 1,
+                            crowded: false,
                             // Über Mitternacht geteilte Termine nur im Dialog ändern
                             editable: item.movable() && whole,
                             progress_text: progress
@@ -563,9 +578,28 @@ fn load_week(app: &AppWindow, state: &mut State, first: NaiveDate, days: i64, ke
     } else {
         rows.sort_by_key(|(_, it)| (it.day, it.start_min, -it.dur_min, it.id));
     }
-    let keys: Vec<String> = rows.iter().map(|(k, _)| k.clone()).collect();
-    let mut events: Vec<EventItem> = rows.into_iter().map(|(_, it)| it).collect();
-    apply_layout(&mut events);
+    let mut events: Vec<EventItem> = rows.iter().map(|(_, it)| it.clone()).collect();
+    // Woche: höchstens zwei nebeneinander, drei Tage: drei; der Tag zeigt alle
+    let max_lanes = match days {
+        1 => i32::MAX,
+        2..=3 => 3,
+        _ => 2,
+    };
+    let (hidden, more) = apply_layout(&mut events, max_lanes);
+    app.set_week_more(ModelRc::new(VecModel::from(more)));
+    // Verdeckte Termine gar nicht erst als Karte (auch nicht per Tab erreichbar)
+    let keys: Vec<String> = rows
+        .iter()
+        .zip(&hidden)
+        .filter(|(_, h)| !**h)
+        .map(|((k, _), _)| k.clone())
+        .collect();
+    let events: Vec<EventItem> = events
+        .into_iter()
+        .zip(&hidden)
+        .filter(|(_, h)| !**h)
+        .map(|(it, _)| it)
+        .collect();
     if keys == state.row_keys && events.len() == state.rows.row_count() {
         for (row, item) in events.into_iter().enumerate() {
             if state.rows.row_data(row).as_ref() != Some(&item) {

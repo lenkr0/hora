@@ -17,12 +17,23 @@ export struct EventItem {
     lane: int,
     lanes: int,
     span: int,
+    // Teilt sich die Zeit mit Terminen, die nicht mehr nebeneinander passen:
+    // rechts bleibt Platz für den Hinweis "+n"
+    crowded: bool,
     // Verschieben und Dauer ändern erlaubt (Server-Termine erst ab M3)
     editable: bool,
     // App-Zeiten: gezählte Zeit gegen die Dauer, z. B. "1:12 / 1:30 h", und
     // der Anteil (0–1, darüber erreicht); leer bei Terminen ohne Aktivität
     progress-text: string,
     progress: float,
+}
+
+// Hinweis "+n" in der Woche: Termine, die neben den anderen keinen Platz
+// mehr haben (Klick öffnet den Tag)
+export struct WeekMore {
+    day: int,
+    start-min: int,
+    count: int,
 }
 
 // Einrasten wird in Rust berechnet (week.rs), damit es testbar ist.
