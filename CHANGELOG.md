@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Back up calendars on this PC
+
+- A calendar on this PC can be saved as an .ics file (color dot → Edit… →
+  Export…). The file holds all events, series, tasks and journal entries and
+  other calendar programs can read it too.
+- Import… reads an .ics file into such a calendar, from Hora or from other
+  programs. Entries with the same UID replace the existing ones, so reading
+  a backup in again doesn't create duplicates.
+
 ### Fuller weeks stay readable
 
 - The week shows at most two events side by side (three days: three); more

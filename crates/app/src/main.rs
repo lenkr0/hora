@@ -5,6 +5,7 @@ mod activity;
 mod activity_events;
 mod activity_overview;
 mod activity_ui;
+mod calendar_file;
 mod date_picker;
 mod editing;
 mod forms;
@@ -3336,6 +3337,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     app.on_show_add_account(with(&app, &state, |app, s| {
         s.editing_calendar = None;
         app.set_add_account_error("".into());
+        app.set_calendar_status("".into());
         app.set_add_account_busy(false);
         app.set_calendar_editing(false);
         app.set_calendar_name("".into());
@@ -3365,6 +3367,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         };
         s.editing_calendar = Some(calendar.id);
         app.set_add_account_error("".into());
+        app.set_calendar_status("".into());
         app.set_add_account_busy(false);
         app.set_add_account_mode(0);
         app.set_calendar_editing(true);
@@ -3411,6 +3414,18 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         app.invoke_focus_main();
         s.reload_calendars();
         refresh(app, s, true);
+    }));
+    app.on_calendar_export(with(&app, &state, |app, s| {
+        if let Some(id) = s.editing_calendar {
+            calendar_file::export(app, s, id);
+        }
+    }));
+    app.on_calendar_import(with(&app, &state, |app, s| {
+        if let Some(id) = s.editing_calendar
+            && calendar_file::import(app, s, id)
+        {
+            refresh(app, s, true);
+        }
     }));
     app.on_calendar_delete(with(&app, &state, |app, s| {
         let Some(id) = s.editing_calendar.take() else {

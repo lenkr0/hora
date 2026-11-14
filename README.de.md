@@ -69,8 +69,9 @@ Kalender an (Name und Farbe), ganz ohne Server. **CalDAV-Server** fragt nach
 der DAV-Adresse (bei Baïkal z. B. `http://server:8089/dav.php`), Benutzername
 und Passwort; Hora findet die Kalender selbst, das Passwort liegt im
 Windows-Anmeldeinformationsspeicher. Abgeglichen wird beim Start, alle
-5 Minuten und mit `F5`. Einen lokalen Kalender benennst du über seinen
-Farbpunkt → **Bearbeiten …** um oder löschst ihn dort.
+5 Minuten und mit `F5`. Über seinen Farbpunkt → **Bearbeiten …** benennst du
+einen lokalen Kalender um, löschst ihn, sicherst ihn als .ics-Datei
+(**Exportieren …**) oder liest eine ein (**Importieren …**).
 
 Sprache sowie Datums- und Zeitformat lassen sich jederzeit unter
 Einstellungen → Programm ändern. Die Schnelleingabe versteht in jeder
