@@ -10,7 +10,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: crates/app/src/activity_events.rs:50
-#: crates/app/src/activity_overview.rs:66
+#: crates/app/src/activity_overview.rs:64
 msgid "{0} / {1} h"
 msgstr "{0} / {1} u"
 
@@ -18,103 +18,109 @@ msgstr "{0} / {1} u"
 msgid "None"
 msgstr "Geen"
 
-#: crates/app/src/activity_overview.rs:197
+#: crates/app/src/activity_overview.rs:130
+msgid "{0} · this week {1}"
+msgstr "{0} · deze week {1}"
+
+#: crates/app/src/activity_overview.rs:154
+msgid "{0} · pause after {1}"
+msgstr "{0} · pauze na {1}"
+
+#: crates/app/src/activity_overview.rs:214
 msgid "Goal reached this week"
 msgstr "Doel deze week gehaald"
 
-#: crates/app/src/activity_overview.rs:198
+#: crates/app/src/activity_overview.rs:215
 msgid "Goal reached last week"
 msgstr "Doel vorige week gehaald"
 
-#: crates/app/src/activity_overview.rs:210
+#: crates/app/src/activity_overview.rs:227
 #: crates/app/src/activity_ui.rs:30
 msgid "{} min"
 msgstr "{} min"
 
-#: crates/app/src/activity_overview.rs:212
+#: crates/app/src/activity_overview.rs:229
 #: crates/app/src/activity_ui.rs:32
 msgid "{} h"
 msgstr "{} u"
 
-#: crates/app/src/activity_overview.rs:291
+#: crates/app/src/activity_overview.rs:308
 msgid "{0} · average {1} · longest {2}"
 msgstr "{0} · gemiddeld {1} · langste {2}"
 
-#: crates/app/src/activity_overview.rs:334
+#: crates/app/src/activity_overview.rs:351
 msgid "goal {0} · {1} %"
 msgstr "doel {0} · {1} %"
 
-#: crates/app/src/activity_overview.rs:350
+#: crates/app/src/activity_overview.rs:367
 msgid "since {}"
 msgstr "sinds {}"
 
-#: crates/app/src/activity_overview.rs:365
+#: crates/app/src/activity_overview.rs:382
 msgid "goal {}"
 msgstr "doel {}"
 
-#: crates/app/src/activity_overview.rs:199
+#: crates/app/src/activity_overview.rs:132
+msgid "{n} activity"
+msgid_plural "{n} activities"
+msgstr[0] "{n} activiteit"
+msgstr[1] "{n} activiteiten"
+
+#: crates/app/src/activity_overview.rs:216
 msgid "Goal reached {n} week in a row"
 msgid_plural "Goal reached {n} weeks in a row"
 msgstr[0] "Doel {n} week op rij gehaald"
 msgstr[1] "Doel {n} weken op rij gehaald"
 
-#: crates/app/src/activity_overview.rs:293
+#: crates/app/src/activity_overview.rs:310
 msgid "{n} session"
 msgid_plural "{n} sessions"
 msgstr[0] "{n} sessie"
 msgstr[1] "{n} sessies"
 
-#: crates/app/src/activity_ui.rs:104
-msgid "No programs"
-msgstr "Geen programma's"
-
-#: crates/app/src/activity_ui.rs:112
-msgid "{0} · this week {1} · total {2}"
-msgstr "{0} · deze week {1} · totaal {2}"
-
-#: crates/app/src/activity_ui.rs:139
-msgid "{} seconds"
-msgstr "{} seconden"
-
-#: crates/app/src/activity_ui.rs:156
+#: crates/app/src/activity_ui.rs:111
 msgid "No goal"
 msgstr "Geen doel"
 
-#: crates/app/src/activity_ui.rs:202
+#: crates/app/src/activity_ui.rs:157
 msgid "counts for {}"
 msgstr "telt voor {}"
 
-#: crates/app/src/activity_ui.rs:247
+#: crates/app/src/activity_ui.rs:202
 msgid "Delete “{0}” with its counted time ({1})? This can't be undone."
 msgstr "‘{0}’ met de getelde tijd ({1}) verwijderen? Dit kan niet ongedaan worden gemaakt."
 
-#: crates/app/src/activity_ui.rs:293
+#: crates/app/src/activity_ui.rs:248
 msgid "Please enter the program's file name, e.g. program.exe."
 msgstr "Voer de bestandsnaam van het programma in, bijv. program.exe."
 
-#: crates/app/src/activity_ui.rs:332
+#: crates/app/src/activity_ui.rs:287
 msgid "Please enter a name."
 msgstr "Voer een naam in."
 
-#: crates/app/src/activity_ui.rs:343
+#: crates/app/src/activity_ui.rs:298
 msgid "Please choose at least one program."
 msgstr "Kies ten minste één programma."
 
-#: crates/app/src/activity_ui.rs:141
-#: crates/app/src/reminders.rs:274
-#: crates/platform/src/notify.rs:63
-msgid "{n} minute"
-msgid_plural "{n} minutes"
-msgstr[0] "{n} minuut"
-msgstr[1] "{n} minuten"
+#: crates/app/src/activity_ui.rs:343
+msgid "{} seconds"
+msgstr "{} seconden"
 
-#: crates/app/src/activity_ui.rs:158
+#: crates/app/src/activity_ui.rs:113
 #: crates/app/src/reminders.rs:272
 #: crates/platform/src/notify.rs:69
 msgid "{n} hour"
 msgid_plural "{n} hours"
 msgstr[0] "{n} uur"
 msgstr[1] "{n} uur"
+
+#: crates/app/src/activity_ui.rs:345
+#: crates/app/src/reminders.rs:274
+#: crates/platform/src/notify.rs:63
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] "{n} minuut"
+msgstr[1] "{n} minuten"
 
 #: crates/app/src/editing.rs:119
 msgid "Please choose a calendar."
@@ -149,7 +155,7 @@ msgid "New event"
 msgstr "Nieuwe afspraak"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2947
+#: crates/app/src/main.rs:2964
 msgid "The repetition ends before the start."
 msgstr "De herhaling eindigt vóór het begin."
 
@@ -198,13 +204,13 @@ msgstr "Het einde moet na het begin liggen."
 
 #: crates/app/src/items.rs:212
 #: crates/app/src/items.rs:237
-#: crates/app/src/main.rs:1326
+#: crates/app/src/main.rs:1333
 msgid "(untitled)"
 msgstr "(zonder titel)"
 
 #: crates/app/src/journal.rs:107
 #: crates/app/src/journal.rs:148
-#: crates/app/src/main.rs:369
+#: crates/app/src/main.rs:373
 msgid "Sample events"
 msgstr "Voorbeeldafspraken"
 
@@ -266,7 +272,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Veel gedaan: verhuizing gepland, belasting geregeld, eindelijk weer regelmatig hardgelopen.\n\n---\n\nVoor november: **meer lezen**, minder scherm."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2639
+#: crates/app/src/main.rs:2656
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Dagboek"
@@ -321,169 +327,175 @@ msgid "The entry from {} will be deleted."
 msgstr "Het item van {} wordt verwijderd."
 
 #: crates/app/src/journal_ui.rs:491
-#: crates/app/src/main.rs:1511
-#: crates/app/src/main.rs:1537
+#: crates/app/src/main.rs:1518
+#: crates/app/src/main.rs:1544
 msgid "“{}” will be deleted."
 msgstr "‘{}’ wordt verwijderd."
 
-#: crates/app/src/main.rs:368
+#: crates/app/src/main.rs:372
 msgid "On this device"
 msgstr "Op dit apparaat"
 
-#: crates/app/src/main.rs:425
-#: crates/app/src/main.rs:984
+#: crates/app/src/main.rs:429
+#: crates/app/src/main.rs:991
 #: crates/app/src/quick_add.rs:135
 msgid "Sample events (only on this device)"
 msgstr "Voorbeeldafspraken (alleen op dit apparaat)"
 
-#: crates/app/src/main.rs:449
+#: crates/app/src/main.rs:453
 msgid "W{}"
 msgstr "Wk {}"
 
-#: crates/app/src/main.rs:755
-#: crates/app/ui/rail.slint:211
+#: crates/app/src/main.rs:759
+#: crates/app/ui/rail.slint:215
 msgid "Tasks"
 msgstr "Taken"
 
-#: crates/app/src/main.rs:795
+#: crates/app/src/main.rs:761
+#: crates/app/src/palette.rs:153
+#: crates/app/ui/rail.slint:234
+msgid "App time"
+msgstr "App-tijd"
+
+#: crates/app/src/main.rs:802
 msgid "Syncing…"
 msgstr "Synchroniseren…"
 
-#: crates/app/src/main.rs:819
+#: crates/app/src/main.rs:826
 msgid "{} (+{} more)"
 msgstr "{} (+{} meer)"
 
-#: crates/app/src/main.rs:837
+#: crates/app/src/main.rs:844
 msgid "Synced {}"
 msgstr "Gesynchroniseerd om {}"
 
-#: crates/app/src/main.rs:841
+#: crates/app/src/main.rs:848
 msgid "Not synced yet"
 msgstr "Nog niet gesynchroniseerd"
 
-#: crates/app/src/main.rs:873
+#: crates/app/src/main.rs:880
 msgid "An event"
 msgstr "Een afspraak"
 
-#: crates/app/src/main.rs:877
+#: crates/app/src/main.rs:884
 msgid "“{}” was changed on the server before your deletion was uploaded. Which version should apply?"
 msgstr "‘{}’ is op de server gewijzigd voordat je verwijdering was geüpload. Welke versie moet gelden?"
 
-#: crates/app/src/main.rs:882
+#: crates/app/src/main.rs:889
 msgid "“{}” was changed on the server before your change was uploaded. Which version should apply?"
 msgstr "‘{}’ is op de server gewijzigd voordat je wijziging was geüpload. Welke versie moet gelden?"
 
-#: crates/app/src/main.rs:1149
+#: crates/app/src/main.rs:1156
 msgid "No reminder"
 msgstr "Geen herinnering"
 
-#: crates/app/src/main.rs:1429
+#: crates/app/src/main.rs:1436
 msgid "No parent task"
 msgstr "Geen bovenliggende taak"
 
-#: crates/app/src/main.rs:1460
+#: crates/app/src/main.rs:1467
 msgid "Recurring task: {}. Completed {} times so far. The due date applies to the series."
 msgstr "Terugkerende taak: {}. Tot nu toe {} keer voltooid. De vervaldatum geldt voor de reeks."
 
-#: crates/app/src/main.rs:1522
+#: crates/app/src/main.rs:1529
 msgid "The whole series will be deleted."
 msgstr "De hele reeks wordt verwijderd."
 
-#: crates/app/src/main.rs:1524
+#: crates/app/src/main.rs:1531
 msgid "Delete task?"
 msgstr "Taak verwijderen?"
 
-#: crates/app/src/main.rs:1536
+#: crates/app/src/main.rs:1543
 #: crates/app/ui/app.slint:555
 msgid "Delete event?"
 msgstr "Afspraak verwijderen?"
 
-#: crates/app/src/main.rs:1751
-#: crates/app/src/palette.rs:362
+#: crates/app/src/main.rs:1758
+#: crates/app/src/palette.rs:373
 msgid "Task: {}"
 msgstr "Taak: {}"
 
-#: crates/app/src/main.rs:1975
+#: crates/app/src/main.rs:1982
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:2005
+#: crates/app/src/main.rs:2012
 msgid "Windows language"
 msgstr "Windows-taal"
 
-#: crates/app/src/main.rs:2064
+#: crates/app/src/main.rs:2071
 msgid "Hora could not start: {}"
 msgstr "Hora kon niet starten: {}"
 
-#: crates/app/src/main.rs:2112
+#: crates/app/src/main.rs:2119
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "De database {} kan niet worden geopend ({}). Om niets te verliezen, wordt Hora afgesloten."
 
-#: crates/app/src/main.rs:2777
+#: crates/app/src/main.rs:2794
 msgid "Please choose a calendar that supports tasks."
 msgstr "Kies een agenda die taken ondersteunt."
 
-#: crates/app/src/main.rs:2786
+#: crates/app/src/main.rs:2803
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "De taak bestaat niet meer."
 
-#: crates/app/src/main.rs:3043
+#: crates/app/src/main.rs:3065
 msgid "Autostart not changed: {}"
 msgstr "Automatisch starten niet gewijzigd: {}"
 
-#: crates/app/src/main.rs:3085
-#: crates/app/ui/settings.slint:238
+#: crates/app/src/main.rs:3119
+#: crates/app/ui/settings.slint:237
 msgid "Test notification"
 msgstr "Testmelding"
 
-#: crates/app/src/main.rs:3086
+#: crates/app/src/main.rs:3120
 msgid "This is what Hora's reminders look like"
 msgstr "Zo zien herinneringen van Hora eruit"
 
-#: crates/app/src/main.rs:3101
+#: crates/app/src/main.rs:3135
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Verzonden. Verschijnt er niets: Windows-instellingen → Systeem → Meldingen."
 
-#: crates/app/src/main.rs:3185
+#: crates/app/src/main.rs:3219
 msgid "Please enter the server address."
 msgstr "Voer het serveradres in."
 
-#: crates/app/src/main.rs:3187
+#: crates/app/src/main.rs:3221
 msgid "Please enter the username."
 msgstr "Voer de gebruikersnaam in."
 
-#: crates/app/src/main.rs:3189
+#: crates/app/src/main.rs:3223
 msgid "Please enter the password."
 msgstr "Voer het wachtwoord in."
 
-#: crates/app/src/main.rs:3279
+#: crates/app/src/main.rs:3313
 msgid "Hora keeps running in the notification area"
 msgstr "Hora blijft actief in het systeemvak"
 
-#: crates/app/src/main.rs:3280
+#: crates/app/src/main.rs:3314
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "Herinneringen blijven komen. Afsluiten via het pictogram in het systeemvak (rechtsklik)."
 
-#: crates/app/src/main.rs:799
+#: crates/app/src/main.rs:806
 msgid "{n} conflict while saving"
 msgid_plural "{n} conflicts while saving"
 msgstr[0] "{n} conflict bij opslaan"
 msgstr[1] "{n} conflicten bij opslaan"
 
-#: crates/app/src/main.rs:809
+#: crates/app/src/main.rs:816
 msgid "{n} change rejected by the server"
 msgid_plural "{n} changes rejected by the server"
 msgstr[0] "{n} wijziging geweigerd door de server"
 msgstr[1] "{n} wijzigingen geweigerd door de server"
 
-#: crates/app/src/main.rs:827
+#: crates/app/src/main.rs:834
 msgid "{n} change waiting to upload"
 msgid_plural "{n} changes waiting to upload"
 msgstr[0] "{n} wijziging wacht op upload"
 msgstr[1] "{n} wijzigingen wachten op upload"
 
-#: crates/app/src/main.rs:1514
+#: crates/app/src/main.rs:1521
 msgid "So will its subtask."
 msgid_plural "So will its {n} subtasks."
 msgstr[0] "De subtaak ook."
@@ -560,141 +572,141 @@ msgstr "Agendaweergave"
 msgid "Tasks view"
 msgstr "Takenweergave"
 
-#: crates/app/src/palette.rs:153
+#: crates/app/src/palette.rs:160
 #: crates/app/ui/app.slint:80
 msgid "Previous"
 msgstr "Vorige"
 
-#: crates/app/src/palette.rs:160
+#: crates/app/src/palette.rs:167
 #: crates/app/ui/app.slint:121
 #: crates/setup/ui/setup.slint:852
 msgid "Next"
 msgstr "Volgende"
 
-#: crates/app/src/palette.rs:166
 #: crates/app/src/palette.rs:173
 #: crates/app/src/palette.rs:180
+#: crates/app/src/palette.rs:187
 msgid "ACTIONS"
 msgstr "ACTIES"
 
-#: crates/app/src/palette.rs:167
+#: crates/app/src/palette.rs:174
 msgid "Create event"
 msgstr "Afspraak maken"
 
-#: crates/app/src/palette.rs:174
+#: crates/app/src/palette.rs:181
 #: crates/app/ui/task-dialog.slint:67
 #: crates/app/ui/tasks-view.slint:500
 msgid "New task"
 msgstr "Nieuwe taak"
 
-#: crates/app/src/palette.rs:181
+#: crates/app/src/palette.rs:188
 msgid "New journal entry"
 msgstr "Nieuw dagboekitem"
 
-#: crates/app/src/palette.rs:188
+#: crates/app/src/palette.rs:195
 #: crates/app/ui/quick-add.slint:63
 #: crates/app/ui/quick-add.slint:105
 msgid "Quick add"
 msgstr "Snel toevoegen"
 
-#: crates/app/src/palette.rs:195
+#: crates/app/src/palette.rs:202
 msgid "Sync calendars"
 msgstr "Agenda's synchroniseren"
 
-#: crates/app/src/palette.rs:202
+#: crates/app/src/palette.rs:209
 #: crates/app/ui/dialogs.slint:95
-#: crates/app/ui/sidebar.slint:329
+#: crates/app/ui/sidebar.slint:393
 msgid "Add account"
 msgstr "Account toevoegen"
 
-#: crates/app/src/palette.rs:208
 #: crates/app/src/palette.rs:215
 #: crates/app/src/palette.rs:222
+#: crates/app/src/palette.rs:229
 msgid "SETTINGS"
 msgstr "INSTELLINGEN"
 
-#: crates/app/src/palette.rs:209
+#: crates/app/src/palette.rs:216
 msgid "Open settings"
 msgstr "Instellingen openen"
 
-#: crates/app/src/palette.rs:211
+#: crates/app/src/palette.rs:218
 msgid "Ctrl+,"
 msgstr "Ctrl+,"
 
-#: crates/app/src/palette.rs:216
+#: crates/app/src/palette.rs:223
 msgid "Switch theme (Light → Dark → System)"
 msgstr "Thema wisselen (Licht → Donker → Systeem)"
 
-#: crates/app/src/palette.rs:223
-#: crates/app/ui/sidebar.slint:451
+#: crates/app/src/palette.rs:230
+#: crates/app/ui/sidebar.slint:516
 msgid "About Hora"
 msgstr "Over Hora"
 
-#: crates/app/src/palette.rs:330
+#: crates/app/src/palette.rs:341
 msgid "Go to {}"
 msgstr "Naar {}"
 
-#: crates/app/src/palette.rs:347
-#: crates/app/src/palette.rs:570
+#: crates/app/src/palette.rs:358
+#: crates/app/src/palette.rs:581
 #: crates/app/ui/tasks-view.slint:95
 msgid "due {}"
 msgstr "vervalt {}"
 
-#: crates/app/src/palette.rs:360
+#: crates/app/src/palette.rs:371
 msgid "QUICK ADD"
 msgstr "SNEL TOEVOEGEN"
 
-#: crates/app/src/palette.rs:364
+#: crates/app/src/palette.rs:375
 msgid "Create: {}"
 msgstr "Maken: {}"
 
-#: crates/app/src/palette.rs:396
+#: crates/app/src/palette.rs:407
 #: crates/app/ui/event-dialog.slint:572
 #: crates/app/ui/quick-add.slint:197
 msgid "Calendar"
 msgstr "Agenda"
 
-#: crates/app/src/palette.rs:404
-#: crates/app/src/palette.rs:423
-#: crates/app/ui/sidebar.slint:315
+#: crates/app/src/palette.rs:415
+#: crates/app/src/palette.rs:434
+#: crates/app/ui/sidebar.slint:380
 msgid "CALENDARS"
 msgstr "AGENDA'S"
 
-#: crates/app/src/palette.rs:406
-#: crates/app/src/palette.rs:425
+#: crates/app/src/palette.rs:417
+#: crates/app/src/palette.rs:436
 msgid "Hide {}"
 msgstr "{} verbergen"
 
-#: crates/app/src/palette.rs:408
-#: crates/app/src/palette.rs:427
+#: crates/app/src/palette.rs:419
+#: crates/app/src/palette.rs:438
 msgid "Show {}"
 msgstr "{} tonen"
 
-#: crates/app/src/palette.rs:465
-#: crates/app/src/palette.rs:540
+#: crates/app/src/palette.rs:476
+#: crates/app/src/palette.rs:551
 msgid "EVENTS"
 msgstr "AFSPRAKEN"
 
-#: crates/app/src/palette.rs:571
+#: crates/app/src/palette.rs:582
 #: crates/app/src/quick_add.rs:121
 msgid "no due date"
 msgstr "geen vervaldatum"
 
-#: crates/app/src/palette.rs:574
+#: crates/app/src/palette.rs:585
 #: crates/app/ui/tasks-view.slint:95
 msgid "done"
 msgstr "klaar"
 
-#: crates/app/src/palette.rs:577
-#: crates/app/ui/settings.slint:254
+#: crates/app/src/palette.rs:588
+#: crates/app/ui/settings.slint:253
 msgid "TASKS"
 msgstr "TAKEN"
 
-#: crates/app/src/palette.rs:616
+#: crates/app/src/palette.rs:627
 msgid "JOURNAL"
 msgstr "DAGBOEK"
 
-#: crates/app/src/palette.rs:618
+#: crates/app/src/palette.rs:629
 #: crates/app/ui/journal-view.slint:108
 #: crates/app/ui/journal-view.slint:164
 msgid "Untitled entry"
@@ -1306,7 +1318,7 @@ msgid "Color"
 msgstr "Kleur"
 
 #: crates/app/ui/activity-dialog.slint:88
-#: crates/app/ui/sidebar.slint:484
+#: crates/app/ui/sidebar.slint:549
 msgid "Color {}"
 msgstr "Kleur {}"
 
@@ -1368,47 +1380,60 @@ msgstr "Opslaan"
 msgid "Keep"
 msgstr "Behouden"
 
-#: crates/app/ui/activity-overview.slint:247
-msgid "App time"
-msgstr "App-tijd"
+#: crates/app/ui/activity-overview.slint:318
+#: crates/app/ui/sidebar.slint:196
+msgid "Weekly goal reached"
+msgstr "Weekdoel gehaald"
 
-#: crates/app/ui/activity-overview.slint:299
+#: crates/app/ui/activity-overview.slint:393
+msgid "+ New activity"
+msgstr "+ Nieuwe activiteit"
+
+#: crates/app/ui/activity-overview.slint:415
+#: crates/app/ui/settings.slint:280
+msgid "Paused. Resume in the menu of the Hora icon in the notification area."
+msgstr "Gepauzeerd. Hervat via het menu van het Hora-pictogram in het systeemvak."
+
+#: crates/app/ui/activity-overview.slint:431
+msgid "No activities yet. Create one and choose the programs whose time Hora should count."
+msgstr "Nog geen activiteiten. Maak er een aan en kies de programma's waarvan Hora de tijd telt."
+
+#: crates/app/ui/activity-overview.slint:508
+#: crates/app/ui/preview.slint:191
+msgid "Edit"
+msgstr "Bewerken"
+
+#: crates/app/ui/activity-overview.slint:520
 msgid "Total"
 msgstr "Totaal"
 
-#: crates/app/ui/activity-overview.slint:305
+#: crates/app/ui/activity-overview.slint:526
 msgid "This week"
 msgstr "Deze week"
 
-#: crates/app/ui/activity-overview.slint:311
+#: crates/app/ui/activity-overview.slint:532
 msgid "This month"
 msgstr "Deze maand"
 
-#: crates/app/ui/activity-overview.slint:324
+#: crates/app/ui/activity-overview.slint:545
 msgid "History"
 msgstr "Verloop"
 
-#: crates/app/ui/activity-overview.slint:338
+#: crates/app/ui/activity-overview.slint:559
 msgid "Weeks"
 msgstr "Weken"
 
-#: crates/app/ui/activity-overview.slint:338
+#: crates/app/ui/activity-overview.slint:559
 msgid "Months"
 msgstr "Maanden"
 
-#: crates/app/ui/activity-overview.slint:367
+#: crates/app/ui/activity-overview.slint:589
 msgid "Sessions"
 msgstr "Sessies"
 
-#: crates/app/ui/activity-overview.slint:380
+#: crates/app/ui/activity-overview.slint:602
 msgid "No sessions yet. They appear here once you use a program of this activity."
 msgstr "Nog geen sessies. Ze verschijnen hier zodra je een programma van deze activiteit gebruikt."
-
-#: crates/app/ui/activity-overview.slint:433
-#: crates/app/ui/dialogs.slint:252
-#: crates/app/ui/palette.slint:387
-msgid "Close"
-msgstr "Sluiten"
 
 #: crates/app/ui/agenda-view.slint:48
 msgid "{}, {}, today – open day"
@@ -1472,7 +1497,7 @@ msgstr "J"
 msgid "View: {}"
 msgstr "Weergave: {}"
 
-#: crates/app/ui/app.slint:1356
+#: crates/app/ui/app.slint:1394
 msgid "Sync"
 msgstr "Synchronisatie"
 
@@ -1531,6 +1556,12 @@ msgstr "Ontwerp en gedrag gebaseerd op Calino van Ivan Malinovski (MIT-licentie)
 #: crates/app/ui/dialogs.slint:234
 msgid "Font: Newsreader, The Newsreader Project Authors (SIL Open Font License 1.1)."
 msgstr "Lettertype: Newsreader, The Newsreader Project Authors (SIL Open Font License 1.1)."
+
+#: crates/app/ui/dialogs.slint:252
+#: crates/app/ui/palette.slint:387
+#: crates/app/ui/preview.slint:99
+msgid "Close"
+msgstr "Sluiten"
 
 #: crates/app/ui/event-dialog.slint:135
 msgid "Remove reminder: {}"
@@ -1914,11 +1945,6 @@ msgstr "Enter"
 msgid "Select"
 msgstr "Kiezen"
 
-#: crates/app/ui/preview.slint:191
-#: crates/app/ui/settings.slint:337
-msgid "Edit"
-msgstr "Bewerken"
-
 #: crates/app/ui/quick-add.slint:114
 msgid "e.g. Dentist tomorrow 3pm at Dr. Weber"
 msgstr "bijv. Dentist tomorrow 3pm at Dr. Weber"
@@ -1947,178 +1973,178 @@ msgstr "Openen in venster"
 msgid "Create"
 msgstr "Aanmaken"
 
-#: crates/app/ui/rail.slint:134
+#: crates/app/ui/rail.slint:136
 msgid "Hora {} is ready · Restart to update"
 msgstr "Hora {} staat klaar · Opnieuw starten om bij te werken"
 
-#: crates/app/ui/rail.slint:146
+#: crates/app/ui/rail.slint:150
 msgid "Areas"
 msgstr "Onderdelen"
 
-#: crates/app/ui/rail.slint:202
+#: crates/app/ui/rail.slint:206
 msgid "Agenda"
 msgstr "Agenda"
 
-#: crates/app/ui/settings.slint:168
-#: crates/app/ui/sidebar.slint:444
+#: crates/app/ui/settings.slint:167
+#: crates/app/ui/sidebar.slint:509
 msgid "Settings"
 msgstr "Instellingen"
 
-#: crates/app/ui/settings.slint:186
+#: crates/app/ui/settings.slint:185
 msgid "REMINDERS"
 msgstr "HERINNERINGEN"
 
-#: crates/app/ui/settings.slint:190
-#: crates/app/ui/settings.slint:194
+#: crates/app/ui/settings.slint:189
+#: crates/app/ui/settings.slint:193
 msgid "Event reminders"
 msgstr "Afspraakherinneringen"
 
-#: crates/app/ui/settings.slint:191
+#: crates/app/ui/settings.slint:190
 msgid "Windows notification before events start, even when Hora is in the notification area"
 msgstr "Windows-melding voordat afspraken beginnen, ook als Hora in het systeemvak staat"
 
-#: crates/app/ui/settings.slint:205
+#: crates/app/ui/settings.slint:204
 msgid "Default reminder"
 msgstr "Standaardherinnering"
 
-#: crates/app/ui/settings.slint:206
+#: crates/app/ui/settings.slint:205
 msgid "Reminder that new events start with"
 msgstr "Herinnering waarmee nieuwe afspraken beginnen"
 
-#: crates/app/ui/settings.slint:223
-#: crates/app/ui/settings.slint:227
+#: crates/app/ui/settings.slint:222
+#: crates/app/ui/settings.slint:226
 msgid "Task due reminders"
 msgstr "Herinneringen voor vervaldata"
 
-#: crates/app/ui/settings.slint:224
+#: crates/app/ui/settings.slint:223
 msgid "Notify when a task is due: at the due time, or at {} for tasks with only a date"
 msgstr "Melden wanneer een taak vervalt: op het vervaltijdstip, of om {} bij taken met alleen een datum"
 
-#: crates/app/ui/settings.slint:239
+#: crates/app/ui/settings.slint:238
 msgid "Shows a notification right away to check Windows settings and sound"
 msgstr "Toont meteen een melding om Windows-instellingen en geluid te controleren"
 
-#: crates/app/ui/settings.slint:242
+#: crates/app/ui/settings.slint:241
 msgid "Send"
 msgstr "Verzenden"
 
-#: crates/app/ui/settings.slint:258
-#: crates/app/ui/settings.slint:262
+#: crates/app/ui/settings.slint:257
+#: crates/app/ui/settings.slint:261
 msgid "Show tasks in the calendar"
 msgstr "Taken in de agenda tonen"
 
-#: crates/app/ui/settings.slint:259
+#: crates/app/ui/settings.slint:258
 msgid "Open tasks appear in the week and month views on their due date"
 msgstr "Open taken verschijnen in week- en maandweergave op hun vervaldatum"
 
-#: crates/app/ui/settings.slint:275
-#: crates/app/ui/sidebar.slint:410
+#: crates/app/ui/settings.slint:274
+#: crates/app/ui/sidebar.slint:474
 msgid "APP TIME"
 msgstr "APP-TIJD"
 
-#: crates/app/ui/settings.slint:279
-#: crates/app/ui/settings.slint:285
+#: crates/app/ui/settings.slint:278
+#: crates/app/ui/settings.slint:284
 msgid "Count app time"
 msgstr "App-tijd tellen"
 
 #: crates/app/ui/settings.slint:281
-msgid "Paused. Resume in the menu of the Hora icon in the notification area."
-msgstr "Gepauzeerd. Hervat via het menu van het Hora-pictogram in het systeemvak."
-
-#: crates/app/ui/settings.slint:282
 msgid "Counts how long you actively use the programs of an activity: while one of them is in front and you use the mouse, keyboard or pen. The times stay on this PC."
 msgstr "Telt hoe lang je de programma's van een activiteit actief gebruikt: zolang een ervan op de voorgrond staat en je muis, toetsenbord of pen gebruikt. De tijden blijven op deze pc."
 
-#: crates/app/ui/settings.slint:353
-msgid "New activity…"
-msgstr "Nieuwe activiteit…"
+#: crates/app/ui/settings.slint:297
+msgid "Activities are in their own area: the clock in the bar on the left."
+msgstr "Activiteiten hebben een eigen onderdeel: de klok in de balk links."
 
-#: crates/app/ui/settings.slint:366
+#: crates/app/ui/settings.slint:309
+msgid "Open app time"
+msgstr "App-tijd openen"
+
+#: crates/app/ui/settings.slint:322
 msgid "GENERAL"
 msgstr "ALGEMEEN"
 
-#: crates/app/ui/settings.slint:370
+#: crates/app/ui/settings.slint:326
 msgid "Language"
 msgstr "Taal"
 
-#: crates/app/ui/settings.slint:371
+#: crates/app/ui/settings.slint:327
 msgid "Language of menus, dates and notifications"
 msgstr "Taal van menu's, datums en meldingen"
 
-#: crates/app/ui/settings.slint:388
+#: crates/app/ui/settings.slint:344
 msgid "Date and time format"
 msgstr "Datum- en tijdnotatie"
 
-#: crates/app/ui/settings.slint:389
+#: crates/app/ui/settings.slint:345
 msgid "Order of day, month and year; 12 or 24 hours"
 msgstr "Volgorde van dag, maand en jaar; 12 of 24 uur"
 
-#: crates/app/ui/settings.slint:406
+#: crates/app/ui/settings.slint:362
 msgid "Appearance"
 msgstr "Weergave"
 
-#: crates/app/ui/settings.slint:407
+#: crates/app/ui/settings.slint:363
 msgid "Light, dark or the same as Windows"
 msgstr "Licht, donker of zoals Windows"
 
-#: crates/app/ui/settings.slint:413
+#: crates/app/ui/settings.slint:369
 msgid "Like Windows"
 msgstr "Zoals Windows"
 
-#: crates/app/ui/settings.slint:413
+#: crates/app/ui/settings.slint:369
 msgid "Light"
 msgstr "Licht"
 
-#: crates/app/ui/settings.slint:413
+#: crates/app/ui/settings.slint:369
 msgid "Dark"
 msgstr "Donker"
 
-#: crates/app/ui/settings.slint:424
-#: crates/app/ui/settings.slint:428
+#: crates/app/ui/settings.slint:380
+#: crates/app/ui/settings.slint:384
 #: crates/setup/ui/setup.slint:699
 msgid "Start with Windows"
 msgstr "Starten met Windows"
 
-#: crates/app/ui/settings.slint:425
+#: crates/app/ui/settings.slint:381
 #: crates/setup/ui/setup.slint:700
 msgid "Hora starts quietly in the notification area when you sign in"
 msgstr "Hora start bij het aanmelden onopvallend in het systeemvak"
 
-#: crates/app/ui/settings.slint:439
-#: crates/app/ui/settings.slint:443
+#: crates/app/ui/settings.slint:395
+#: crates/app/ui/settings.slint:399
 msgid "Keep running in the notification area"
 msgstr "Actief blijven in het systeemvak"
 
-#: crates/app/ui/settings.slint:440
+#: crates/app/ui/settings.slint:396
 msgid "Closing the window doesn't quit Hora, so reminders and sync keep running"
 msgstr "Het venster sluiten beëindigt Hora niet, zodat herinneringen en synchronisatie doorgaan"
 
-#: crates/app/ui/settings.slint:456
+#: crates/app/ui/settings.slint:412
 msgid "UPDATES"
 msgstr "UPDATES"
 
-#: crates/app/ui/settings.slint:460
-#: crates/app/ui/settings.slint:464
+#: crates/app/ui/settings.slint:416
+#: crates/app/ui/settings.slint:420
 msgid "Check for updates automatically"
 msgstr "Automatisch naar updates zoeken"
 
-#: crates/app/ui/settings.slint:461
+#: crates/app/ui/settings.slint:417
 msgid "Once a day Hora looks for a new version on GitHub and downloads it in the background. It installs only when you restart Hora."
 msgstr "Eén keer per dag zoekt Hora op GitHub naar een nieuwe versie en downloadt die op de achtergrond. Installeren gebeurt pas als je Hora opnieuw start."
 
-#: crates/app/ui/settings.slint:475
+#: crates/app/ui/settings.slint:431
 msgid "Hora {}"
 msgstr "Hora {}"
 
-#: crates/app/ui/settings.slint:479
+#: crates/app/ui/settings.slint:435
 msgid "Restart and update"
 msgstr "Opnieuw starten en bijwerken"
 
-#: crates/app/ui/settings.slint:479
+#: crates/app/ui/settings.slint:435
 msgid "Check now"
 msgstr "Nu zoeken"
 
-#: crates/app/ui/settings.slint:500
+#: crates/app/ui/settings.slint:456
 #: crates/setup/src/install.rs:232
 #: crates/setup/src/install.rs:275
 msgid "Done"
@@ -2132,15 +2158,11 @@ msgstr "alleen-lezen"
 msgid "Color for {}"
 msgstr "Kleur voor {}"
 
-#: crates/app/ui/sidebar.slint:196
-msgid "Weekly goal reached"
-msgstr "Weekdoel gehaald"
-
-#: crates/app/ui/sidebar.slint:378
+#: crates/app/ui/sidebar.slint:442
 msgid "Connect your CalDAV server to see your own events."
 msgstr "Koppel je CalDAV-server om je eigen afspraken te zien."
 
-#: crates/app/ui/sidebar.slint:420
+#: crates/app/ui/sidebar.slint:483
 msgid "this week"
 msgstr "deze week"
 
@@ -2660,8 +2682,11 @@ msgstr "de download is beschadigd ({})"
 msgid "the update can't be saved ({})"
 msgstr "de update kan niet worden opgeslagen ({})"
 
-#~ msgid "Hora {} is ready"
-#~ msgstr "Hora {} staat klaar"
+#~ msgid "No programs"
+#~ msgstr "Geen programma's"
 
-#~ msgid "Restart to update"
-#~ msgstr "Opnieuw starten om bij te werken"
+#~ msgid "{0} · this week {1} · total {2}"
+#~ msgstr "{0} · deze week {1} · totaal {2}"
+
+#~ msgid "New activity…"
+#~ msgstr "Nieuwe activiteit…"

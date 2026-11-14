@@ -1,11 +1,11 @@
-// App-Zeiten: Übersicht einer Aktivität mit Summen, Verlauf über Wochen
-// oder Monate und den letzten Sitzungen. Geöffnet aus der Seitenleiste.
+// App-Zeiten als eigener Bereich: links die Aktivitäten mit der Zeit dieser
+// Woche, rechts die gewählte mit Summen, Verlauf über Wochen oder Monate und
+// den letzten Sitzungen.
 
 import { Theme } from "theme.slint";
 import { Button } from "controls.slint";
-import { Select, SelectOption } from "inputs.slint";
-import { Modal } from "dialogs.slint";
 import { Segmented } from "journal-view.slint";
+import { ActivityRow } from "settings.slint";
 
 // Balken im Verlauf: Beschriftung darunter, Zeitraum und Wert für den
 // Hinweis, Höhe 0–1 (bezogen auf die oberste Linie)
@@ -244,205 +244,435 @@ component Chart inherits Rectangle {
     }
 }
 
-export component ActivityOverview inherits Modal {
-    in property <[SelectOption]> options;
-    in-out property <int> index;
-    in property <ActivityStats> stats;
-    in-out property <bool> months;
-    callback select(int);
-    callback range-changed();
-    callback dismiss();
+// Aktivität in der Liste links: Farbe, Name, Zeit dieser Woche, Wochenziel
+component ActivityCard inherits Rectangle {
+    in property <ActivityRow> item;
+    in property <bool> selected;
+    callback clicked();
 
-    title: @tr("App time");
-    card-width: 620px;
-    close => {
-        root.dismiss();
+    height: 58px;
+    border-radius: Theme.radius-md;
+    background: root.selected ? Theme.panel : ta.has-hover ? Theme.hover-bg : transparent;
+    border-width: root.selected ? 1px : 0px;
+    border-color: Theme.line;
+    accessible-role: list-item;
+    accessible-label: root.item.name + ", " + root.item.detail;
+    accessible-item-selected: root.selected;
+    accessible-action-default => {
+        root.clicked();
     }
 
-    changed index => {
-        root.select(root.index);
+    // Vor der TouchArea, damit der erste Klick zählt
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Return || e.text == " " {
+                root.clicked();
+                return accept;
+            }
+            return reject;
+        }
     }
 
-    VerticalLayout {
-        spacing: 18px;
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            fs.focus();
+            root.clicked();
+        }
+    }
 
-        if root.options.length > 1: HorizontalLayout {
-            alignment: start;
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 12px;
 
-            Select {
-                width: 260px;
-                label: "";
-                options: root.options;
-                selected <=> root.index;
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 10px;
+                height: 10px;
+                border-radius: 5px;
+                background: root.item.color;
             }
         }
 
-        if root.options.length == 1: HorizontalLayout {
-            spacing: 10px;
-            alignment: start;
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
 
-            VerticalLayout {
-                alignment: center;
-
-                Rectangle {
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 5px;
-                    background: root.stats.color;
-                }
+            Text {
+                text: root.item.name;
+                font-size: 14px;
+                font-weight: 500;
+                color: Theme.ink;
+                overflow: elide;
             }
 
             Text {
-                text: root.options[0].name;
-                font-size: 15px;
-                font-weight: 600;
-                color: Theme.ink;
+                text: root.item.detail;
+                font-size: 12.5px;
+                color: Theme.ink-3;
                 overflow: elide;
             }
         }
 
-        HorizontalLayout {
-            spacing: 10px;
+        if root.item.progress >= 1: VerticalLayout {
+            alignment: center;
 
-            Tile {
-                label: @tr("Total");
-                value: root.stats.total;
-                note: root.stats.since;
-            }
-
-            Tile {
-                label: @tr("This week");
-                value: root.stats.week;
-                note: root.stats.week-range;
-            }
-
-            Tile {
-                label: @tr("This month");
-                value: root.stats.month;
-                note: root.stats.month-name;
+            Image {
+                source: @image-url("icons/check.svg");
+                width: 13px;
+                height: 13px;
+                colorize: Theme.success;
+                accessible-role: image;
+                accessible-label: @tr("Weekly goal reached");
             }
         }
+    }
+
+    // Wochenziel: schmaler Balken unten
+    if root.item.progress >= 0: Rectangle {
+        x: 36px;
+        y: root.height - 9px;
+        width: root.width - 50px;
+        height: 2px;
+        border-radius: 1px;
+        background: Theme.line;
+
+        Rectangle {
+            x: 0;
+            width: parent.width * Math.min(1, root.item.progress);
+            height: parent.height;
+            border-radius: 1px;
+            background: root.item.color;
+        }
+    }
+
+    if fs.has-focus: Rectangle {
+        border-radius: Theme.radius-md;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
+export component ActivityPage inherits Rectangle {
+    // Aktivitäten wie in der Seitenleiste; gewählt ist die mit dieser Kennung
+    in property <[ActivityRow]> rows;
+    in property <int> selected;
+    in property <ActivityStats> stats;
+    // Name, Programme und Pause der gewählten Aktivität
+    in property <string> name;
+    in property <string> programs;
+    // "3 Aktivitäten · diese Woche 7:57 Std."
+    in property <string> head;
+    // Über den Infobereich pausiert
+    in property <bool> paused;
+    in-out property <bool> months;
+    callback select(int);
+    callback range-changed();
+    callback new-activity();
+    callback edit(int);
+
+    background: Theme.canvas;
+
+    // Spalte höchstens 1000 px breit, mittig
+    Rectangle {
+        x: (root.width - self.width) / 2;
+        width: Math.min(1000px, root.width - 24px);
+        height: root.height;
 
         VerticalLayout {
-            spacing: 4px;
+            padding-top: 4px;
+            spacing: 0px;
 
+            // Leiste: Zahl und Woche links, Anlegen rechts
             HorizontalLayout {
-                spacing: 12px;
-
-                SectionLabel {
-                    text: @tr("History");
-                    vertical-alignment: center;
-                }
+                padding-left: 14px;
+                padding-right: 14px;
+                padding-top: 8px;
+                padding-bottom: 14px;
+                spacing: 14px;
 
                 Text {
-                    horizontal-stretch: 1;
-                    text: root.stats.streak;
-                    font-size: 12px;
-                    color: Theme.ink-3;
+                    text: root.head;
+                    font-size: 14px;
+                    color: Theme.ink-2;
                     vertical-alignment: center;
+                    horizontal-stretch: 1;
                     overflow: elide;
                 }
 
-                Segmented {
-                    labels: [@tr("Weeks"), @tr("Months")];
-                    current: root.months ? 1 : 0;
-                    tab-w: 84px;
-                    tab-h: 26px;
-                    font-px: 12.5px;
-                    select(i) => {
-                        root.months = i == 1;
-                        root.range-changed();
+                Button {
+                    text: @tr("+ New activity");
+                    primary: true;
+                    clicked => {
+                        root.new-activity();
                     }
                 }
             }
 
-            Chart {
-                bars: root.stats.bars;
-                bar-color: root.stats.color;
-                scale-top: root.stats.scale-top;
-                scale-mid: root.stats.scale-mid;
-                goal: root.stats.goal;
-                goal-label: root.stats.goal-label;
-            }
-        }
+            if root.paused: Rectangle {
+                height: 40px;
 
-        VerticalLayout {
-            spacing: 6px;
+                Rectangle {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    height: 34px;
+                    y: 0px;
+                    border-radius: Theme.radius-md;
+                    background: Theme.selected-bg;
 
-            HorizontalLayout {
-                spacing: 12px;
-
-                SectionLabel {
-                    text: @tr("Sessions");
-                    horizontal-stretch: 1;
+                    Text {
+                        x: 14px;
+                        width: parent.width - 28px;
+                        text: @tr("Paused. Resume in the menu of the Hora icon in the notification area.");
+                        font-size: 13px;
+                        color: Theme.ink-2;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
                 }
+            }
+
+            // Noch keine Aktivität
+            if root.rows.length == 0: VerticalLayout {
+                padding: 14px;
+                padding-top: 40px;
+                spacing: 14px;
+                alignment: start;
 
                 Text {
-                    text: root.stats.summary;
-                    font-size: 12px;
-                    color: Theme.ink-3;
-                    vertical-alignment: center;
+                    text: @tr("No activities yet. Create one and choose the programs whose time Hora should count.");
+                    font-size: 14px;
+                    color: Theme.ink-2;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
                 }
             }
 
-            if root.stats.sessions.length == 0: Text {
-                text: @tr("No sessions yet. They appear here once you use a program of this activity.");
-                font-size: 13px;
-                color: Theme.ink-3;
-                wrap: word-wrap;
-            }
+            if root.rows.length > 0: HorizontalLayout {
+                padding-left: 14px;
+                padding-right: 14px;
+                spacing: 20px;
 
-            if root.stats.sessions.length > 0: Flickable {
-                height: Math.min(list.preferred-height, 190px);
-                content-height: list.preferred-height;
+                // Liste
+                VerticalLayout {
+                    width: 270px;
+                    spacing: 4px;
+                    alignment: start;
 
-                list := VerticalLayout {
-                    for session in root.stats.sessions: VerticalLayout {
-                        Rectangle {
-                            height: 1px;
-                            background: Theme.line-2;
+                    for row in root.rows: ActivityCard {
+                        item: row;
+                        selected: row.id == root.selected;
+                        clicked => {
+                            root.select(row.id);
+                        }
+                    }
+                }
+
+                // Übersicht der gewählten Aktivität
+                Rectangle {
+                    horizontal-stretch: 1;
+                    background: Theme.panel;
+                    border-radius: Theme.radius-lg;
+                    border-width: 1px;
+                    border-color: Theme.line;
+
+                    VerticalLayout {
+                        padding: 22px;
+                        spacing: 18px;
+
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            VerticalLayout {
+                                alignment: center;
+
+                                Rectangle {
+                                    width: 12px;
+                                    height: 12px;
+                                    border-radius: 6px;
+                                    background: root.stats.color;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                spacing: 2px;
+
+                                Text {
+                                    text: root.name;
+                                    font-family: Theme.serif-medium;
+                                    font-size: 21px;
+                                    color: Theme.ink;
+                                    overflow: elide;
+                                }
+
+                                Text {
+                                    text: root.programs;
+                                    font-size: 12.5px;
+                                    color: Theme.ink-3;
+                                    overflow: elide;
+                                }
+                            }
+
+                            VerticalLayout {
+                                alignment: center;
+
+                                Button {
+                                    text: @tr("Edit");
+                                    clicked => {
+                                        root.edit(root.selected);
+                                    }
+                                }
+                            }
                         }
 
                         HorizontalLayout {
-                            padding-top: 7px;
-                            padding-bottom: 7px;
-                            spacing: 12px;
+                            spacing: 10px;
 
-                            Text {
-                                text: session.day;
-                                font-size: 13px;
-                                color: Theme.ink;
-                                horizontal-stretch: 1;
-                                overflow: elide;
+                            Tile {
+                                label: @tr("Total");
+                                value: root.stats.total;
+                                note: root.stats.since;
                             }
 
-                            Text {
-                                text: session.span;
+                            Tile {
+                                label: @tr("This week");
+                                value: root.stats.week;
+                                note: root.stats.week-range;
+                            }
+
+                            Tile {
+                                label: @tr("This month");
+                                value: root.stats.month;
+                                note: root.stats.month-name;
+                            }
+                        }
+
+                        VerticalLayout {
+                            spacing: 4px;
+
+                            HorizontalLayout {
+                                spacing: 12px;
+
+                                SectionLabel {
+                                    text: @tr("History");
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: root.stats.streak;
+                                    font-size: 12px;
+                                    color: Theme.ink-3;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+
+                                Segmented {
+                                    labels: [@tr("Weeks"), @tr("Months")];
+                                    current: root.months ? 1 : 0;
+                                    tab-w: 84px;
+                                    tab-h: 26px;
+                                    font-px: 12.5px;
+                                    select(i) => {
+                                        root.months = i == 1;
+                                        root.range-changed();
+                                    }
+                                }
+                            }
+
+                            Chart {
+                                bars: root.stats.bars;
+                                bar-color: root.stats.color;
+                                scale-top: root.stats.scale-top;
+                                scale-mid: root.stats.scale-mid;
+                                goal: root.stats.goal;
+                                goal-label: root.stats.goal-label;
+                            }
+                        }
+
+                        VerticalLayout {
+                            spacing: 6px;
+                            vertical-stretch: 1;
+
+                            HorizontalLayout {
+                                spacing: 12px;
+
+                                SectionLabel {
+                                    text: @tr("Sessions");
+                                    horizontal-stretch: 1;
+                                }
+
+                                Text {
+                                    text: root.stats.summary;
+                                    font-size: 12px;
+                                    color: Theme.ink-3;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            if root.stats.sessions.length == 0: Text {
+                                text: @tr("No sessions yet. They appear here once you use a program of this activity.");
                                 font-size: 13px;
                                 color: Theme.ink-3;
+                                wrap: word-wrap;
                             }
 
-                            Text {
-                                min-width: 64px;
-                                text: session.length;
-                                font-size: 13px;
-                                color: Theme.ink;
-                                horizontal-alignment: right;
+                            if root.stats.sessions.length > 0: Flickable {
+                                vertical-stretch: 1;
+                                min-height: 60px;
+                                content-height: list.preferred-height;
+
+                                list := VerticalLayout {
+                                    alignment: start;
+
+                                    for session in root.stats.sessions: VerticalLayout {
+                                        Rectangle {
+                                            height: 1px;
+                                            background: Theme.line-2;
+                                        }
+
+                                        HorizontalLayout {
+                                            padding-top: 7px;
+                                            padding-bottom: 7px;
+                                            spacing: 12px;
+
+                                            Text {
+                                                text: session.day;
+                                                font-size: 13px;
+                                                color: Theme.ink;
+                                                horizontal-stretch: 1;
+                                                overflow: elide;
+                                            }
+
+                                            Text {
+                                                text: session.span;
+                                                font-size: 13px;
+                                                color: Theme.ink-3;
+                                            }
+
+                                            Text {
+                                                min-width: 64px;
+                                                text: session.length;
+                                                font-size: 13px;
+                                                color: Theme.ink;
+                                                horizontal-alignment: right;
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        HorizontalLayout {
-            alignment: end;
-
-            Button {
-                text: @tr("Close");
-                clicked => {
-                    root.dismiss();
-                }
+            if root.rows.length == 0: Rectangle {
+                vertical-stretch: 1;
             }
         }
     }

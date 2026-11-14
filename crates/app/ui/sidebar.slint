@@ -234,6 +234,69 @@ component ActivityItem inherits Rectangle {
     }
 }
 
+// Abschnittskopf ("KALENDER", "APP-ZEITEN"): ein Klick klappt den Abschnitt
+// ein oder aus, auch per Tab und Eingabe
+component SectionToggle inherits Rectangle {
+    in property <string> text;
+    in-out property <bool> collapsed;
+    callback toggled();
+
+    height: 28px;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-expandable: true;
+    accessible-expanded: !root.collapsed;
+    accessible-action-default => {
+        root.collapsed = !root.collapsed;
+        root.toggled();
+    }
+
+    // Vor der TouchArea, damit der erste Klick zählt
+    fs := FocusScope {
+        key-pressed(e) => {
+            if e.text == Key.Return || e.text == " " {
+                root.collapsed = !root.collapsed;
+                root.toggled();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    ta := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => {
+            root.collapsed = !root.collapsed;
+            root.toggled();
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 5px;
+        alignment: start;
+
+        Text {
+            text: root.text;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 1.03px;
+            color: ta.has-hover || fs.has-focus ? Theme.ink-2 : Theme.ink-3;
+            vertical-alignment: center;
+        }
+
+        VerticalLayout {
+            alignment: center;
+
+            Image {
+                source: root.collapsed ? @image-url("icons/chevron-right.svg") : @image-url("icons/chevron-down.svg");
+                width: 11px;
+                height: 11px;
+                colorize: ta.has-hover || fs.has-focus ? Theme.ink-2 : Theme.ink-3;
+            }
+        }
+    }
+}
+
 // Textverweis unten in der Seitenleiste, auch per Tab und Eingabe erreichbar
 component FooterLink inherits Text {
     callback clicked();
@@ -281,6 +344,10 @@ export component Sidebar inherits Rectangle {
     // App-Zeiten: Aktivitäten mit der Zeit dieser Woche
     in property <[ActivityRow]> activities;
     callback activity(int);
+    // Eingeklappte Abschnitte (Hora merkt sie sich)
+    in-out property <bool> calendars-collapsed;
+    in-out property <bool> activities-collapsed;
+    callback collapse-changed();
 
     property <int> picker-id: -1;
     property <length> picker-y;
@@ -317,14 +384,13 @@ export component Sidebar inherits Rectangle {
         HorizontalLayout {
             height: 28px;
 
-            Text {
+            SectionToggle {
                 text: @tr("CALENDARS");
-                font-size: 11.5px;
-                font-weight: 700;
-                letter-spacing: 1.03px;
-                color: Theme.ink-3;
-                vertical-alignment: center;
+                collapsed <=> root.calendars-collapsed;
                 horizontal-stretch: 1;
+                toggled => {
+                    root.collapse-changed();
+                }
             }
 
             VerticalLayout {
@@ -340,7 +406,7 @@ export component Sidebar inherits Rectangle {
             }
         }
 
-        list := VerticalLayout {
+        if !root.calendars-collapsed: VerticalLayout {
             spacing: 0px;
 
             for row in root.calendars: VerticalLayout {
@@ -370,7 +436,7 @@ export component Sidebar inherits Rectangle {
             }
         }
 
-        if !root.has-accounts: Rectangle {
+        if !root.has-accounts && !root.calendars-collapsed: Rectangle {
             border-radius: Theme.radius-md;
             border-width: 1px;
             border-color: Theme.line;
@@ -412,14 +478,13 @@ export component Sidebar inherits Rectangle {
                 height: 28px;
                 spacing: 8px;
 
-                Text {
+                SectionToggle {
                     text: @tr("APP TIME");
-                    font-size: 11.5px;
-                    font-weight: 700;
-                    letter-spacing: 1.03px;
-                    color: Theme.ink-3;
-                    vertical-alignment: center;
+                    collapsed <=> root.activities-collapsed;
                     horizontal-stretch: 1;
+                    toggled => {
+                        root.collapse-changed();
+                    }
                 }
 
                 Text {
@@ -430,11 +495,13 @@ export component Sidebar inherits Rectangle {
                 }
             }
 
+            if !root.activities-collapsed: VerticalLayout {
             for row in root.activities: ActivityItem {
                 item: row;
                 clicked => {
                     root.activity(row.id);
                 }
+            }
             }
         }
 

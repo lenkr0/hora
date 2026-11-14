@@ -14,7 +14,7 @@ import { AddAccountDialog, AboutDialog, DialogLogic } from "dialogs.slint";
 import { EventDialog, EventDraft, RuleDraft, ReminderChip, ConfirmDialog, ConflictDialog, ScopeDialog } from "event-dialog.slint";
 import { SettingsDialog, ActivityRow } from "settings.slint";
 import { ActivityDialog, AppChoice } from "activity-dialog.slint";
-import { ActivityOverview, ActivityStats, ActivityBar, ActivitySession } from "activity-overview.slint";
+import { ActivityPage, ActivityStats, ActivityBar, ActivitySession } from "activity-overview.slint";
 import { TasksView, TaskRow } from "tasks-view.slint";
 import { TaskDialog, TaskDraft } from "task-dialog.slint";
 import { QuickAddDialog, QuickPreview } from "quick-add.slint";
@@ -603,7 +603,6 @@ export component AppWindow inherits Window {
     // App-Zeiten: Abschnitt in den Einstellungen und Dialog einer Aktivität
     in-out property <bool> settings-activities;
     in property <bool> activities-paused;
-    in property <[ActivityRow]> activity-rows;
     in-out property <bool> activity-dialog-open;
     in property <bool> activity-editing;
     in-out property <string> activity-name;
@@ -624,16 +623,21 @@ export component AppWindow inherits Window {
     callback activity-toggle-app(int, bool);
     callback activity-save();
     callback activity-delete();
-    // App-Zeiten: Seitenleiste (Zeit dieser Woche) und Übersicht
+    // App-Zeiten: Seitenleiste (Zeit dieser Woche) und eigener Bereich
     in property <[ActivityRow]> activity-sidebar;
     callback activity-open(int);
-    in-out property <bool> activity-overview-open;
-    in property <[SelectOption]> activity-overview-options;
-    in-out property <int> activity-overview-index;
+    in property <int> activity-selected;
+    in property <string> activity-selected-name;
+    in property <string> activity-programs;
+    in property <string> activity-head;
     in-out property <bool> activity-overview-months;
     in property <ActivityStats> activity-stats;
     callback activity-overview-select(int);
     callback activity-overview-range();
+    // Eingeklappte Abschnitte der Seitenleiste
+    in-out property <bool> sidebar-calendars-collapsed;
+    in-out property <bool> sidebar-activities-collapsed;
+    callback sidebar-collapse-changed();
     in-out property <bool> scope-open;
     in property <bool> scope-deleting;
     in property <bool> scope-allow-this: true;
@@ -888,6 +892,10 @@ export component AppWindow inherits Window {
                 root.set-view(7);
                 return accept;
             }
+            if root.settings-activities && (e.text == "z" || e.text == "Z" || e.text == "9") {
+                root.set-view(8);
+                return accept;
+            }
             if e.text == "/" {
                 root.show-palette();
                 return accept;
@@ -922,6 +930,7 @@ export component AppWindow inherits Window {
             // Bereiche: Kalender, Agenda, Aufgaben, Journal
             rail := AreaRail {
                 view: root.view;
+                activities-on: root.settings-activities;
                 update-version: root.update-version;
                 install-update => {
                     root.install-update();
@@ -976,7 +985,7 @@ export component AppWindow inherits Window {
                 }
 
                 // Aufgaben und alle Journaleinträge haben keinen Zeitraum
-                if root.view != 6 && !(root.view == 7 && root.journal-mode == 1): VerticalLayout {
+                if root.view != 6 && root.view != 8 && !(root.view == 7 && root.journal-mode == 1): VerticalLayout {
                     alignment: center;
 
                     Navigator {
@@ -1103,6 +1112,11 @@ export component AppWindow inherits Window {
                         root.mini-pick(i);
                     }
                     activities: root.activity-sidebar;
+                    calendars-collapsed <=> root.sidebar-calendars-collapsed;
+                    activities-collapsed <=> root.sidebar-activities-collapsed;
+                    collapse-changed => {
+                        root.sidebar-collapse-changed();
+                    }
                     activity(id) => {
                         root.activity-open(id);
                     }
@@ -1137,6 +1151,30 @@ export component AppWindow inherits Window {
                             }
                             delete-event(id) => {
                                 root.delete-event(id);
+                            }
+                        }
+
+                        ActivityPage {
+                            visible: root.view == 8;
+                            rows: root.activity-sidebar;
+                            selected: root.activity-selected;
+                            name: root.activity-selected-name;
+                            stats: root.activity-stats;
+                            programs: root.activity-programs;
+                            head: root.activity-head;
+                            paused: root.activities-paused;
+                            months <=> root.activity-overview-months;
+                            select(id) => {
+                                root.activity-overview-select(id);
+                            }
+                            range-changed => {
+                                root.activity-overview-range();
+                            }
+                            new-activity => {
+                                root.activity-new();
+                            }
+                            edit(id) => {
+                                root.activity-edit(id);
                             }
                         }
 
@@ -1589,13 +1627,10 @@ export component AppWindow inherits Window {
         }
         activities <=> root.settings-activities;
         activities-paused: root.activities-paused;
-        activity-rows: root.activity-rows;
         covered: root.activity-dialog-open;
-        activity-new => {
-            root.activity-new();
-        }
-        activity-edit(id) => {
-            root.activity-edit(id);
+        activity-page => {
+            root.settings-open = false;
+            root.set-view(8);
         }
         update-check <=> root.settings-update-check;
         version: root.version;
@@ -1611,23 +1646,6 @@ export component AppWindow inherits Window {
         }
         dismiss => {
             root.settings-open = false;
-            shortcuts.focus();
-        }
-    }
-
-    if root.activity-overview-open: ActivityOverview {
-        options: root.activity-overview-options;
-        index <=> root.activity-overview-index;
-        months <=> root.activity-overview-months;
-        stats: root.activity-stats;
-        select(i) => {
-            root.activity-overview-select(i);
-        }
-        range-changed => {
-            root.activity-overview-range();
-        }
-        dismiss => {
-            root.activity-overview-open = false;
             shortcuts.focus();
         }
     }

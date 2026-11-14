@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### App time
+
+- App time has its own area: the clock in the bar on the left (and `Z` or
+  `9`) shows your activities with this week's time and goal next to the
+  selected one's total, history and sessions. New activities are created
+  there, editing works from there too. Settings only keep the switch.
+- A click on an activity in the sidebar opens the area with it.
+- The sidebar sections "Calendars" and "App time" fold up with a click on
+  their heading; Hora remembers it.
+
 ### Easier to use
 
 - Date fields in the event and task dialogs have a calendar button: it opens

@@ -152,6 +152,13 @@ fn commands() -> Vec<Command> {
         ),
         c(
             tr!("NAVIGATION"),
+            tr!("App time"),
+            "app zeiten zeit aktivitäten stunden ziel app time activities",
+            "Z",
+            Action::View(View::Activities),
+        ),
+        c(
+            tr!("NAVIGATION"),
             tr!("Previous"),
             "zurück vorherige vorheriger previous back woche monat",
             ",",
@@ -302,11 +309,16 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
         .map(|(i, c)| (c.id, (c.name.clone(), calendar_color(c, i))))
         .collect();
 
+    // App-Zeiten nur, solange sie eingeschaltet sind
+    let shown =
+        |c: &Command| state.settings.activities || c.action != Action::View(View::Activities);
+
     // Ohne Eingabe: die wichtigsten Befehle
     if q.is_empty() {
         for c in commands()
             .into_iter()
             .filter(|c| !matches!(c.action, Action::Theme | Action::About))
+            .filter(|c| shown(c))
         {
             out.push(Entry {
                 group: c.group,
@@ -386,7 +398,7 @@ pub fn entries(state: &mut State, query: &str) -> Vec<Entry> {
         out.push(entry);
     }
 
-    for c in commands() {
+    for c in commands().into_iter().filter(|c| shown(c)) {
         let haystack = format!("{} {}", c.title, c.keywords).to_lowercase();
         if matches(&haystack, &q) {
             out.push(Entry {

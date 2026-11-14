@@ -35,10 +35,10 @@
 //!   der Befehlspalette brauchen (Mittel aus 5 Durchläufen), und beendet sich.
 //! - `--activities-demo` schaltet die App-Zeiten ein und legt, wenn es noch
 //!   keine gibt, zwei Beispiel-Aktivitäten mit gut drei Monaten gezählter Zeit
-//!   an (nur mit eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet die
-//!   Einstellungen mit dem Dialog für eine neue Aktivität,
-//!   `--activity-overview` die Übersicht der ersten Aktivität (mit `--months`
-//!   den Verlauf nach Monaten). `--activity-plan` legt dazu ein Testkonto
+//!   an (nur mit eigenem `HORA_DATA_DIR`); `--activity-dialog` öffnet den
+//!   Dialog für eine neue Aktivität, `--activity-overview` den Bereich
+//!   App-Zeiten mit der ersten Aktivität (mit `--months` den Verlauf nach
+//!   Monaten). `--activity-plan` legt dazu ein Testkonto
 //!   ohne erreichbaren Server mit einer Serie Mo/Mi/Fr 9–10:30 an, die zur
 //!   ersten Aktivität gehört, samt gezählter Zeit in dieser Woche.
 
@@ -129,6 +129,7 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
     }
     if has("--activities-demo") {
         activities_demo(&mut state.borrow_mut());
+        app.set_settings_activities(true);
     }
     if has("--activity-plan") {
         activity_plan(app, &mut state.borrow_mut());
@@ -137,7 +138,6 @@ pub fn install(app: &AppWindow, state: Rc<RefCell<State>>) {
         app.invoke_show_settings();
     }
     if has("--activity-dialog") {
-        app.invoke_show_settings();
         crate::activity_ui::open_new(app, &mut state.borrow_mut());
     }
     if has("--activity-overview") {

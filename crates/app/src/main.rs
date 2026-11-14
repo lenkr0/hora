@@ -71,6 +71,8 @@ enum View {
     Agenda,
     Tasks,
     Journal,
+    /// App-Zeiten (nur wenn eingeschaltet)
+    Activities,
 }
 
 impl View {
@@ -83,6 +85,7 @@ impl View {
             5 => View::Agenda,
             6 => View::Tasks,
             7 => View::Journal,
+            8 => View::Activities,
             _ => View::Week,
         }
     }
@@ -97,6 +100,7 @@ impl View {
             View::Agenda => 5,
             View::Tasks => 6,
             View::Journal => 7,
+            View::Activities => 8,
         }
     }
 }
@@ -273,7 +277,7 @@ impl State {
         match self.view {
             View::Day => (self.anchor, 1),
             View::ThreeDays => (self.anchor, 3),
-            View::Week | View::Tasks => (monday_of(self.anchor), 7),
+            View::Week | View::Tasks | View::Activities => (monday_of(self.anchor), 7),
             View::Month => (
                 monday_of(self.anchor.with_day(1).unwrap_or(self.anchor)),
                 42,
@@ -762,6 +766,8 @@ fn load_view(app: &AppWindow, state: &mut State, keep_order: bool) {
     app.set_view(state.view.index());
     if state.view == View::Tasks {
         app.set_month_title(tr!("Tasks").into());
+    } else if state.view == View::Activities {
+        app.set_month_title(tr!("App time").into());
     } else if state.view == View::Journal {
         app.set_month_title(journal_ui::title(state).into());
     } else {
@@ -769,6 +775,7 @@ fn load_view(app: &AppWindow, state: &mut State, keep_order: bool) {
     }
     match state.view {
         View::Tasks => load_tasks(app, state),
+        View::Activities => activity_overview::page(app, state),
         View::Journal => journal_ui::load(app, state),
         View::Month => load_month(app, state, first),
         View::Year => load_year(app, state, first, keep_order),
@@ -2260,6 +2267,16 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     }));
     UI.with(|ui| *ui.borrow_mut() = Some((app.as_weak(), state.clone())));
     updates::start(&app, &mut state.borrow_mut());
+    {
+        // Leiste und Seitenleiste von Anfang an: App-Zeiten an oder aus,
+        // eingeklappte Abschnitte
+        let s = state.borrow();
+        app.set_settings_activities(s.settings.activities);
+        let collapsed =
+            |key: &str| s.store.setting(key).ok().flatten().as_deref() == Some("collapsed");
+        app.set_sidebar_calendars_collapsed(collapsed("sidebar_calendars"));
+        app.set_sidebar_activities_collapsed(collapsed("sidebar_activities"));
+    }
     // Infobereich und Benachrichtigungen erst nach dem ersten Bild: Das
     // Fenster erscheint so schneller (WinRT braucht gut 20 ms)
     slint::Timer::single_shot(Duration::from_millis(100), {
@@ -2293,7 +2310,7 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         state.anchor = match state.view {
             View::Day => step(state.anchor, 1),
             View::ThreeDays => step(state.anchor, 3),
-            View::Week | View::Tasks => step(state.anchor, 7),
+            View::Week | View::Tasks | View::Activities => step(state.anchor, 7),
             View::Month | View::Agenda | View::Journal => {
                 let first = state.anchor.with_day(1).unwrap_or(state.anchor);
                 if forward {
@@ -3082,6 +3099,11 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         if counted != s.settings.activities {
             activity_ui::apply(s);
             activity_ui::show(app, s);
+            // Ausgeschaltet: der Bereich App-Zeiten verschwindet
+            if !s.settings.activities && s.view == View::Activities {
+                s.view = View::Week;
+                load_view(app, s, false);
+            }
         }
         if s.settings.update_check && !checked_updates {
             updates::tick(app, s);
@@ -3127,6 +3149,18 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     }
     app.on_activity_overview_select(with_arg(&app, &state, activity_overview::select));
     app.on_activity_overview_range(with(&app, &state, activity_overview::range));
+    // Eingeklappte Abschnitte der Seitenleiste merken
+    app.on_sidebar_collapse_changed(with(&app, &state, |app, s| {
+        let flag = |collapsed: bool| if collapsed { "collapsed" } else { "open" };
+        let _ = s.store.set_setting(
+            "sidebar_calendars",
+            flag(app.get_sidebar_calendars_collapsed()),
+        );
+        let _ = s.store.set_setting(
+            "sidebar_activities",
+            flag(app.get_sidebar_activities_collapsed()),
+        );
+    }));
     app.on_install_update(with(&app, &state, updates::install));
     app.on_test_notification(with(&app, &state, |app, s| {
         let Some(shell) = &s.shell else { return };

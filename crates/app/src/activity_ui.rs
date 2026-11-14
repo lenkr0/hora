@@ -10,7 +10,7 @@ use hora_storage::{Activity, ActivityDraft};
 use slint::{Model, ModelRc, VecModel};
 
 use crate::activity::{Config, Counter};
-use crate::{ActivityRow, AppChoice, AppWindow, SelectOption, State};
+use crate::{AppChoice, AppWindow, SelectOption, State};
 
 /// Wahlmöglichkeiten für die Pausengrenze in Sekunden
 const LIMITS: [i64; 6] = [30, 60, 120, 300, 600, 900];
@@ -91,50 +91,10 @@ pub fn toggle_pause(app: &AppWindow, state: &mut State) {
     app.set_activities_paused(state.counting_paused);
 }
 
-fn rows(state: &State, activities: &[Activity]) -> Vec<ActivityRow> {
-    let now = Utc::now();
-    let week = state
-        .store
-        .activity_totals(week_start(state), now + TimeDelta::days(1))
-        .unwrap_or_default();
-    let total = state
-        .store
-        .activity_totals(DateTime::UNIX_EPOCH, now + TimeDelta::days(1))
-        .unwrap_or_default();
-    activities
-        .iter()
-        .map(|activity| {
-            let time = |totals: &std::collections::HashMap<i64, TimeDelta>| {
-                short(totals.get(&activity.id).copied().unwrap_or_default())
-            };
-            let apps = if activity.apps.is_empty() {
-                tr!("No programs").to_string()
-            } else {
-                activity.apps.join(", ")
-            };
-            ActivityRow {
-                id: activity.id as i32,
-                name: activity.name.clone().into(),
-                color: color_of(activity),
-                detail: tr!(
-                    "{0} · this week {1} · total {2}",
-                    apps,
-                    time(&week),
-                    time(&total)
-                )
-                .into(),
-                progress: -1.0,
-            }
-        })
-        .collect()
-}
-
 /// Abschnitt in den Einstellungen und die Seitenleiste füllen
 pub fn show(app: &AppWindow, state: &State) {
     app.set_settings_activities(state.settings.activities);
     app.set_activities_paused(state.counting_paused);
-    let activities = state.store.activities().unwrap_or_default();
-    app.set_activity_rows(ModelRc::new(VecModel::from(rows(state, &activities))));
     crate::activity_overview::sidebar(app, state);
 }
 
@@ -143,12 +103,7 @@ fn limit_options() -> ModelRc<SelectOption> {
         .iter()
         .map(|&seconds| SelectOption {
             id: seconds as i32,
-            name: if seconds < 60 {
-                tr!("{} seconds", seconds)
-            } else {
-                hora_i18n::trn!("{n} minute", "{n} minutes", seconds / 60)
-            }
-            .into(),
+            name: limit_text(seconds).into(),
             color: Default::default(),
         })
         .collect();
@@ -371,16 +326,37 @@ pub fn save(app: &AppWindow, state: &mut State) {
         weekly_goal: goal,
     };
     let result = match state.activity_dialog.editing {
-        Some(id) => state.store.update_activity(id, &draft),
-        None => state.store.add_activity(&draft).map(|_| ()),
+        Some(id) => state.store.update_activity(id, &draft).map(|()| id),
+        None => state.store.add_activity(&draft),
     };
-    if let Err(e) = result {
-        app.set_activity_error(e.to_string().into());
-        return;
+    match result {
+        // Die gespeicherte Aktivität ist im Bereich App-Zeiten gewählt
+        Ok(id) => state.activity_shown = Some(id),
+        Err(e) => {
+            app.set_activity_error(e.to_string().into());
+            return;
+        }
     }
     app.set_activity_dialog_open(false);
     apply(state);
     show(app, state);
+    refresh_page(app, state);
+}
+
+/// Bereich App-Zeiten nach einer Änderung neu füllen, falls er offen ist
+fn refresh_page(app: &AppWindow, state: &mut State) {
+    if state.view == crate::View::Activities {
+        crate::activity_overview::page(app, state);
+    }
+}
+
+/// Pause, nach der nicht mehr gezählt wird: "30 Sekunden", "1 Minute"
+pub fn limit_text(seconds: i64) -> String {
+    if seconds < 60 {
+        tr!("{} seconds", seconds).to_string()
+    } else {
+        hora_i18n::trn!("{n} minute", "{n} minutes", seconds / 60)
+    }
 }
 
 pub fn delete(app: &AppWindow, state: &mut State) {
@@ -394,6 +370,7 @@ pub fn delete(app: &AppWindow, state: &mut State) {
     app.set_activity_dialog_open(false);
     apply(state);
     show(app, state);
+    refresh_page(app, state);
 }
 
 #[cfg(test)]

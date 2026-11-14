@@ -151,11 +151,10 @@ export component SettingsDialog inherits Modal {
     // App-Zeiten: eingeschaltet, über den Infobereich pausiert, Aktivitäten
     in-out property <bool> activities;
     in property <bool> activities-paused;
-    in property <[ActivityRow]> activity-rows;
     // Ein Dialog darüber ist offen; danach den Fokus zurückholen
     in property <bool> covered;
-    callback activity-new();
-    callback activity-edit(int);
+    // Bereich App-Zeiten öffnen (schließt die Einstellungen)
+    callback activity-page();
     in-out property <bool> update-check;
     in property <string> version;
     // Version, die zum Installieren bereitliegt ("" = keine)
@@ -293,69 +292,26 @@ export component SettingsDialog inherits Modal {
             }
         }
 
-        if root.activities: VerticalLayout {
-            for row in root.activity-rows: VerticalLayout {
-                Divider { }
+        if root.activities: HorizontalLayout {
+            padding-top: 4px;
+            spacing: 14px;
 
-                HorizontalLayout {
-                    spacing: 12px;
-                    padding-top: 10px;
-                    padding-bottom: 10px;
-
-                    VerticalLayout {
-                        alignment: center;
-
-                        Rectangle {
-                            width: 10px;
-                            height: 10px;
-                            border-radius: 5px;
-                            background: row.color;
-                        }
-                    }
-
-                    VerticalLayout {
-                        horizontal-stretch: 1;
-                        alignment: center;
-                        spacing: 2px;
-
-                        Text {
-                            text: row.name;
-                            font-size: 14px;
-                            color: Theme.ink;
-                            overflow: elide;
-                        }
-
-                        Text {
-                            text: row.detail;
-                            font-size: 12px;
-                            color: Theme.ink-3;
-                            wrap: word-wrap;
-                        }
-                    }
-
-                    VerticalLayout {
-                        alignment: center;
-
-                        Button {
-                            text: @tr("Edit");
-                            clicked => {
-                                root.activity-edit(row.id);
-                            }
-                        }
-                    }
-                }
+            Text {
+                text: @tr("Activities are in their own area: the clock in the bar on the left.");
+                font-size: 12.5px;
+                color: Theme.ink-3;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
             }
 
-            Divider { }
-
-            HorizontalLayout {
-                padding-top: 12px;
-                alignment: start;
+            VerticalLayout {
+                alignment: center;
 
                 Button {
-                    text: @tr("New activity…");
+                    text: @tr("Open app time");
                     clicked => {
-                        root.activity-new();
+                        root.activity-page();
                     }
                 }
             }

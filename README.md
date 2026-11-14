@@ -25,8 +25,9 @@ memory.
 - **App time** (optional, off by default): counts how long you actively use
   the programs of an activity – only while one is in front and you use the
   mouse, keyboard or pen. The sidebar shows this week's time and an optional
-  weekly goal; the overview adds the total, the month, a history by week or
-  month, your sessions and how many weeks in a row you reached the goal. An
+  weekly goal; its own area (the clock in the bar on the left) lists your
+  activities and adds the total, the month, a history by week or month, your
+  sessions and how many weeks in a row you reached the goal. An
   event can belong to an activity and then shows the counted time, e.g.
   "1:12 / 1:30 h". The times stay on your PC.
 - **Seven languages** (English, Deutsch, Français, Español, Italiano,

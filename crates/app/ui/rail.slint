@@ -1,5 +1,5 @@
 // Schmale Leiste links mit den Bereichen von Hora: Kalender (Tag bis Jahr),
-// Agenda, Aufgaben und Journal. Oben die Raute als Zeichen der App, unten ein
+// Agenda, Aufgaben, Journal und (wenn eingeschaltet) App-Zeiten. Oben die Raute als Zeichen der App, unten ein
 // Knopf, sobald ein Update bereitliegt.
 
 import { Theme } from "theme.slint";
@@ -124,8 +124,10 @@ component UpdateButton inherits Rectangle {
 }
 
 export component AreaRail inherits Rectangle {
-    // Aktuelle Ansicht: 0–4 Kalender, 5 Agenda, 6 Aufgaben, 7 Journal
+    // Aktuelle Ansicht: 0–4 Kalender, 5 Agenda, 6 Aufgaben, 7 Journal, 8 App-Zeiten
     in property <int> view;
+    // App-Zeiten eingeschaltet: dann auch ihr Bereich
+    in property <bool> activities-on;
     // -1 = Kalender in der zuletzt gewählten Zeitspanne, sonst die Ansicht
     callback select(int);
     callback drag();
@@ -139,12 +141,14 @@ export component AreaRail inherits Rectangle {
 
     // Beschriftung zur Schaltfläche unter der Maus und deren Mitte im Fenster
     out property <string> tip-text: calendar.hovered ? calendar.label : agenda.hovered ? agenda.label : tasks.hovered ? tasks.label : journal.hovered ? journal.label
+        : root.activities-on && times.hovered ? times.label
         : root.update-version != "" && root.update-hovered ? root.update-label : "";
     out property <length> tip-y: root.update-version != "" && root.update-hovered ? root.height - 34px
         : calendar.hovered ? calendar.absolute-position.y + 20px
         : agenda.hovered ? agenda.absolute-position.y + 20px
         : tasks.hovered ? tasks.absolute-position.y + 20px
-        : journal.absolute-position.y + 20px;
+        : journal.hovered ? journal.absolute-position.y + 20px
+        : times.absolute-position.y + 20px;
 
     width: 56px;
     accessible-role: tab-list;
@@ -229,6 +233,16 @@ export component AreaRail inherits Rectangle {
             active: root.view == 7;
             clicked => {
                 root.select(7);
+            }
+        }
+
+        times := RailButton {
+            visible: root.activities-on;
+            icon: @image-url("icons/clock.svg");
+            label: @tr("App time");
+            active: root.view == 8;
+            clicked => {
+                root.select(8);
             }
         }
 

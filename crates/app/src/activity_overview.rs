@@ -12,9 +12,7 @@ use slint::{ComponentHandle, ModelRc, VecModel};
 
 use crate::activity_events::hm;
 use crate::activity_ui::{color_of, short};
-use crate::{
-    ActivityBar, ActivityRow, ActivitySession, ActivityStats, AppWindow, SelectOption, State,
-};
+use crate::{ActivityBar, ActivityRow, ActivitySession, ActivityStats, AppWindow, State};
 
 /// So viele Wochen oder Monate zeigt der Verlauf
 const BARS: u32 = 12;
@@ -91,6 +89,9 @@ pub fn tick(app: &AppWindow, state: &mut State) {
     let sum = sidebar(app, state);
     if sum != state.activity_mark {
         state.activity_mark = sum;
+        if state.view == crate::View::Activities {
+            page(app, state);
+        }
         if crate::shows_columns(state)
             && !state
                 .store
@@ -103,51 +104,68 @@ pub fn tick(app: &AppWindow, state: &mut State) {
     }
 }
 
-/// Übersicht einer Aktivität öffnen (aus der Seitenleiste)
+/// Bereich App-Zeiten mit dieser Aktivität öffnen (aus der Seitenleiste)
 pub fn open(app: &AppWindow, state: &mut State, id: i32) {
     state.activity_shown = Some(i64::from(id));
-    fill(app, state);
-    app.set_activity_overview_open(true);
+    crate::journal_ui::flush(app, state);
+    state.view = crate::View::Activities;
+    crate::load_view(app, state, false);
+    app.invoke_focus_main();
 }
 
-/// Andere Aktivität in der Auswahl
-pub fn select(app: &AppWindow, state: &mut State, index: i32) {
-    let activities = state.store.activities().unwrap_or_default();
-    let Some(activity) = activities.get(index.max(0) as usize) else {
-        return;
-    };
-    if state.activity_shown != Some(activity.id) {
-        state.activity_shown = Some(activity.id);
-        fill(app, state);
+/// Andere Aktivität in der Liste gewählt
+pub fn select(app: &AppWindow, state: &mut State, id: i32) {
+    if state.activity_shown != Some(i64::from(id)) {
+        state.activity_shown = Some(i64::from(id));
+        page(app, state);
     }
 }
 
 /// Verlauf zwischen Wochen und Monaten umgeschaltet
 pub fn range(app: &AppWindow, state: &mut State) {
-    fill(app, state);
+    page(app, state);
 }
 
-fn fill(app: &AppWindow, state: &mut State) {
+/// Bereich App-Zeiten füllen: Liste (wie in der Seitenleiste), Zeile oben
+/// und die gewählte Aktivität mit ihren Zahlen
+pub fn page(app: &AppWindow, state: &mut State) {
+    let sum = sidebar(app, state);
     let activities = state.store.activities().unwrap_or_default();
-    let index = activities
+    app.set_activity_head(
+        if activities.is_empty() {
+            String::new()
+        } else {
+            tr!(
+                "{0} · this week {1}",
+                trn!("{n} activity", "{n} activities", activities.len()),
+                short(TimeDelta::milliseconds(sum))
+            )
+        }
+        .into(),
+    );
+    let Some(activity) = activities
         .iter()
-        .position(|a| Some(a.id) == state.activity_shown)
-        .unwrap_or(0);
-    let Some(activity) = activities.get(index) else {
-        app.set_activity_overview_open(false);
+        .find(|a| Some(a.id) == state.activity_shown)
+        .or(activities.first())
+    else {
+        state.activity_shown = None;
+        app.set_activity_selected(-1);
+        app.set_activity_selected_name("".into());
+        app.set_activity_programs("".into());
+        app.set_activity_stats(ActivityStats::default());
         return;
     };
     state.activity_shown = Some(activity.id);
-    let options: Vec<SelectOption> = activities
-        .iter()
-        .map(|a| SelectOption {
-            id: a.id as i32,
-            name: a.name.clone().into(),
-            color: color_of(a),
-        })
-        .collect();
-    app.set_activity_overview_options(ModelRc::new(VecModel::from(options)));
-    app.set_activity_overview_index(index as i32);
+    app.set_activity_selected(activity.id as i32);
+    app.set_activity_selected_name(activity.name.clone().into());
+    app.set_activity_programs(
+        tr!(
+            "{0} · pause after {1}",
+            activity.apps.join(", "),
+            crate::activity_ui::limit_text(activity.idle_limit)
+        )
+        .into(),
+    );
     let spans = state.store.activity_spans(activity.id).unwrap_or_default();
     let months = app.get_activity_overview_months();
     app.set_activity_stats(stats(activity, &spans, months, state.home, Utc::now()));
