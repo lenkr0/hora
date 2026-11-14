@@ -208,11 +208,15 @@ component ServerForm inherits VerticalLayout {
 component LocalCalendarForm inherits VerticalLayout {
     in property <bool> editing;
     in property <string> error;
+    // Ergebnis von Export oder Import
+    in property <string> status;
     in-out property <string> name;
     in-out property <color> color;
     callback save();
     callback delete();
     callback cancel();
+    callback export();
+    callback import();
 
     init => {
         name-field.focus();
@@ -274,6 +278,37 @@ component LocalCalendarForm inherits VerticalLayout {
         font-size: 12px;
         color: Theme.ink-3;
         wrap: word-wrap;
+    }
+
+    // Sichern als .ics-Datei und wieder einlesen
+    if root.editing: VerticalLayout {
+        spacing: 8px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Button {
+                text: @tr("Export…");
+                clicked => {
+                    root.export();
+                }
+            }
+
+            Button {
+                text: @tr("Import…");
+                clicked => {
+                    root.import();
+                }
+            }
+        }
+
+        Text {
+            text: root.status != "" ? root.status : @tr("As an .ics file that other calendar programs can read too.");
+            font-size: 12px;
+            color: root.status != "" ? Theme.ink-2 : Theme.ink-3;
+            wrap: word-wrap;
+        }
     }
 
     if root.error != "": Rectangle {
@@ -339,9 +374,12 @@ export component AddAccountDialog inherits Modal {
     in property <bool> editing;
     in-out property <string> calendar-name;
     in-out property <color> calendar-color;
+    in property <string> calendar-status;
     callback connect(string, string, string, string);
     callback save-local();
     callback delete-local();
+    callback export-local();
+    callback import-local();
     callback cancel();
 
     title: root.editing ? @tr("Edit calendar") : @tr("Add calendar");
@@ -371,10 +409,17 @@ export component AddAccountDialog inherits Modal {
         if root.editing || root.mode == 0: LocalCalendarForm {
             editing: root.editing;
             error: root.error;
+            status: root.calendar-status;
             name <=> root.calendar-name;
             color <=> root.calendar-color;
             save => {
                 root.save-local();
+            }
+            export => {
+                root.export-local();
+            }
+            import => {
+                root.import-local();
             }
             delete => {
                 root.delete-local();

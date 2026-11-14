@@ -478,6 +478,15 @@ impl Store {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// Alle Einträge eines Kalenders (für den Export), nach Adresse sortiert
+    pub fn calendar_resources(&self, calendar_id: i64) -> Result<Vec<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT ics FROM resources WHERE calendar_id = ?1 ORDER BY href")?;
+        let rows = stmt.query_map([calendar_id], |r| r.get(0))?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
     pub fn resource_count(&self, calendar_id: i64) -> Result<i64> {
         Ok(self.conn.query_row(
             "SELECT count(*) FROM resources WHERE calendar_id = ?1",
@@ -616,6 +625,7 @@ mod tests {
         assert_eq!(ops.len(), 1);
         assert_eq!(ops[0].calendar_id, server);
         assert!(store.resource(id, "a.ics").unwrap().is_some());
+        assert_eq!(store.calendar_resources(id).unwrap(), std::slice::from_ref(&ics));
         store.local_delete(id, "a.ics").unwrap();
         assert!(store.resource(id, "a.ics").unwrap().is_none());
         assert_eq!(store.pending_ops().unwrap().len(), 1);

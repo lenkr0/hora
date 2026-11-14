@@ -65,7 +65,9 @@ right away (name and color), without a server. **CalDAV server** asks for
 the DAV address (for Baïkal e.g. `http://server:8089/dav.php`), username and
 password; Hora finds the calendars itself and keeps the password in Windows
 Credential Manager. Hora syncs at startup, every 5 minutes and with `F5`.
-A local calendar is renamed or deleted via its color dot → **Edit…**.
+Via its color dot → **Edit…** a local calendar is renamed, deleted, saved
+as an .ics file (**Export…**) or filled from one (**Import…**), e.g. as a
+backup.
 
 Language and date/time format can be changed any time under Settings →
 General. Quick add understands English and German in every UI language.

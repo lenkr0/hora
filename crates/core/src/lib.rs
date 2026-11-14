@@ -17,9 +17,11 @@
 //! - [`edit`]: Termine ändern und anlegen, mit passender VTIMEZONE
 //!   ([`vtimezone`]).
 //! - [`activity`]: App-Zeiten, also aktive Zeit einer Anwendung im Vordergrund.
+//! - [`bundle`]: ganze Kalender als eine .ics-Datei (Export und Import).
 
 pub mod activity;
 pub mod alarm;
+pub mod bundle;
 pub mod duration;
 pub mod edit;
 pub mod expand;
