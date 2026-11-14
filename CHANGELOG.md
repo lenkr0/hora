@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Calendars on this PC
+
+- The **+** next to "Calendars" now asks: **On this PC** or **CalDAV
+  server**. A calendar on this PC needs only a name and a color; events,
+  series, tasks, reminders and journal entries work as usual, just without
+  sync and without a backup on a server. With the first own calendar the
+  sample events hide.
+- Its color dot offers **Edit…** to rename it, change the color or delete it
+  (with everything in it, after asking).
+
 ### App time
 
 - App time has its own area: the clock in the bar on the left (and `Z` or

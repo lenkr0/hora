@@ -96,6 +96,9 @@ const STEPS: &[&str] = &[
         uid TEXT PRIMARY KEY,
         activity_id INTEGER NOT NULL REFERENCES activities(id) ON DELETE CASCADE
     );",
+    // 6: Kalender nur auf diesem PC: ein eigenes Konto der Art 'local', das
+    // der Abgleich überspringt
+    "ALTER TABLE accounts ADD COLUMN kind TEXT NOT NULL DEFAULT 'caldav';",
 ];
 
 pub fn run(conn: &Connection) -> rusqlite::Result<()> {

@@ -38,6 +38,8 @@ pub struct Account {
     pub credential_key: String,
     pub principal_url: Option<String>,
     pub home_url: Option<String>,
+    /// Konto für Kalender nur auf diesem PC (kein Server, kein Abgleich)
+    pub local: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +68,8 @@ pub struct Calendar {
     pub components: String,
     pub ctag: Option<String>,
     pub sync_token: Option<String>,
+    /// Nur auf diesem PC: Änderungen werden nicht hochgeladen
+    pub local: bool,
 }
 
 impl Calendar {
@@ -215,7 +219,8 @@ impl Store {
 
     pub fn accounts(&self) -> Result<Vec<Account>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, url, username, credential_key, principal_url, home_url FROM accounts ORDER BY id",
+            "SELECT id, name, url, username, credential_key, principal_url, home_url, kind = 'local'
+             FROM accounts ORDER BY id",
         )?;
         let rows = stmt.query_map([], |r| {
             Ok(Account {
@@ -226,6 +231,7 @@ impl Store {
                 credential_key: r.get(4)?,
                 principal_url: r.get(5)?,
                 home_url: r.get(6)?,
+                local: r.get(7)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -275,8 +281,10 @@ impl Store {
 
     pub fn calendars(&self) -> Result<Vec<Calendar>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, account_id, href, name, server_color, local_color, visible, read_only, components, ctag, sync_token
-             FROM calendars ORDER BY account_id, sort_order, id",
+            "SELECT c.id, c.account_id, c.href, c.name, c.server_color, c.local_color, c.visible,
+                    c.read_only, c.components, c.ctag, c.sync_token, a.kind = 'local'
+             FROM calendars c JOIN accounts a ON a.id = c.account_id
+             ORDER BY c.account_id, c.sort_order, c.id",
         )?;
         let rows = stmt.query_map([], |r| {
             Ok(Calendar {
@@ -291,9 +299,85 @@ impl Store {
                 components: r.get(8)?,
                 ctag: r.get(9)?,
                 sync_token: r.get(10)?,
+                local: r.get(11)?,
             })
         })?;
         Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    // ---- Kalender nur auf diesem PC ----
+
+    /// Konto für lokale Kalender; beim ersten Mal angelegt. Es hat weder
+    /// Server noch Passwort, der Abgleich überspringt es.
+    pub fn local_account(&self) -> Result<i64> {
+        let found: Option<i64> = self
+            .conn
+            .query_row(
+                "SELECT id FROM accounts WHERE kind = 'local' ORDER BY id LIMIT 1",
+                [],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(id) = found {
+            return Ok(id);
+        }
+        self.conn.execute(
+            "INSERT INTO accounts (name, url, username, credential_key, kind)
+             VALUES ('', '', '', 'local', 'local')",
+            [],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Neuer Kalender nur auf diesem PC, für Termine, Aufgaben und Journal
+    pub fn add_local_calendar(&mut self, name: &str, color: &str) -> Result<i64> {
+        let account = self.local_account()?;
+        let tx = self.write()?;
+        let order: i64 = tx.query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM calendars WHERE account_id = ?1",
+            [account],
+            |r| r.get(0),
+        )?;
+        // Statt einer Server-Adresse eine eigene, an die sich Termine wie
+        // "<uid>.ics" anhängen lassen
+        let next: i64 =
+            tx.query_row("SELECT COALESCE(MAX(id), 0) + 1 FROM calendars", [], |r| {
+                r.get(0)
+            })?;
+        tx.execute(
+            "INSERT INTO calendars (account_id, href, name, local_color, components, sort_order)
+             VALUES (?1, ?2, ?3, ?4, 'VEVENT,VTODO,VJOURNAL', ?5)",
+            params![
+                account,
+                format!("hora-local://pc/{next}/"),
+                name,
+                color,
+                order
+            ],
+        )?;
+        let id = tx.last_insert_rowid();
+        tx.commit()?;
+        Ok(id)
+    }
+
+    /// Lokalen Kalender umbenennen (Server-Kalender benennt der Server)
+    pub fn rename_local_calendar(&self, id: i64, name: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE calendars SET name = ?2
+             WHERE id = ?1 AND account_id IN (SELECT id FROM accounts WHERE kind = 'local')",
+            params![id, name],
+        )?;
+        Ok(())
+    }
+
+    /// Lokalen Kalender mit allen Terminen, Aufgaben und Einträgen löschen
+    pub fn delete_local_calendar(&self, id: i64) -> Result<()> {
+        self.conn.execute(
+            "DELETE FROM calendars
+             WHERE id = ?1 AND account_id IN (SELECT id FROM accounts WHERE kind = 'local')",
+            [id],
+        )?;
+        Ok(())
     }
 
     pub fn set_calendar_visible(&self, id: i64, visible: bool) -> Result<()> {
@@ -499,6 +583,60 @@ mod tests {
             .unwrap();
         let id = store.calendars().unwrap()[0].id;
         (store, id)
+    }
+
+    #[test]
+    fn local_calendars_stay_on_this_pc() {
+        let (mut store, server) = store_with_calendar();
+        let id = store.add_local_calendar("Zuhause", "#4f7cac").unwrap();
+        let second = store.add_local_calendar("Sport", "#5b8a5a").unwrap();
+        // Ein lokales Konto, unabhängig vom Server-Konto
+        let accounts = store.accounts().unwrap();
+        assert_eq!(accounts.iter().filter(|a| a.local).count(), 1);
+        assert!(!accounts[0].local);
+        let calendars = store.calendars().unwrap();
+        let local = calendars.iter().find(|c| c.id == id).unwrap();
+        assert!(local.local);
+        assert!(local.supports(Kind::Event) && local.supports(Kind::Todo));
+        assert_eq!(local.color(), Some("#4f7cac"));
+        assert!(!calendars.iter().find(|c| c.id == server).unwrap().local);
+        assert_ne!(
+            local.href,
+            calendars.iter().find(|c| c.id == second).unwrap().href
+        );
+        // Termine lassen sich an die Adresse anhängen (wie bei Server-Kalendern)
+        let base = url::Url::parse(&local.href).unwrap();
+        assert_eq!(base.join("a.ics").unwrap().path(), format!("/{id}/a.ics"));
+
+        // Änderungen landen nicht in der Warteschlange, Server-Kalender schon
+        let ics = event("a", "20261116T090000Z", "20261116T100000Z", "");
+        store.local_put(id, "a.ics", &ics).unwrap();
+        store.local_put(server, "b.ics", &ics).unwrap();
+        let ops = store.pending_ops().unwrap();
+        assert_eq!(ops.len(), 1);
+        assert_eq!(ops[0].calendar_id, server);
+        assert!(store.resource(id, "a.ics").unwrap().is_some());
+        store.local_delete(id, "a.ics").unwrap();
+        assert!(store.resource(id, "a.ics").unwrap().is_none());
+        assert_eq!(store.pending_ops().unwrap().len(), 1);
+
+        // Umbenennen und Löschen nur für lokale Kalender
+        store.rename_local_calendar(id, "Daheim").unwrap();
+        store.rename_local_calendar(server, "Nein").unwrap();
+        store.local_put(id, "c.ics", &ics).unwrap();
+        store.delete_local_calendar(id).unwrap();
+        store.delete_local_calendar(server).unwrap();
+        let calendars = store.calendars().unwrap();
+        assert!(calendars.iter().all(|c| c.id != id));
+        assert_eq!(
+            calendars.iter().find(|c| c.id == server).unwrap().name,
+            "Privat"
+        );
+        assert!(store.resource(id, "c.ics").unwrap().is_none());
+        assert_eq!(
+            calendars.iter().find(|c| c.id == second).unwrap().name,
+            "Sport"
+        );
     }
 
     #[test]

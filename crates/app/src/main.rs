@@ -209,6 +209,9 @@ struct State {
     collapsed_tasks: HashSet<String>,
     editing_task: Option<tasks::TaskItem>,
     deleting_task: Option<tasks::TaskItem>,
+    /// Lokaler Kalender im Dialog (bearbeiten) bzw. vor dem Löschen
+    editing_calendar: Option<i64>,
+    deleting_calendar: Option<i64>,
     /// Auswahllisten des Aufgaben-Dialogs
     task_calendar_ids: Vec<i64>,
     task_parent_ids: Vec<Option<String>>,
@@ -262,7 +265,14 @@ impl State {
     }
 
     fn reload_calendars(&mut self) {
-        self.accounts = self.store.accounts().unwrap_or_default();
+        // Nur Server-Konten; lokale Kalender stehen bei den Kalendern
+        self.accounts = self
+            .store
+            .accounts()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|a| !a.local)
+            .collect();
         self.calendars = self.store.calendars().unwrap_or_default();
     }
 
@@ -300,6 +310,16 @@ type UiHandle = (slint::Weak<AppWindow>, Rc<RefCell<State>>);
 thread_local! {
     /// Für Rückmeldungen aus dem Sync-Thread, die über die Ereignisschleife kommen
     static UI: RefCell<Option<UiHandle>> = const { RefCell::new(None) };
+}
+
+/// Farbe als "#rrggbb" (wie in der Datenbank)
+fn hex_of(color: slint::Color) -> String {
+    format!(
+        "#{:02x}{:02x}{:02x}",
+        color.red(),
+        color.green(),
+        color.blue()
+    )
 }
 
 fn monday_of(date: NaiveDate) -> NaiveDate {
@@ -380,7 +400,20 @@ fn calendar_rows(state: &State) -> Vec<CalendarRow> {
         visible: state.demo_visible,
         read_only: false,
         first_of_account: true,
+        local: false,
     }];
+    for (index, calendar) in state.calendars.iter().enumerate().filter(|(_, c)| c.local) {
+        rows.push(CalendarRow {
+            id: calendar.id as i32,
+            account: tr!("On this device").into(),
+            name: calendar.name.as_str().into(),
+            color: rgb(calendar_color(calendar, index)),
+            visible: calendar.visible,
+            read_only: false,
+            first_of_account: false,
+            local: true,
+        });
+    }
     for account in &state.accounts {
         let calendars = state
             .calendars
@@ -402,10 +435,25 @@ fn calendar_rows(state: &State) -> Vec<CalendarRow> {
                 visible: calendar.visible,
                 read_only: calendar.read_only,
                 first_of_account: n == 0,
+                local: false,
             });
         }
     }
     rows
+}
+
+/// "Privat · Baïkal" bzw. "Privat · Auf diesem Gerät"
+fn calendar_label(state: &State, calendar: &hora_storage::Calendar) -> String {
+    let account = if calendar.local {
+        tr!("On this device").to_string()
+    } else {
+        state
+            .accounts
+            .iter()
+            .find(|a| a.id == calendar.account_id)
+            .map_or(String::new(), |a| a.name.clone())
+    };
+    format!("{} · {}", calendar.name, account)
 }
 
 /// Kalender, in die neue Termine dürfen; Beispieltermine, solange sichtbar
@@ -417,14 +465,9 @@ fn calendar_options(state: &mut State) -> Vec<SelectOption> {
         if calendar.read_only || !calendar.supports(Kind::Event) {
             continue;
         }
-        let account = state
-            .accounts
-            .iter()
-            .find(|a| a.id == calendar.account_id)
-            .map_or("", |a| a.name.as_str());
         options.push(SelectOption {
             id: calendar.id as i32,
-            name: format!("{} · {}", calendar.name, account).into(),
+            name: calendar_label(state, calendar).into(),
             color: rgb(calendar_color(calendar, index)),
         });
         ids.push(calendar.id);
@@ -992,14 +1035,7 @@ fn details(state: &mut State, item: &Item) -> EventDetails {
             .calendars
             .iter()
             .find(|c| c.id == *calendar_id)
-            .map(|c| {
-                let account = state
-                    .accounts
-                    .iter()
-                    .find(|a| a.id == c.account_id)
-                    .map_or("", |a| a.name.as_str());
-                format!("{} · {}", c.name, account)
-            })
+            .map(|c| calendar_label(state, c))
             .unwrap_or_default(),
         _ => tr!("Sample events (only on this device)").to_string(),
     };
@@ -1415,17 +1451,10 @@ fn open_task_dialog(
                 .enumerate()
                 .find(|(_, c)| c.id == *id)
         })
-        .map(|(i, c)| {
-            let account = state
-                .accounts
-                .iter()
-                .find(|a| a.id == c.account_id)
-                .map_or("", |a| a.name.as_str());
-            SelectOption {
-                id: c.id as i32,
-                name: format!("{} · {}", c.name, account).into(),
-                color: rgb(calendar_color(c, i)),
-            }
+        .map(|(i, c)| SelectOption {
+            id: c.id as i32,
+            name: calendar_label(state, c).into(),
+            color: rgb(calendar_color(c, i)),
         })
         .collect();
     let parent_item = parent
@@ -1863,7 +1892,10 @@ fn run_palette_action(app: &AppWindow, state: &Rc<RefCell<State>>, action: palet
         Action::Quick => app.invoke_show_quick(),
         Action::Sync => app.invoke_sync_now(),
         Action::Settings => app.invoke_show_settings(),
-        Action::AddAccount => app.invoke_show_add_account(),
+        Action::AddAccount => {
+            app.set_add_account_mode(1);
+            app.invoke_show_add_account();
+        }
         Action::About => app.set_about_open(true),
         Action::Theme => {
             // System → hell → dunkel → System
@@ -2170,7 +2202,13 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     dates::set_region(region_for(&format_choice(&store)));
     adopt_installer_language(&store);
     apply_language(&app, resolve_language(&language_choice(&store)));
-    let accounts = store.accounts().unwrap_or_default();
+    // Nur Server-Konten; lokale Kalender stehen bei den Kalendern
+    let accounts: Vec<_> = store
+        .accounts()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|a| !a.local)
+        .collect();
     let calendars = store.calendars().unwrap_or_default();
     let demo_visible = match store.setting("demo_visible").ok().flatten() {
         Some(value) => value == "1",
@@ -2235,6 +2273,8 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
         collapsed_tasks: HashSet::new(),
         editing_task: None,
         deleting_task: None,
+        editing_calendar: None,
+        deleting_calendar: None,
         task_calendar_ids: Vec::new(),
         task_parent_ids: Vec::new(),
         option_ids: Vec::new(),
@@ -2472,6 +2512,14 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
     }));
     app.on_confirm_accepted(with(&app, &state, |app, s| {
         app.set_confirm_open(false);
+        if let Some(id) = s.deleting_calendar.take() {
+            if let Err(e) = s.store.delete_local_calendar(id) {
+                s.sync.errors = vec![e.to_string()];
+            }
+            s.reload_calendars();
+            refresh(app, s, true);
+            return;
+        }
         if let Some(entry) = s.deleting_journal.take() {
             journal_ui::delete(app, s, &entry);
             return;
@@ -3245,27 +3293,113 @@ fn run(dir: PathBuf) -> Result<(), slint::PlatformError> {
                 return;
             }
             let mut s = state.borrow_mut();
-            let hex = format!(
-                "#{:02x}{:02x}{:02x}",
-                color.red(),
-                color.green(),
-                color.blue()
-            );
+            let hex = hex_of(color);
             let _ = s.store.set_calendar_color(i64::from(id), Some(&hex));
             s.reload_calendars();
             refresh(&app, &mut s, true);
         }
     });
-    app.on_show_add_account({
+    app.on_show_add_account(with(&app, &state, |app, s| {
+        s.editing_calendar = None;
+        app.set_add_account_error("".into());
+        app.set_add_account_busy(false);
+        app.set_calendar_editing(false);
+        app.set_calendar_name("".into());
+        // Farbe, die noch kein Kalender hat (sonst die erste)
+        let used: Vec<String> = s
+            .calendars
+            .iter()
+            .filter_map(|c| c.color().map(str::to_lowercase))
+            .collect();
+        let palette = app.global::<Theme>().get_calendar_colors();
+        let color = palette
+            .iter()
+            .find(|c| !used.contains(&hex_of(*c)))
+            .or_else(|| palette.row_data(0))
+            .unwrap_or_default();
+        app.set_calendar_color(color);
+        app.set_add_account_open(true);
+    }));
+    app.on_edit_calendar(with_arg(&app, &state, |app, s, id: i32| {
+        let found = s
+            .calendars
+            .iter()
+            .enumerate()
+            .find(|(_, c)| c.id == i64::from(id) && c.local);
+        let Some((index, calendar)) = found else {
+            return;
+        };
+        s.editing_calendar = Some(calendar.id);
+        app.set_add_account_error("".into());
+        app.set_add_account_busy(false);
+        app.set_add_account_mode(0);
+        app.set_calendar_editing(true);
+        app.set_calendar_name(calendar.name.as_str().into());
+        app.set_calendar_color(rgb(calendar_color(calendar, index)));
+        // Erst nach dem Farbmenü öffnen: Es gibt beim Schließen den Fokus
+        // zurück und nähme ihn sonst dem Namensfeld
         let weak = app.as_weak();
-        move || {
+        slint::Timer::single_shot(Duration::from_millis(30), move || {
             if let Some(app) = weak.upgrade() {
-                app.set_add_account_error("".into());
-                app.set_add_account_busy(false);
                 app.set_add_account_open(true);
             }
+        });
+    }));
+    app.on_calendar_save(with(&app, &state, |app, s| {
+        let name = app.get_calendar_name().trim().to_string();
+        if name.is_empty() {
+            app.set_add_account_error(tr!("Please enter a name.").into());
+            return;
         }
-    });
+        let color = hex_of(app.get_calendar_color());
+        let result = match s.editing_calendar {
+            Some(id) => s
+                .store
+                .rename_local_calendar(id, &name)
+                .and_then(|()| s.store.set_calendar_color(id, Some(&color))),
+            None => {
+                // Mit dem ersten eigenen Kalender verschwinden die Beispieltermine
+                let first = s.accounts.is_empty() && !s.calendars.iter().any(|c| c.local);
+                let created = s.store.add_local_calendar(&name, &color).map(|_| ());
+                if created.is_ok() && first && s.demo_visible {
+                    s.demo_visible = false;
+                    let _ = s.store.set_setting("demo_visible", "0");
+                }
+                created
+            }
+        };
+        if let Err(e) = result {
+            app.set_add_account_error(e.to_string().into());
+            return;
+        }
+        s.editing_calendar = None;
+        app.set_add_account_open(false);
+        app.invoke_focus_main();
+        s.reload_calendars();
+        refresh(app, s, true);
+    }));
+    app.on_calendar_delete(with(&app, &state, |app, s| {
+        let Some(id) = s.editing_calendar.take() else {
+            return;
+        };
+        let name = s
+            .calendars
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| c.name.clone())
+            .unwrap_or_default();
+        app.set_add_account_open(false);
+        app.set_confirm_title(tr!("Delete calendar?").into());
+        app.set_confirm_message(
+            tr!(
+                "“{}” will be deleted with all its events, tasks and journal entries. This cannot be undone.",
+                name
+            )
+            .into(),
+        );
+        s.deleting_calendar = Some(id);
+        app.set_confirm_open(true);
+    }));
     app.on_connect({
         let (weak, state) = (app.as_weak(), state.clone());
         move |name, url, username, password| {

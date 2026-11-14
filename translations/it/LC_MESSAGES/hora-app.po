@@ -95,6 +95,7 @@ msgid "Please enter the program's file name, e.g. program.exe."
 msgstr "Inserisci il nome file del programma, es. program.exe."
 
 #: crates/app/src/activity_ui.rs:287
+#: crates/app/src/main.rs:3296
 msgid "Please enter a name."
 msgstr "Inserisci un nome."
 
@@ -155,7 +156,7 @@ msgid "New event"
 msgstr "Nuovo evento"
 
 #: crates/app/src/editing.rs:393
-#: crates/app/src/main.rs:2964
+#: crates/app/src/main.rs:3012
 msgid "The repetition ends before the start."
 msgstr "La ripetizione termina prima dell'inizio."
 
@@ -204,13 +205,13 @@ msgstr "La fine deve essere dopo l'inizio."
 
 #: crates/app/src/items.rs:212
 #: crates/app/src/items.rs:237
-#: crates/app/src/main.rs:1333
+#: crates/app/src/main.rs:1367
 msgid "(untitled)"
 msgstr "(senza titolo)"
 
 #: crates/app/src/journal.rs:107
 #: crates/app/src/journal.rs:148
-#: crates/app/src/main.rs:373
+#: crates/app/src/main.rs:392
 msgid "Sample events"
 msgstr "Eventi di esempio"
 
@@ -272,7 +273,7 @@ msgid "Got a lot done: planned the move, finished the taxes, finally running reg
 msgstr "Fatto molto: trasloco pianificato, tasse sistemate, finalmente di nuovo a correre regolarmente.\n\n---\n\nPer novembre: **leggere di più**, meno schermi."
 
 #: crates/app/src/journal_ui.rs:40
-#: crates/app/src/main.rs:2656
+#: crates/app/src/main.rs:2704
 #: crates/app/src/palette.rs:146
 msgid "Journal"
 msgstr "Diario"
@@ -327,175 +328,185 @@ msgid "The entry from {} will be deleted."
 msgstr "La voce del {} verrà eliminata."
 
 #: crates/app/src/journal_ui.rs:491
-#: crates/app/src/main.rs:1518
-#: crates/app/src/main.rs:1544
+#: crates/app/src/main.rs:1547
+#: crates/app/src/main.rs:1573
 msgid "“{}” will be deleted."
 msgstr "«{}» verrà eliminato."
 
-#: crates/app/src/main.rs:372
+#: crates/app/src/main.rs:391
+#: crates/app/src/main.rs:402
+#: crates/app/src/main.rs:441
 msgid "On this device"
 msgstr "Su questo dispositivo"
 
-#: crates/app/src/main.rs:429
-#: crates/app/src/main.rs:991
+#: crates/app/src/main.rs:470
+#: crates/app/src/main.rs:1025
 #: crates/app/src/quick_add.rs:135
 msgid "Sample events (only on this device)"
 msgstr "Eventi di esempio (solo su questo dispositivo)"
 
-#: crates/app/src/main.rs:453
+#: crates/app/src/main.rs:494
 msgid "W{}"
 msgstr "S{}"
 
-#: crates/app/src/main.rs:759
+#: crates/app/src/main.rs:800
 #: crates/app/ui/rail.slint:215
 msgid "Tasks"
 msgstr "Attività"
 
-#: crates/app/src/main.rs:761
+#: crates/app/src/main.rs:802
 #: crates/app/src/palette.rs:153
 #: crates/app/ui/rail.slint:234
 msgid "App time"
 msgstr "Tempo nelle app"
 
-#: crates/app/src/main.rs:802
+#: crates/app/src/main.rs:843
 msgid "Syncing…"
 msgstr "Sincronizzazione…"
 
-#: crates/app/src/main.rs:826
+#: crates/app/src/main.rs:867
 msgid "{} (+{} more)"
 msgstr "{} (+{} altri)"
 
-#: crates/app/src/main.rs:844
+#: crates/app/src/main.rs:885
 msgid "Synced {}"
 msgstr "Sincronizzato alle {}"
 
-#: crates/app/src/main.rs:848
+#: crates/app/src/main.rs:889
 msgid "Not synced yet"
 msgstr "Non ancora sincronizzato"
 
-#: crates/app/src/main.rs:880
+#: crates/app/src/main.rs:921
 msgid "An event"
 msgstr "Un evento"
 
-#: crates/app/src/main.rs:884
+#: crates/app/src/main.rs:925
 msgid "“{}” was changed on the server before your deletion was uploaded. Which version should apply?"
 msgstr "«{}» è stato modificato sul server prima che la tua eliminazione fosse caricata. Quale versione deve valere?"
 
-#: crates/app/src/main.rs:889
+#: crates/app/src/main.rs:930
 msgid "“{}” was changed on the server before your change was uploaded. Which version should apply?"
 msgstr "«{}» è stato modificato sul server prima che la tua modifica fosse caricata. Quale versione deve valere?"
 
-#: crates/app/src/main.rs:1156
+#: crates/app/src/main.rs:1190
 msgid "No reminder"
 msgstr "Nessun promemoria"
 
-#: crates/app/src/main.rs:1436
+#: crates/app/src/main.rs:1465
 msgid "No parent task"
 msgstr "Nessuna attività principale"
 
-#: crates/app/src/main.rs:1467
+#: crates/app/src/main.rs:1496
 msgid "Recurring task: {}. Completed {} times so far. The due date applies to the series."
 msgstr "Attività ricorrente: {}. Completata {} volte finora. La scadenza vale per la serie."
 
-#: crates/app/src/main.rs:1529
+#: crates/app/src/main.rs:1558
 msgid "The whole series will be deleted."
 msgstr "Verrà eliminata l'intera serie."
 
-#: crates/app/src/main.rs:1531
+#: crates/app/src/main.rs:1560
 msgid "Delete task?"
 msgstr "Eliminare l'attività?"
 
-#: crates/app/src/main.rs:1543
-#: crates/app/ui/app.slint:555
+#: crates/app/src/main.rs:1572
+#: crates/app/ui/app.slint:564
 msgid "Delete event?"
 msgstr "Eliminare l'evento?"
 
-#: crates/app/src/main.rs:1758
+#: crates/app/src/main.rs:1787
 #: crates/app/src/palette.rs:373
 msgid "Task: {}"
 msgstr "Attività: {}"
 
-#: crates/app/src/main.rs:1982
+#: crates/app/src/main.rs:2014
 msgid "Windows ({})"
 msgstr "Windows ({})"
 
-#: crates/app/src/main.rs:2012
+#: crates/app/src/main.rs:2044
 msgid "Windows language"
 msgstr "Lingua di Windows"
 
-#: crates/app/src/main.rs:2071
+#: crates/app/src/main.rs:2103
 msgid "Hora could not start: {}"
 msgstr "Impossibile avviare Hora: {}"
 
-#: crates/app/src/main.rs:2119
+#: crates/app/src/main.rs:2151
 msgid "The database {} can't be opened ({}). To avoid losing anything, Hora will quit."
 msgstr "Impossibile aprire il database {} ({}). Per non perdere nulla, Hora verrà chiuso."
 
-#: crates/app/src/main.rs:2794
+#: crates/app/src/main.rs:2842
 msgid "Please choose a calendar that supports tasks."
 msgstr "Scegli un calendario che supporti le attività."
 
-#: crates/app/src/main.rs:2803
+#: crates/app/src/main.rs:2851
 #: crates/app/src/tasks.rs:447
 msgid "The task no longer exists."
 msgstr "L'attività non esiste più."
 
-#: crates/app/src/main.rs:3065
+#: crates/app/src/main.rs:3113
 msgid "Autostart not changed: {}"
 msgstr "Avvio automatico non modificato: {}"
 
-#: crates/app/src/main.rs:3119
+#: crates/app/src/main.rs:3167
 #: crates/app/ui/settings.slint:237
 msgid "Test notification"
 msgstr "Notifica di prova"
 
-#: crates/app/src/main.rs:3120
+#: crates/app/src/main.rs:3168
 msgid "This is what Hora's reminders look like"
 msgstr "Ecco come appaiono i promemoria di Hora"
 
-#: crates/app/src/main.rs:3135
+#: crates/app/src/main.rs:3183
 msgid "Sent. If nothing appears: Windows Settings → System → Notifications."
 msgstr "Inviata. Se non compare nulla: Impostazioni di Windows → Sistema → Notifiche."
 
-#: crates/app/src/main.rs:3219
+#: crates/app/src/main.rs:3337
+msgid "Delete calendar?"
+msgstr "Eliminare il calendario?"
+
+#: crates/app/src/main.rs:3339
+msgid "“{}” will be deleted with all its events, tasks and journal entries. This cannot be undone."
+msgstr "«{}» verrà eliminato con tutti i suoi eventi, attività e voci del diario. Non si può annullare."
+
+#: crates/app/src/main.rs:3353
 msgid "Please enter the server address."
 msgstr "Inserisci l'indirizzo del server."
 
-#: crates/app/src/main.rs:3221
+#: crates/app/src/main.rs:3355
 msgid "Please enter the username."
 msgstr "Inserisci il nome utente."
 
-#: crates/app/src/main.rs:3223
+#: crates/app/src/main.rs:3357
 msgid "Please enter the password."
 msgstr "Inserisci la password."
 
-#: crates/app/src/main.rs:3313
+#: crates/app/src/main.rs:3447
 msgid "Hora keeps running in the notification area"
 msgstr "Hora continua a funzionare nell'area di notifica"
 
-#: crates/app/src/main.rs:3314
+#: crates/app/src/main.rs:3448
 msgid "Reminders keep coming. Quit via the icon in the notification area (right-click)."
 msgstr "I promemoria continuano ad arrivare. Per uscire usa l'icona nell'area di notifica (clic destro)."
 
-#: crates/app/src/main.rs:806
+#: crates/app/src/main.rs:847
 msgid "{n} conflict while saving"
 msgid_plural "{n} conflicts while saving"
 msgstr[0] "{n} conflitto durante il salvataggio"
 msgstr[1] "{n} conflitti durante il salvataggio"
 
-#: crates/app/src/main.rs:816
+#: crates/app/src/main.rs:857
 msgid "{n} change rejected by the server"
 msgid_plural "{n} changes rejected by the server"
 msgstr[0] "{n} modifica rifiutata dal server"
 msgstr[1] "{n} modifiche rifiutate dal server"
 
-#: crates/app/src/main.rs:834
+#: crates/app/src/main.rs:875
 msgid "{n} change waiting to upload"
 msgid_plural "{n} changes waiting to upload"
 msgstr[0] "{n} modifica in attesa di caricamento"
 msgstr[1] "{n} modifiche in attesa di caricamento"
 
-#: crates/app/src/main.rs:1521
+#: crates/app/src/main.rs:1550
 msgid "So will its subtask."
 msgid_plural "So will its {n} subtasks."
 msgstr[0] "Anche la sua sottoattività."
@@ -614,8 +625,7 @@ msgid "Sync calendars"
 msgstr "Sincronizza calendari"
 
 #: crates/app/src/palette.rs:209
-#: crates/app/ui/dialogs.slint:95
-#: crates/app/ui/sidebar.slint:393
+#: crates/app/ui/sidebar.slint:459
 msgid "Add account"
 msgstr "Aggiungi account"
 
@@ -638,7 +648,7 @@ msgid "Switch theme (Light → Dark → System)"
 msgstr "Cambia tema (Chiaro → Scuro → Sistema)"
 
 #: crates/app/src/palette.rs:230
-#: crates/app/ui/sidebar.slint:516
+#: crates/app/ui/sidebar.slint:523
 msgid "About Hora"
 msgstr "Informazioni su Hora"
 
@@ -668,7 +678,7 @@ msgstr "Calendario"
 
 #: crates/app/src/palette.rs:415
 #: crates/app/src/palette.rs:434
-#: crates/app/ui/sidebar.slint:380
+#: crates/app/ui/sidebar.slint:386
 msgid "CALENDARS"
 msgstr "CALENDARI"
 
@@ -728,21 +738,21 @@ msgstr "Nessun calendario disponibile per le attività."
 msgid "Sample events can't repeat; please connect an account first."
 msgstr "Gli eventi di esempio non possono ripetersi; collega prima un account."
 
-#: crates/app/src/quick_add.rs:160
+#: crates/app/src/quick_add.rs:153
 msgid "{} (default)"
 msgstr "{} (predefinito)"
 
-#: crates/app/src/quick_add.rs:171
+#: crates/app/src/quick_add.rs:164
 #: crates/app/ui/agenda-view.slint:146
 #: crates/app/ui/month-view.slint:239
 msgid "Task"
 msgstr "Attività"
 
-#: crates/app/src/quick_add.rs:171
+#: crates/app/src/quick_add.rs:164
 msgid "Event"
 msgstr "Evento"
 
-#: crates/app/src/quick_add.rs:195
+#: crates/app/src/quick_add.rs:188
 #: crates/app/src/tasks.rs:573
 msgid "Please enter a title."
 msgstr "Inserisci un titolo."
@@ -1306,6 +1316,7 @@ msgid "New activity"
 msgstr "Nuova categoria"
 
 #: crates/app/ui/activity-dialog.slint:61
+#: crates/app/ui/dialogs.slint:220
 msgid "Name"
 msgstr "Nome"
 
@@ -1314,11 +1325,13 @@ msgid "e.g. Writing"
 msgstr "es. Scrittura"
 
 #: crates/app/ui/activity-dialog.slint:73
+#: crates/app/ui/dialogs.slint:232
 msgid "Color"
 msgstr "Colore"
 
 #: crates/app/ui/activity-dialog.slint:88
-#: crates/app/ui/sidebar.slint:549
+#: crates/app/ui/dialogs.slint:248
+#: crates/app/ui/sidebar.slint:556
 msgid "Color {}"
 msgstr "Colore {}"
 
@@ -1360,19 +1373,19 @@ msgstr "Compare nella barra laterale e nella panoramica, con quante settimane di
 
 #: crates/app/ui/activity-dialog.slint:255
 #: crates/app/ui/activity-dialog.slint:304
-#: crates/app/ui/event-dialog.slint:648
+#: crates/app/ui/dialogs.slint:295
 msgid "Delete"
 msgstr "Elimina"
 
 #: crates/app/ui/activity-dialog.slint:267
-#: crates/app/ui/dialogs.slint:188
-#: crates/app/ui/event-dialog.slint:660
+#: crates/app/ui/dialogs.slint:186
+#: crates/app/ui/dialogs.slint:307
 msgid "Cancel"
 msgstr "Annulla"
 
 #: crates/app/ui/activity-dialog.slint:274
+#: crates/app/ui/dialogs.slint:314
 #: crates/app/ui/event-dialog.slint:667
-#: crates/app/ui/task-dialog.slint:227
 msgid "Save"
 msgstr "Salva"
 
@@ -1381,7 +1394,7 @@ msgid "Keep"
 msgstr "Mantieni"
 
 #: crates/app/ui/activity-overview.slint:318
-#: crates/app/ui/sidebar.slint:196
+#: crates/app/ui/sidebar.slint:198
 msgid "Weekly goal reached"
 msgstr "Obiettivo settimanale raggiunto"
 
@@ -1497,7 +1510,7 @@ msgstr "Y"
 msgid "View: {}"
 msgstr "Vista: {}"
 
-#: crates/app/ui/app.slint:1394
+#: crates/app/ui/app.slint:1411
 msgid "Sync"
 msgstr "Sincronizzazione"
 
@@ -1505,59 +1518,89 @@ msgstr "Sincronizzazione"
 msgid "Choose date"
 msgstr "Scegli data"
 
-#: crates/app/ui/dialogs.slint:115
+#: crates/app/ui/dialogs.slint:113
 msgid "Server address"
 msgstr "Indirizzo del server"
 
-#: crates/app/ui/dialogs.slint:116
+#: crates/app/ui/dialogs.slint:114
 msgid "e.g. https://calendar.example.org/dav.php"
 msgstr "es. https://calendario.example.org/dav.php"
 
-#: crates/app/ui/dialogs.slint:125
+#: crates/app/ui/dialogs.slint:123
 msgid "Unencrypted connection (http): the password is sent in plain text. Usually fine on your own home network, otherwise use https."
 msgstr "Connessione non cifrata (http): la password viene inviata in chiaro. Di solito va bene nella rete di casa, altrimenti usa https."
 
-#: crates/app/ui/dialogs.slint:132
+#: crates/app/ui/dialogs.slint:130
 msgid "Username"
 msgstr "Nome utente"
 
-#: crates/app/ui/dialogs.slint:141
+#: crates/app/ui/dialogs.slint:139
 msgid "Password"
 msgstr "Password"
 
-#: crates/app/ui/dialogs.slint:151
+#: crates/app/ui/dialogs.slint:149
 msgid "Name in the sidebar (optional)"
 msgstr "Nome nella barra laterale (facoltativo)"
 
-#: crates/app/ui/dialogs.slint:152
+#: crates/app/ui/dialogs.slint:150
 msgid "e.g. Baïkal at home"
 msgstr "es. Baïkal a casa"
 
-#: crates/app/ui/dialogs.slint:161
+#: crates/app/ui/dialogs.slint:159
 msgid "The password is stored in Windows Credential Manager, not in Hora's database."
 msgstr "La password viene salvata in Gestione credenziali di Windows, non nel database di Hora."
 
-#: crates/app/ui/dialogs.slint:196
+#: crates/app/ui/dialogs.slint:194
 msgid "Connecting…"
 msgstr "Connessione…"
 
-#: crates/app/ui/dialogs.slint:196
+#: crates/app/ui/dialogs.slint:194
 msgid "Connect"
 msgstr "Connetti"
 
-#: crates/app/ui/dialogs.slint:220
+#: crates/app/ui/dialogs.slint:221
+msgid "e.g. Private"
+msgstr "ad es. Privato"
+
+#: crates/app/ui/dialogs.slint:269
+msgid "Events, tasks and journal entries in this calendar stay on this PC only: no sync with other devices and no backup on a server."
+msgstr "Eventi, attività e voci del diario di questo calendario restano solo su questo PC: nessuna sincronizzazione con altri dispositivi e nessun backup su un server."
+
+#: crates/app/ui/dialogs.slint:314
+#: crates/app/ui/quick-add.slint:231
+msgid "Create"
+msgstr "Crea"
+
+#: crates/app/ui/dialogs.slint:342
+msgid "Edit calendar"
+msgstr "Modifica calendario"
+
+#: crates/app/ui/dialogs.slint:342
+#: crates/app/ui/sidebar.slint:399
+msgid "Add calendar"
+msgstr "Aggiungi calendario"
+
+#: crates/app/ui/dialogs.slint:356
+msgid "On this PC"
+msgstr "Su questo PC"
+
+#: crates/app/ui/dialogs.slint:356
+msgid "CalDAV server"
+msgstr "Server CalDAV"
+
+#: crates/app/ui/dialogs.slint:412
 msgid "Version {} · Desktop calendar for Windows, inspired by Calino"
 msgstr "Versione {} · Calendario desktop per Windows, ispirato a Calino"
 
-#: crates/app/ui/dialogs.slint:227
+#: crates/app/ui/dialogs.slint:419
 msgid "Design and behavior based on Calino by Ivan Malinovski (MIT License), github.com/Ivan-Malinovski/calino. Hora is an independent project, not an official Calino app."
 msgstr "Design e comportamento basati su Calino di Ivan Malinovski (licenza MIT), github.com/Ivan-Malinovski/calino. Hora è un progetto indipendente, non un'app ufficiale di Calino."
 
-#: crates/app/ui/dialogs.slint:234
+#: crates/app/ui/dialogs.slint:426
 msgid "Font: Newsreader, The Newsreader Project Authors (SIL Open Font License 1.1)."
 msgstr "Carattere: Newsreader, The Newsreader Project Authors (SIL Open Font License 1.1)."
 
-#: crates/app/ui/dialogs.slint:252
+#: crates/app/ui/dialogs.slint:444
 #: crates/app/ui/palette.slint:387
 #: crates/app/ui/preview.slint:99
 msgid "Close"
@@ -1969,10 +2012,6 @@ msgstr "Invio crea · Maiusc+Invio apre la finestra"
 msgid "Open in dialog"
 msgstr "Apri nella finestra"
 
-#: crates/app/ui/quick-add.slint:231
-msgid "Create"
-msgstr "Crea"
-
 #: crates/app/ui/rail.slint:136
 msgid "Hora {} is ready · Restart to update"
 msgstr "Aggiornamento {} pronto · Riavvia per installarlo"
@@ -1986,7 +2025,7 @@ msgid "Agenda"
 msgstr "Agenda"
 
 #: crates/app/ui/settings.slint:167
-#: crates/app/ui/sidebar.slint:509
+#: crates/app/ui/sidebar.slint:516
 msgid "Settings"
 msgstr "Impostazioni"
 
@@ -2038,7 +2077,7 @@ msgid "Open tasks appear in the week and month views on their due date"
 msgstr "Le attività aperte compaiono nelle viste settimana e mese alla loro scadenza"
 
 #: crates/app/ui/settings.slint:274
-#: crates/app/ui/sidebar.slint:474
+#: crates/app/ui/sidebar.slint:481
 msgid "APP TIME"
 msgstr "TEMPO NELLE APP"
 
@@ -2150,21 +2189,26 @@ msgstr "Cerca ora"
 msgid "Done"
 msgstr "Fine"
 
-#: crates/app/ui/sidebar.slint:89
+#: crates/app/ui/sidebar.slint:91
 msgid "read-only"
 msgstr "sola lettura"
 
-#: crates/app/ui/sidebar.slint:104
+#: crates/app/ui/sidebar.slint:106
 msgid "Color for {}"
 msgstr "Colore di {}"
 
-#: crates/app/ui/sidebar.slint:442
+#: crates/app/ui/sidebar.slint:449
 msgid "Connect your CalDAV server to see your own events."
 msgstr "Collega il tuo server CalDAV per vedere i tuoi eventi."
 
-#: crates/app/ui/sidebar.slint:483
+#: crates/app/ui/sidebar.slint:490
 msgid "this week"
 msgstr "questa settimana"
+
+#: crates/app/ui/sidebar.slint:574
+#: crates/app/ui/sidebar.slint:578
+msgid "Edit…"
+msgstr "Modifica…"
 
 #: crates/app/ui/task-dialog.slint:67
 msgid "Edit task"
@@ -2681,12 +2725,3 @@ msgstr "il download è danneggiato ({})"
 #: crates/update/src/lib.rs:93
 msgid "the update can't be saved ({})"
 msgstr "impossibile salvare l'aggiornamento ({})"
-
-#~ msgid "No programs"
-#~ msgstr "Nessun programma"
-
-#~ msgid "{0} · this week {1} · total {2}"
-#~ msgstr "{0} · questa settimana {1} · totale {2}"
-
-#~ msgid "New activity…"
-#~ msgstr "Nuova categoria…"

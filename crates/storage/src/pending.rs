@@ -128,8 +128,18 @@ impl Store {
     }
 
     /// Ressource lokal anlegen oder ändern und zum Hochladen vormerken.
+    /// Kalender nur auf diesem PC laden nichts hoch.
     pub fn local_put(&mut self, calendar_id: i64, href: &str, ics: &str) -> Result<()> {
         let tx = self.write()?;
+        let local: bool = tx
+            .query_row(
+                "SELECT a.kind = 'local' FROM calendars c JOIN accounts a ON a.id = c.account_id
+                 WHERE c.id = ?1",
+                [calendar_id],
+                |r| r.get(0),
+            )
+            .optional()?
+            .unwrap_or(false);
         let base: Option<String> = tx
             .query_row(
                 "SELECT etag FROM resources WHERE calendar_id = ?1 AND href = ?2",
@@ -154,6 +164,10 @@ impl Store {
                 index.end
             ],
         )?;
+        if local {
+            tx.commit()?;
+            return Ok(());
+        }
         let existing: Option<i64> = tx
             .query_row(
                 "SELECT id FROM pending WHERE calendar_id = ?1 AND href = ?2",

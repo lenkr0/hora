@@ -384,8 +384,12 @@ fn resolve_conflict(store: &mut Store, op_id: i64, keep_mine: bool) -> Result<()
 }
 
 fn sync_all(store: &mut Store, notify: &impl Fn(Update)) {
+    // Kalender nur auf diesem PC haben keinen Server
     let accounts = match store.accounts() {
-        Ok(accounts) if !accounts.is_empty() => accounts,
+        Ok(accounts) if accounts.iter().any(|a| !a.local) => accounts
+            .into_iter()
+            .filter(|a| !a.local)
+            .collect::<Vec<_>>(),
         Ok(_) => return,
         Err(e) => {
             notify(Update::SyncFinished {
@@ -470,6 +474,28 @@ fn sync_all(store: &mut Store, notify: &impl Fn(Update)) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Kalender nur auf diesem PC: kein Abgleich, nichts hochzuladen
+    #[test]
+    fn local_calendars_are_not_synced() {
+        let mut store = Store::open_in_memory().unwrap();
+        let id = store.add_local_calendar("Zuhause", "#4f7cac").unwrap();
+        let ics = "BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:x
+DTSTART:20261116T090000Z
+DTEND:20261116T100000Z
+END:VEVENT
+END:VCALENDAR
+";
+        store.local_put(id, "x.ics", ics).unwrap();
+        let updates = std::cell::Cell::new(0);
+        sync_all(&mut store, &|_| updates.set(updates.get() + 1));
+        assert_eq!(updates.get(), 0);
+        assert!(push_pending(&mut store, &|_| {}).is_empty());
+        assert!(store.resource(id, "x.ics").unwrap().is_some());
+    }
 
     /// Ohne Netz bleibt die Änderung erhalten und wird später erneut versucht.
     #[test]

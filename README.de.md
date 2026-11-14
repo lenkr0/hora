@@ -15,6 +15,7 @@ startet in deutlich unter einer Sekunde mit rund 12 MB Arbeitsspeicher.
 
 - **CalDAV-Abgleich** mit automatischer Erkennung, Offline-Warteschlange und
   Konfliktdialog, wenn ein anderes Gerät denselben Termin geändert hat.
+  Kalender **nur auf diesem PC** funktionieren ganz ohne Server.
 - **Acht Ansichten:** Tag, 3 Tage, Woche, Monat, Jahr, Agenda, Aufgaben und
   Journal.
 - **Termine und Serien:** ziehen, Dauer ändern, „Nur dieser / Dieser und alle
@@ -54,19 +55,22 @@ Ordner, `--lang=de`, `--no-autostart` und `--desktop-shortcut` setzen die
 Optionen.
 
 **Updates:** Einmal am Tag sieht Hora hier auf GitHub nach einer neuen
-Version und lädt sie im Hintergrund. Liegt sie bereit, zeigt die Titelleiste
-„Hora 1.2.0 ist bereit · Zum Aktualisieren neu starten“; ein Klick installiert
-sie und startet Hora neu. Updates sind signiert, Hora prüft Signatur, Größe
+Version und lädt sie im Hintergrund. Liegt sie bereit, erscheint unten in der
+Leiste links ein runder Knopf („Hora 1.4.0 ist bereit · Zum Aktualisieren neu
+starten“); ein Klick installiert sie und startet Hora neu. Updates sind signiert, Hora prüft Signatur, Größe
 und Prüfsumme vor dem Installieren. Gefragt wird nur github.com nach dem
 neuesten Release (dabei gehen deine IP-Adresse und `Hora/<Version>` mit, sonst
 nichts); ausschalten unter Einstellungen → Updates.
 
 ## Loslegen
 
-Seitenleiste → **Konto hinzufügen**, dann DAV-Adresse (bei Baïkal z. B.
-`http://server:8089/dav.php`), Benutzername und Passwort eingeben. Hora findet
-die Kalender selbst; das Passwort liegt im Windows-Anmeldeinformationsspeicher.
-Abgeglichen wird beim Start, alle 5 Minuten und mit `F5`.
+Seitenleiste → **+** neben „Kalender“. **Auf diesem PC** legt sofort einen
+Kalender an (Name und Farbe), ganz ohne Server. **CalDAV-Server** fragt nach
+der DAV-Adresse (bei Baïkal z. B. `http://server:8089/dav.php`), Benutzername
+und Passwort; Hora findet die Kalender selbst, das Passwort liegt im
+Windows-Anmeldeinformationsspeicher. Abgeglichen wird beim Start, alle
+5 Minuten und mit `F5`. Einen lokalen Kalender benennst du über seinen
+Farbpunkt → **Bearbeiten …** um oder löschst ihn dort.
 
 Sprache sowie Datums- und Zeitformat lassen sich jederzeit unter
 Einstellungen → Programm ändern. Die Schnelleingabe versteht in jeder

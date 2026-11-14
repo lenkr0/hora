@@ -548,6 +548,15 @@ export component AppWindow inherits Window {
     in property <string> sync-detail;
 
     in-out property <bool> add-account-open;
+    // Kalender hinzufügen: 0 = auf diesem PC, 1 = CalDAV-Server
+    in-out property <int> add-account-mode;
+    // Lokaler Kalender im Dialog: bearbeiten, Name, Farbe
+    in property <bool> calendar-editing;
+    in-out property <string> calendar-name;
+    in-out property <color> calendar-color;
+    callback calendar-save();
+    callback calendar-delete();
+    callback edit-calendar(int);
     in property <bool> add-account-busy;
     in property <string> add-account-error;
     in-out property <bool> about-open;
@@ -1094,7 +1103,15 @@ export component AppWindow inherits Window {
                         root.set-calendar-color(id, c);
                     }
                     add-account => {
+                        root.add-account-mode = 1;
                         root.show-add-account();
+                    }
+                    add-calendar => {
+                        root.add-account-mode = 0;
+                        root.show-add-account();
+                    }
+                    edit-calendar(id) => {
+                        root.edit-calendar(id);
                     }
                     about => {
                         root.about-open = true;
@@ -1585,6 +1602,16 @@ export component AppWindow inherits Window {
     if root.add-account-open: AddAccountDialog {
         busy: root.add-account-busy;
         error: root.add-account-error;
+        mode <=> root.add-account-mode;
+        editing: root.calendar-editing;
+        calendar-name <=> root.calendar-name;
+        calendar-color <=> root.calendar-color;
+        save-local => {
+            root.calendar-save();
+        }
+        delete-local => {
+            root.calendar-delete();
+        }
         connect(name, url, user, password) => {
             root.connect(name, url, user, password);
         }

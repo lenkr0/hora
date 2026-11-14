@@ -14,7 +14,8 @@ memory.
 ## Features
 
 - **CalDAV sync** with automatic discovery, an offline queue and a conflict
-  dialog when another device changed the same event.
+  dialog when another device changed the same event. Calendars that stay
+  **only on this PC** work without any server.
 - **Eight views:** day, 3 days, week, month, year, agenda, tasks and journal.
 - **Events and series:** drag, resize, "only this / this and following / all",
   reminders as Windows notifications, also from the notification area.
@@ -50,19 +51,21 @@ For scripts: `/S` installs silently, `/D=C:\Path` (last) picks the folder,
 `--lang=de`, `--no-autostart` and `--desktop-shortcut` set the options.
 
 **Updates:** once a day Hora looks for a new version here on GitHub and
-downloads it in the background. When it's ready, the title bar shows
-"Hora 1.2.0 is ready · Restart to update"; a click installs it and starts Hora
-again. Updates are signed, and Hora checks the signature, size and checksum
+downloads it in the background. When it's ready, a round button appears at
+the bottom of the bar on the left ("Hora 1.4.0 is ready · Restart to
+update"); a click installs it and starts Hora again. Updates are signed, and Hora checks the signature, size and checksum
 before installing. The check only asks github.com for the latest release (it
 sends your IP address and `Hora/<version>`, nothing else); turn it off in
 Settings → Updates.
 
 ## Getting started
 
-Sidebar → **Add account**, then enter the DAV address (for Baïkal e.g.
-`http://server:8089/dav.php`), username and password. Hora finds the
-calendars itself; the password is kept in Windows Credential Manager. Hora
-syncs at startup, every 5 minutes and with `F5`.
+Sidebar → **+** next to "Calendars". **On this PC** creates a calendar
+right away (name and color), without a server. **CalDAV server** asks for
+the DAV address (for Baïkal e.g. `http://server:8089/dav.php`), username and
+password; Hora finds the calendars itself and keeps the password in Windows
+Credential Manager. Hora syncs at startup, every 5 minutes and with `F5`.
+A local calendar is renamed or deleted via its color dot → **Edit…**.
 
 Language and date/time format can be changed any time under Settings →
 General. Quick add understands English and German in every UI language.

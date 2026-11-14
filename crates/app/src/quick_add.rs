@@ -145,14 +145,7 @@ pub fn preview(state: &State, text: &str) -> QuickPreview {
             .iter()
             .enumerate()
             .find(|(_, c)| c.id == id)
-            .map(|(i, c)| {
-                let account = state
-                    .accounts
-                    .iter()
-                    .find(|a| a.id == c.account_id)
-                    .map_or("", |a| a.name.as_str());
-                (format!("{} · {account}", c.name), rgb(calendar_color(c, i)))
-            })
+            .map(|(i, c)| (crate::calendar_label(state, c), rgb(calendar_color(c, i))))
             .unwrap_or_default(),
         None => (String::new(), Color::default()),
     };
